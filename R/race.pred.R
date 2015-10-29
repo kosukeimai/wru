@@ -1,18 +1,6 @@
-## Create Fake Voter File
-VoterID <- seq(1:10)
-surname <- c("Khanna", "Imai", "Velasco", "Fifield", "Zhou", "Ratkovic", "Johnson", "Lopez", "Wantchekon", "Morse")
-state <- c("NJ", "NJ", "NY", "NJ", "NJ", "NJ", "NY", "NJ", "NJ", "DC")
-CD <- c(12, 12, NA, 12, 12, 12, NA, 12, 12, NA)
-county <- c("34021", "34021", "", "34021", "34021", "34021", "", "34021", "34021", "")
-tract <- c("34021004000", "34021004501", "34021004501", "34021004501", "34021004501", "34021004501", "34021004000", "34021004501", "34021004501", "")
-block <- c("3001", "1025", "", "1025", "1025", "1025", "", "1025", "1025", "")
-precinct <- c("6", "", "", "", "", "", "", "", "", "")
-age <- c(29, 40, 33, 27, 28, 35, 25, 33, 50, 29)
-female <- c(0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
-party <- c("Ind", "Dem", "Rep", "Dem", "Dem", "Ind", "Dem", "Rep", "Rep", "Rep")
-
-voters <- as.data.frame(cbind(VoterID, surname, state, CD, county, tract, block, precinct, age, female, party))
-
+## Load names.RData and pid.RData
+names <- load("data/names.RData")
+pid <- load("data/pid.RData")
 
 ## Race Prediction Function
 race.pred <- function(voters, vars, races, UScensus2010) {
@@ -45,7 +33,7 @@ race.pred <- function(voters, vars, races, UScensus2010) {
   }
   
   if (UScensus2010 == TRUE) {
-    #source("Census.Helper.R")
+    source("Census.Helper.R")
     warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
     voters <- census.helper(voters = voters, states = "all", geo = geo)
   }
@@ -90,8 +78,6 @@ race.pred <- function(voters, vars, races, UScensus2010) {
   return(voters)
 }
 
-
-## Examples
 df.out1 <- race.pred(voters = voters, 
                      vars = c("surname", "tract"), 
                      races = c("white", "black", "latino"), 
@@ -99,5 +85,15 @@ df.out1 <- race.pred(voters = voters,
 
 df.out2 <- race.pred(voters = voters, 
                      vars = c("surname", "tract", "party"), 
+                     races = c("white", "black", "latino", "asian", "other"), 
+                     UScensus2010 = TRUE)
+
+df.out3 <- race.pred(voters = voters, 
+                     vars = c("surname", "block"), 
+                     races = c("white", "black", "latino", "asian", "other"), 
+                     UScensus2010 = TRUE)
+
+df.out4 <- race.pred(voters = voters, 
+                     vars = c("surname", "block", "party"), 
                      races = c("white", "black", "latino", "asian", "other"), 
                      UScensus2010 = TRUE)
