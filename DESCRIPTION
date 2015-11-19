@@ -1,8 +1,8 @@
 Package: wru
-Version: 0.0
-Date: 2015-10-30
-Title: Who Are You: Bayesian Predictions of Voter Race/Ethnicity
-Author: Kosuke Imai [aut, cre], Kabir Khanna [aut, cre]
+Version: 0.0-1
+Date: 2015-10-31
+Title: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation
+Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre]
 Maintainer: Kabir Khanna <kkhanna@princeton.edu>
 Depends:
     R (>= 3.2.0),
@@ -11,9 +11,8 @@ Depends:
 Imports:
     UScensus2010
 Suggests:
-    NA
-VignetteBuilder: NA
-Description: NA
+VignetteBuilder: 
+Description: 
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
