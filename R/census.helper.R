@@ -1,16 +1,33 @@
-## Step 1: Download relevant data from Census Summary File
-## Step 2: Compute Pr(Geolocation | Race) using raw counts
-## Step 3: Compute Pr(Geolocation & Age & Sex | Race) using raw counts
-
-
-## Note 1: 'voters' object must be voter file with state and geolocation specified.
-## Note 2: Set states to "all" for all states or a subset of states in voter file.
-
+#' Census helper function.
+#'
+#' \code{census.helper} links user-input dataset with Census data.
+#'
+#' This function allows users to link their geocoded dataset (e.g., voter file) 
+#' with U.S. Census 2010 data. The function extracts Census data at the tract 
+#' or block level using the 'UScensus2010' package. Census data calculated are 
+#' Pr(geolocation | race) where geolocation is tract or block.
+#'
+#' @param voters An object of class \code{data.frame}. Must contain a field 
+#'  named 'tract' or 'block' that specifies geolocation.
+#' @param states A character vector specifying which states to extract 
+#'  Census data for, e.g. c("NJ", "NY"). May also be "all" to extract 
+#'  Census data for all states contained in user-input data.
+#' @param geo A character object specifying what aggregation level to use. 
+#'  Use "trt" for tract or "blk" for block. Warning: block takes very long.
+#' @return Output will be an object of class \code{data.frame}. It will 
+#'  consist of the original user-input data with additional columns of 
+#'  Census data.
+#'
+#' @examples
+#' census.helper(NJ.voter.file, "nj", "blk")
+#' census.helper(voters.all, c("nj", "ny"), "trt")
+#'
+#' @export
 census.helper <- function(voters, states, geo) {
   require(UScensus2010)
   
   if (geo == "trt") {
-    geo <- "tract"
+    geo <- geo.name <- "tract"
     install.tract("linux")
   }
 
@@ -19,7 +36,7 @@ census.helper <- function(voters, states, geo) {
     install.block("linux")
   }
 
-  if (states == "all") {
+  if (states == "All") {
     states <- tolower(unique(voters$state))
   }
   
@@ -50,25 +67,3 @@ census.helper <- function(voters, states, geo) {
   
   return(df.out)
 }
-
-
-## NJ Tract-Level Race Counts by Age and Sex
-eth.cen <- c("whi", "bla", "his", "asi", "npi", "aian", "oth", "mix")
-eth.let <- c("I", "B", "H", "D", "E", "C", "F", "G")
-sex <- c("male", "fem")
-age.cat <- c(seq(5, 23), seq(5, 23))
-age.cen <- as.character(c(c("07", "08", "09"), seq(10, 25), seq(31, 49)))
-
-for (i in 1:length(eth.let)) {
-  for (k in 1:length(sex)) {
-    for (j in 1:23) {
-      if (k == 2) {
-        j <- j + 23
-      }
-      assign(paste("nj.trt.demo.", eth.let[i], age.cen[j], sep = ""), 
-             demographics(dem = paste("P012", eth.let[i], "0", age.cen[j], sep = ""), state = "nj", level = c("tract")))
-    }
-  }
-}
-
-test <- demographics(dem = "P012H007", state = "nj", level = c("tract"))
