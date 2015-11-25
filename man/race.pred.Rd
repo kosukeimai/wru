@@ -59,8 +59,8 @@ Output will be an object of class \code{data.frame}. It will
 }
 \details{
 This function implements the Bayesian race prediction methods outlined in 
-Imai and Khanna (2015). The function estimates individual-level 
-race/ethnicity, based on surname, geolocation, and party registration.
+Imai and Khanna (2015). The function produces probabilistics estimates of 
+individual-level race/ethnicity, based on surname, geolocation, and party.
 }
 \examples{
 race.pred(voters = ..., races = c("asian"), surname.only = TRUE)
