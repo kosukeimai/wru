@@ -1,99 +1,145 @@
-## Load names.RData and pid.RData
-names <- load("data/names.RData")
-pid <- load("data/pid.RData")
+#' Race prediction function.
+#'
+#' \code{race.pred} makes probabilistic estimates of individual-level race/ethnicity.
+#'
+#' This function implements the Bayesian race prediction methods outlined in 
+#' Imai and Khanna (2015). The function estimates individual-level 
+#' race/ethnicity, based on surname, geolocation, and party registration.
+#'
+#' @param voters An object of class \code{data.frame}. Must contain a field for 
+#'  surname ('surname'). Optional fields include Census tract ('tract'), Census 
+#'  block ('block'), party registration ('party'), age ('age'), and sex ('sex').
+#' @param races A character vector specifying which racial groups to generate 
+#'  predicted probabilities for. Can include any subset of the default vector, 
+#'  which is c("white", "black", "latino", "asian", "other").
+#' @param name.clean A TRUE/FALSE object. If TRUE, function will call
+#'  \code{name.clean} to merge in data from U.S. Census 2000 Surname List 
+#'  and Spanish Surname List. If FALSE, voters object must contain fields 
+#'  specifying Pr(Race | Surname), named as follows: 'p_whi' for Whites, 
+#'  'p_bla' for Blacks, 'p_his' for Hispanics/Latinos, 'p_asi' for Asians, 
+#'  and/or 'p_oth' for Other. Default is TRUE.
+#' @param census An optional character vector specifying what level of 
+#'  geography to use to merge in U.S. Census 2010 data. Currently only 
+#'  "tract" and "block" are supported. If "tract" or "block" is specified, 
+#'  function will call \code{census.helper.api} to merge in tract- or block-
+#'  level data. If left unspecified, \code{voters} must contain fields 
+#'  specifying Pr(Geolocation | Race), including any of the following: 
+#'  'r_whi', 'r_bla', 'r_his', 'r_asi', and/or 'r_oth'.
+#' @param census.key A character object specifying user's Census API 
+#'  key. Must be specified if \code{census} is specified, because the 
+#'  \code{census.helper} function requires a Census API key to operate.
+#' @param demo An optional TRUE/FALSE object specifying whether to 
+#'  condition race predictions on individual age and sex. 
+#'  If TRUE, \code{voters} should include numerical variables 'age' and 'sex', 
+#'  where 'sex' coded as follows: male = 0 and female = 1. Default is FALSE. 
+#'  May only be set to TRUE when \code{census} is specified.
+#' @param party An optional character object specifying party registration field. 
+#'  Party registration should be coded as follows: 
+#'  Democrat = 1, Republican = 2, and Other = 0.
+#' @param surname.only A TRUE/FALSE object. If TRUE, race predictions will 
+#'  only use surname data and calculate Pr(Race | Surnname). Default is FALSE.
+#' @return Output will be an object of class \code{data.frame}. It will 
+#'  consist of the original user-input data with additional columns that 
+#'  contain predicted probabilities for each race in \code{races}.
+#'
+#' @examples
+#' race.pred(voters = ..., races = c("asian"), surname.only = TRUE)
+#' race.pred(voters = ..., races = c("white", "black", "latino") census = "tract", census.key = "", demo = TRUE,)
+#' race.pred(voters = ..., races = c("white", "black", "latino", "asian", "other"), name.clean = FALSE, census = "tract", census.key = "", party = TRUE)
+#'
+#' @export
 
 ## Race Prediction Function
-race.pred <- function(voters, vars, races, UScensus2010) {
+race.pred <- function(voters, races = c("white", "black", "latino", "asian", "other"), 
+                      name.clean = TRUE, surname.only = FALSE, 
+                      census = "", census.key = "", demo = FALSE, 
+                      party) {
   
-  ## Merge in Pr(Race | Surname) -- no surname cleaning yet
-  voters$surname <- toupper(voters$surname)
-  voters <- merge(voters, names, by = "surname", all.x = T)
-  voters$p_whi <- ifelse(is.na(voters$p_whi), .621, voters$p_whi)
-  voters$p_bla <- ifelse(is.na(voters$p_bla), .132, voters$p_bla)
-  voters$p_his <- ifelse(is.na(voters$p_his), .174, voters$p_his)
-  voters$p_asi <- ifelse(is.na(voters$p_asi), .054, voters$p_asi)
-  voters$p_oth <- ifelse(is.na(voters$p_oth), .019, voters$p_oth)
-  
-  ## Merge in Pr(Party | Race)
-  voters <- merge(voters, pid, by = "party", all.x = T) 
-    
-  if ("block" %in% vars) {
-    geo <- "blk"
-  }
-
-  if ("precinct" %in% vars) {
-    geo <- "prc"
-    if (UScensus2010 == TRUE) {
-      stop('Error: precinct-level data currently unavailable using UScensus2010.')
-    }
-  }
-
-  if ("tract" %in% vars) {
-    geo <- "trt"
-  }
-  
-  if (UScensus2010 == TRUE) {
-    source("Census.Helper.R")
-    warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
-    voters <- census.helper(voters = voters, states = "all", geo = geo)
-  }
+  vars.orig <- names(voters)
   
   ## Subset user-specified races (maximum of five)
   eth <- c("whi", "bla", "his", "asi", "oth")[c("white", "black", "latino", "asian", "other") %in% races]
   
-  voters.temp <- voters
+  if (census == "" & demo == TRUE) {
+    stop('Cannot set demo to TRUE without specifying census option.')
+  }
+
+  ## Merge in Pr(Race | Surname) if necessary
+  if (name.clean == TRUE) {
+    voters <- name.clean(voters)
+  }
+  
+  ## Surname-Only Predictions
+  if (surname.only == TRUE) {
+    for (k in 1:length(eth)) {
+      voters[paste("pred", eth[k], sep = ".")] <- voters[paste("p", eth[k], sep = "_")]
+    }
+    pred <- paste("pred", eth, sep = ".")
+    return(voters[c(names(voters), pred)])
+  }
+
+  ## Merge in Pr(Party | Race) if necessary
+  if (missing(party) == F) {
+    voters$PID <- voters[, party]
+    load("data/pid.RData")
+    voters <- merge(voters, pid, by = "PID", all.x = T)  
+  }
+  
+  if (census == "block") {
+    oldw <- getOption("warn")
+    options(warn = -1)
+    warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
+    voters <- census.helper.api(key = census.key, 
+                                     voters = voters, 
+                                     states = "All", 
+                                     geo = "block", 
+                                     demo = demo)
+    options(warn = oldw)
+  }
+
+  if (census == "precinct") {
+    geo <- "precinct"
+    stop('Error: census.helper function does not currently support merging precinct-level data.')
+  }
+
+  if (census == "tract") {
+    oldw <- getOption("warn")
+    options(warn = -1)
+    warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
+    voters <- census.helper.api(key = census.key, 
+                                     voters = voters, 
+                                     states = "All", 
+                                     geo = "tract", 
+                                     demo = demo)
+    options(warn = oldw)
+  }
   
   ## Pr(Race | Surname, Geolocation)
-  for (k in 1:length(eth)) {
-    voters.temp[paste("u1", eth[k], sep = "_")] <- voters.temp[paste("p", eth[k], sep = "_")] * voters.temp[paste("r", eth[k], sep = "_")]
+  if (missing(party)) {
+    for (k in 1:length(eth)) {
+      voters[paste("u", eth[k], sep = "_")] <- voters[paste("p", eth[k], sep = "_")] * voters[paste("r", eth[k], sep = "_")]
+    }
+    voters$u_tot <- apply(voters[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
+    for (k in 1:length(eth)) {
+      voters[paste("q", eth[k], sep = "_")] <- voters[paste("u", eth[k], sep = "_")] / voters$u_tot
+    }
   }
-  voters.temp$u1_tot <- apply(voters.temp[paste("u1", eth, sep = "_")], 1, sum, na.rm = T)
-  for (k in 1:length(eth)) {
-    voters.temp[paste("q1", eth[k], sep = "_")] <- voters.temp[paste("u1", eth[k], sep = "_")] / voters.temp$u1_tot
-  }    
   
   ## Pr(Race | Surname, Geolocation, Party)
-  for (k in 1:length(eth)) {
-    voters.temp[paste("u2", eth[k], sep = "_")] <- voters.temp[paste("p", eth[k], sep = "_")] * voters.temp[paste("r", eth[k], sep = "_")] * voters.temp[paste("r_pid", eth[k], sep = "_")]
-  }
-  voters.temp$u2_tot <- apply(voters.temp[paste("u2", eth, sep = "_")], 1, sum, na.rm = T)
-  for (k in 1:length(eth)) {
-    voters.temp[paste("q2", eth[k], sep = "_")] <- voters.temp[paste("u2", eth[k], sep = "_")] / voters.temp$u2_tot
-  }
-  
-  if ("party" %in% vars == F) {
+  if (missing(party) == F) {
     for (k in 1:length(eth)) {
-      voters[paste("pred", eth[k], sep = ".")] <- voters.temp[paste("q1", eth[k], sep = "_")]
+      voters[paste("u", eth[k], sep = "_")] <- voters[paste("p", eth[k], sep = "_")] * voters[paste("r", eth[k], sep = "_")] * voters[paste("r_pid", eth[k], sep = "_")]
     }
-    pred <- paste("pred", eth, sep = ".")
-  }
-  
-  if ("party" %in% vars == T) {
+    voters$u_tot <- apply(voters[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
     for (k in 1:length(eth)) {
-      voters[paste("pred", eth[k], sep = ".")] <- voters.temp[paste("q2", eth[k], sep = "_")]
+      voters[paste("q", eth[k], sep = "_")] <- voters[paste("u", eth[k], sep = "_")] / voters$u_tot
     }
-    pred <- paste("pred", eth, sep = ".")
   }
+
+  for (k in 1:length(eth)) {
+    voters[paste("pred", eth[k], sep = ".")] <- voters[paste("q", eth[k], sep = "_")]
+  }
+  pred <- paste("pred", eth, sep = ".")
   
-  return(voters)
+  return(voters[c(vars.orig, pred)])
 }
-
-df.out1 <- race.pred(voters = voters, 
-                     vars = c("surname", "tract"), 
-                     races = c("white", "black", "latino"), 
-                     UScensus2010 = TRUE)
-
-df.out2 <- race.pred(voters = voters, 
-                     vars = c("surname", "tract", "party"), 
-                     races = c("white", "black", "latino", "asian", "other"), 
-                     UScensus2010 = TRUE)
-
-df.out3 <- race.pred(voters = voters, 
-                     vars = c("surname", "block"), 
-                     races = c("white", "black", "latino", "asian", "other"), 
-                     UScensus2010 = TRUE)
-
-df.out4 <- race.pred(voters = voters, 
-                     vars = c("surname", "block", "party"), 
-                     races = c("white", "black", "latino", "asian", "other"), 
-                     UScensus2010 = TRUE)

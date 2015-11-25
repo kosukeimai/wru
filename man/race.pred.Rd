@@ -4,25 +4,50 @@
 \alias{race.pred}
 \title{Race prediction function.}
 \usage{
-race.pred(voters, vars, races, UScensus2010)
+race.pred(voters, races = c("white", "black", "latino", "asian", "other"),
+  name.clean = TRUE, surname.only = FALSE, census = "", census.key = "",
+  demo = FALSE, party)
 }
 \arguments{
-\item{voters}{An object of class \code{data.frame}. Must contain fields for 
-surname ('surname') and geolocation ('tract' or 'block'). 
-Optional fields include: party registration ('party'), 'age', and 'sex'.}
+\item{voters}{An object of class \code{data.frame}. Must contain a field for 
+surname ('surname'). Optional fields include Census tract ('tract'), Census 
+block ('block'), party registration ('party'), age ('age'), and sex ('sex').}
 
-\item{vars}{A character vector specifying variables on which to condition 
-race predictions. May include "surname", "tract" or "block", and "party".}
+\item{races}{A character vector specifying which racial groups to generate 
+predicted probabilities for. Can include any subset of the default vector, 
+which is c("white", "black", "latino", "asian", "other").}
 
-\item{races}{A character vector specifying which races to generate 
-predictions for.}
+\item{name.clean}{A TRUE/FALSE object. If TRUE, function will call
+\code{name.clean} to merge in data from U.S. Census 2000 Surname List 
+and Spanish Surname List. If FALSE, voters object must contain fields 
+specifying Pr(Race | Surname), named as follows: 'p_whi' for Whites, 
+'p_bla' for Blacks, 'p_his' for Hispanics/Latinos, 'p_asi' for Asians, 
+and/or 'p_oth' for Other. Default is TRUE.}
 
-\item{UScensus2010}{A TRUE/FALSE object. If TRUE, function will call
-\code{census.helper} to merge in U.S. Census 2010 data. If FALSE, 
-voters must contain fields specifying Pr(X | Race), where X is the 
-set of variables with which to update the prior Pr(Race | Surname). 
-These fields may include any of the following: 'r_whi', 'r_bla', 
-'r_his', 'r_asi', and/or 'r_oth'.}
+\item{surname.only}{A TRUE/FALSE object. If TRUE, race predictions will 
+only use surname data and calculate Pr(Race | Surnname). Default is FALSE.}
+
+\item{census}{An optional character vector specifying what level of 
+geography to use to merge in U.S. Census 2010 data. Currently only 
+"tract" and "block" are supported. If "tract" or "block" is specified, 
+function will call \code{census.helper.api} to merge in tract- or block-
+level data. If left unspecified, \code{voters} must contain fields 
+specifying Pr(Geolocation | Race), including any of the following: 
+'r_whi', 'r_bla', 'r_his', 'r_asi', and/or 'r_oth'.}
+
+\item{census.key}{A character object specifying user's Census API 
+key. Must be specified if \code{census} is specified, because the 
+\code{census.helper} function requires a Census API key to operate.}
+
+\item{demo}{An optional TRUE/FALSE object specifying whether to 
+condition race predictions on individual age and sex. 
+If TRUE, \code{voters} should include numerical variables 'age' and 'sex', 
+where 'sex' coded as follows: male = 0 and female = 1. Default is FALSE. 
+May only be set to TRUE when \code{census} is specified.}
+
+\item{party}{An optional character object specifying party registration field. 
+Party registration should be coded as follows: 
+Democrat = 1, Republican = 2, and Other = 0.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -38,9 +63,9 @@ Imai and Khanna (2015). The function estimates individual-level
 race/ethnicity, based on surname, geolocation, and party registration.
 }
 \examples{
-race.pred(voters = ..., vars = c("surname", "block"), races = c("asian"), UScensus2010 = FALSE)
-race.pred(voters = ..., vars = c("surname", "tract"), races = c("white", "black", "latino"), UScensus2010 = TRUE)
-race.pred(voters = ..., vars = c("surname", "tract", "party"), races = c("white", "black", "latino", "asian", "other"), UScensus2010 = TRUE)
+race.pred(voters = ..., races = c("asian"), surname.only = TRUE)
+race.pred(voters = ..., races = c("white", "black", "latino") census = "tract", census.key = "", demo = TRUE,)
+race.pred(voters = ..., races = c("white", "black", "latino", "asian", "other"), name.clean = FALSE, census = "tract", census.key = "", party = TRUE)
 
 }
 

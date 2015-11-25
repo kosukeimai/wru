@@ -32,8 +32,13 @@
 
 name.clean <- function(voters) {
 
+  if ("surname" %in% names(voters) == F) {
+    stop('Data does not contain surname field.')
+  }
   ## Load Census Surname Data
   load("data/names.all.RData")
+  names.all$surname <- as.character(names.all$surname)
+  
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
   
   ## Convert Surnames to Upper Case 
@@ -58,13 +63,13 @@ name.clean <- function(voters) {
   df3[df3$nomatch == 1, ]$surname2[grep(" ", df3[df3$nomatch == 1, ]$surname.upper)] <- sapply(strsplit(grep(" ", df3$surname.upper, value = T), " "), "[", 2)
 
   ## Use first half of name to merge in priors
-  df3[df3$nomatch == 1, ]$surname.match <- df3[df3$nomatch == 1 , ]$surname1
+  df3[df3$nomatch == 1, ]$surname.match <- as.character(df3[df3$nomatch == 1 , ]$surname1)
   df3[df3$nomatch == 1, ] <- merge(df3[df3$nomatch == 1, names(df3) %in% p_eth == F], names.all[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df3)]
   df3$nomatch <- 0
   df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
   
   ## Use second half of name to merge in priors for rest
-  df3[df3$nomatch == 1, ]$surname.match <- df3[df3$nomatch == 1 , ]$surname2
+  df3[df3$nomatch == 1, ]$surname.match <- as.character(df3[df3$nomatch == 1 , ]$surname2)
   df3[df3$nomatch == 1, ] <- merge(df3[df3$nomatch == 1, names(df3) %in% p_eth == F], names.all[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df3)]
   df3$nomatch <- 0
   df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
@@ -76,5 +81,5 @@ name.clean <- function(voters) {
   df3[df3$nomatch == 1, ]$p_asi <- .054 #.070
   df3[df3$nomatch == 1, ]$p_oth <- .019 #(neg)
   
-  return(df3[c(names(voters), "surname.match", "p_whi", "p_bla", "p_his", "p_asi", "p_oth")])
+  return(df3[c(names(voters), "surname.match", p_eth)])
 }
