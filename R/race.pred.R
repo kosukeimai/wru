@@ -3,8 +3,8 @@
 #' \code{race.pred} makes probabilistic estimates of individual-level race/ethnicity.
 #'
 #' This function implements the Bayesian race prediction methods outlined in 
-#' Imai and Khanna (2015). The function estimates individual-level 
-#' race/ethnicity, based on surname, geolocation, and party registration.
+#' Imai and Khanna (2015). The function produces probabilistics estimates of 
+#' individual-level race/ethnicity, based on surname, geolocation, and party.
 #'
 #' @param voters An object of class \code{data.frame}. Must contain a field for 
 #'  surname ('surname'). Optional fields include Census tract ('tract'), Census 
