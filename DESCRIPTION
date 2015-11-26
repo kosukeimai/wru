@@ -10,8 +10,6 @@ Depends:
     utils
 Imports:
 Suggests:
-VignetteBuilder: 
-Description: 
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
