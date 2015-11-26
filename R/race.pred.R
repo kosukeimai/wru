@@ -75,7 +75,7 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
       voters[paste("pred", eth[k], sep = ".")] <- voters[paste("p", eth[k], sep = "_")]
     }
     pred <- paste("pred", eth, sep = ".")
-    return(voters[c(names(voters), pred)])
+    return(voters[c(vars.orig, pred)])
   }
 
   ## Merge in Pr(Party | Race) if necessary
