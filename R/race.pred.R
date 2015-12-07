@@ -45,8 +45,10 @@
 #' @examples
 #' data(voters)
 #' race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
-#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino"), census = "tract", census.key = "...", demo = TRUE)}
-#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), census = "tract", census.key = "...", party = "PID")}
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino"), 
+#' census = "tract", census.key = "...", demo = TRUE)}
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' census = "tract", census.key = "...", party = "PID")}
 #' @export
 
 ## Race Prediction Function

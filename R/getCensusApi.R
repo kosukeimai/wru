@@ -20,7 +20,8 @@
 #'  If unsuccessful, function prints the URL query that caused the error.
 #'
 #' @examples
-#' \dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
+#' \dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+#' vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 #'
 #' @references
 #' Based on code authored by Nicholas Nagle, which is available at: 

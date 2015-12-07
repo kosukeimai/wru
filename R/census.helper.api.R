@@ -28,7 +28,8 @@
 #' @examples
 #' \dontshow{data(voters)}
 #' \dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
-#' \dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", demo = TRUE)}
+#' \dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", 
+#' demo = TRUE)}
 #'
 #' @references
 #' Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 

@@ -21,7 +21,8 @@
 #'  If unsuccessful, function prints the URL query that was constructed.
 #'
 #' @examples
-#' \dontrun{getCensusApi2(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", get = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
+#' \dontrun{getCensusApi2(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+#' get = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 #' 
 #' @references
 #' Based on code authored by Nicholas Nagle, which is available at: 
