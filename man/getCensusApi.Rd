@@ -34,7 +34,8 @@ This function obtains U.S. Census data via the public API. User
 can specify the variables and region(s) for which to obtain data.
 }
 \examples{
-\dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
+\dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 
 }
 \references{
