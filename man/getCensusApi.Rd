@@ -2,15 +2,43 @@
 % Please edit documentation in R/getCensusApi.R
 \name{getCensusApi}
 \alias{getCensusApi}
-\title{get Census data via the public API: loop through variables if needed}
+\title{Census API function.}
 \usage{
-getCensusApi(data_url, key, vars, region, numeric = TRUE)
+getCensusApi(data_url, key, vars, region)
+}
+\arguments{
+\item{data_url}{URL root of the API, including the '?', 
+e.g., "http://api.census.gov/data/2010/sf1?".}
+
+\item{key}{A required character object containing user's Census API key, 
+which can be requested at http://api.census.gov/data/key_signup.html.}
+
+\item{vars}{A character vector of variables to get, 
+e.g., c("P0050003","P0050004","P0050005", "P0050006").
+If there are more than 50 variables, then function will automatically 
+split variables into separate queries.}
+
+\item{region}{Character object specifying which region to obtain data for.
+Must contain "for" and possibly "in", 
+e.g., "for=block:1213&in=state:47+county:015+tract:*"}
+}
+\value{
+If successful, output will be an object of class \code{data.frame}. 
+ If unsuccessful, function prints the URL query that caused the error.
 }
 \description{
-get Census data via the public API: loop through variables if needed
+\code{getCensusApi} obtains U.S. Census data via the public API.
+}
+\details{
+This function obtains U.S. Census data via the public API. User 
+can specify the variables and region(s) for which to obtain data.
 }
 \examples{
-getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "", region = "")
+\dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 
+}
+\references{
+Based on code authored by Nicholas Nagle, which is available at: 
+http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html.
 }
 

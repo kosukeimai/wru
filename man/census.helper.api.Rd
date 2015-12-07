@@ -36,13 +36,14 @@ Output will be an object of class \code{data.frame}. It will
 }
 \details{
 This function allows users to link their geocoded dataset (e.g., voter file) 
-with U.S. Census 2010 data. The function extracts Census data at the tract 
-or block level using the 'UScensus2010' package. Census data calculated are 
-Pr(Geolocation | Race) where geolocation is tract or block.
+with U.S. Census 2010 data. The function extracts Census Summary File data 
+at the tract or block level using the 'UScensus2010' package. Census data 
+calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 }
 \examples{
-census.helper.api(key = "", voters = NJ.voter.file, states = "nj", geo = "block")
-census.helper.api(key = "", voters = voters.all, states = "all", geo = "tract", demo = TRUE)
+\dontshow{data(voters)}
+\dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
+\dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", demo = TRUE)}
 
 }
 \references{

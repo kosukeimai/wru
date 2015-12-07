@@ -37,7 +37,8 @@ This function allows users to match surnames in their dataset with the U.S.
  probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
 }
 \examples{
-name.clean(NJ.voter.file)
+data(voters)
+name.clean(voters)
 
 }
 

@@ -63,9 +63,9 @@ Imai and Khanna (2015). The function produces probabilistics estimates of
 individual-level race/ethnicity, based on surname, geolocation, and party.
 }
 \examples{
-race.pred(voters = ..., races = c("asian"), surname.only = TRUE)
-race.pred(voters = ..., races = c("white", "black", "latino") census = "tract", census.key = "", demo = TRUE,)
-race.pred(voters = ..., races = c("white", "black", "latino", "asian", "other"), name.clean = FALSE, census = "tract", census.key = "", party = TRUE)
-
+data(voters)
+race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
+\dontrun{race.pred(voters = voters, races = c("white", "black", "latino"), census = "tract", census.key = "...", demo = TRUE)}
+\dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), census = "tract", census.key = "...", party = "PID")}
 }
 
