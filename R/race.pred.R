@@ -43,17 +43,16 @@
 #'  contain predicted probabilities for each race in \code{races}.
 #'
 #' @examples
-#' race.pred(voters = ..., races = c("asian"), surname.only = TRUE)
-#' race.pred(voters = ..., races = c("white", "black", "latino") census = "tract", census.key = "", demo = TRUE,)
-#' race.pred(voters = ..., races = c("white", "black", "latino", "asian", "other"), name.clean = FALSE, census = "tract", census.key = "", party = TRUE)
-#'
+#' data(voters)
+#' race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino"), census = "tract", census.key = "...", demo = TRUE)}
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), census = "tract", census.key = "...", party = "PID")}
 #' @export
 
 ## Race Prediction Function
 race.pred <- function(voters, races = c("white", "black", "latino", "asian", "other"), 
                       name.clean = TRUE, surname.only = FALSE, 
-                      census = "", census.key = "", demo = FALSE, 
-                      party) {
+                      census = "", census.key = "", demo = FALSE, party) {
   
   vars.orig <- names(voters)
   
@@ -81,8 +80,8 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
   ## Merge in Pr(Party | Race) if necessary
   if (missing(party) == F) {
     voters$PID <- voters[, party]
-    load("data/pid.RData")
-    voters <- merge(voters, pid, by = "PID", all.x = T)  
+    data(pid, envir = environment())
+    voters <- merge(voters, get("pid")[names(get("pid")) %in% "party" == F], by = "PID", all.x = T)  
   }
   
   if (census == "block") {
@@ -90,10 +89,10 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     options(warn = -1)
     warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
     voters <- census.helper.api(key = census.key, 
-                                     voters = voters, 
-                                     states = "All", 
-                                     geo = "block", 
-                                     demo = demo)
+                                voters = voters, 
+                                states = "All", 
+                                geo = "block", 
+                                demo = demo)
     options(warn = oldw)
   }
 
@@ -108,7 +107,7 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
     voters <- census.helper.api(key = census.key, 
                                      voters = voters, 
-                                     states = "All", 
+                                     states = "all", 
                                      geo = "tract", 
                                      demo = demo)
     options(warn = oldw)

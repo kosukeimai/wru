@@ -26,7 +26,8 @@
 #'  'p_asi' for Asians, and 'p_oth' for Others).
 #'
 #' @examples
-#' name.clean(NJ.voter.file)
+#' data(voters)
+#' name.clean(voters)
 #'
 #' @export
 
@@ -36,7 +37,7 @@ name.clean <- function(voters) {
     stop('Data does not contain surname field.')
   }
   ## Load Census Surname Data
-  load("data/names.all.RData")
+  data(names.all, envir = environment())
   names.all$surname <- as.character(names.all$surname)
   
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")

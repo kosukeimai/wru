@@ -3,9 +3,9 @@
 #' \code{census.helper.api} links user-input dataset with Census data.
 #'
 #' This function allows users to link their geocoded dataset (e.g., voter file) 
-#' with U.S. Census 2010 data. The function extracts Census data at the tract 
-#' or block level using the 'UScensus2010' package. Census data calculated are 
-#' Pr(Geolocation | Race) where geolocation is tract or block.
+#' with U.S. Census 2010 data. The function extracts Census Summary File data 
+#' at the tract or block level using the 'UScensus2010' package. Census data 
+#' calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested at http://api.census.gov/data/key_signup.html.
@@ -26,8 +26,9 @@
 #'  Census data.
 #'
 #' @examples
-#' census.helper.api(key = "", voters = NJ.voter.file, states = "nj", geo = "block")
-#' census.helper.api(key = "", voters = voters.all, states = "all", geo = "tract", demo = TRUE)
+#' \dontshow{data(voters)}
+#' \dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
+#' \dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", demo = TRUE)}
 #'
 #' @references
 #' Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 
@@ -36,14 +37,15 @@
 #' @export
 census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = F) {
 
-  load("data/State.FIPS.RData")
-    
+  data(State.FIPS, envir = environment())
+
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
   }
 
-  if (states == "all") {
-    states <- toupper(unique(voters$state))
+  states <- toupper(states)
+  if (states == "ALL") {
+    states <- as.character(unique(voters$state))
   }
   
   df.out <- NULL
@@ -51,8 +53,9 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
   for (s in 1:length(states)) {
     
     print(paste("State ", s, " of ", length(states), ": ", states[s], sep = ""))
-    state.fips <- State.FIPS[State.FIPS$State == states[s], "FIPS"]
-    
+    fips.codes <- get("State.FIPS")
+    state.fips <- fips.codes[fips.codes$State == states[s], "FIPS"]
+
     if (demo == F) {
       num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
       vars <- paste("P00500", num, sep = "")
@@ -64,7 +67,7 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
       vars <- NULL
       for (e in 1:length(eth.let)) {
         vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
-        }
+      }
     }
     
     if (geo == "county") {
@@ -79,7 +82,7 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
       geo.merge <- c("state", "county", "tract")
       
       region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-      county_df <- getCensusApi("http://api.census.gov/data/2010/acs5?", key=key, vars="B01001_001E", region=region_county)
+      county_df <- getCensusApi("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county)
       county_list <- county_df$county
       
       census <- NULL
@@ -98,18 +101,20 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
       geo.merge <- c("state", "county", "tract", "block")
       
       region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-      county_df <- getCensusApi("http://api.census.gov/data/2010/acs5?", key=key, vars="B01001_001E", region=region_county)
+      county_df <- getCensusApi("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county)
       county_list <- county_df$county
-      
+
       census <- NULL
       
       for (c in 1:length(county_list)) {
         print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
         
         region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-        tract_df <- getCensusApi("http://api.census.gov/data/2010/acs5?", key=key, vars="B01001_001E", region=region_tract)
+        print(region_tract)
+        tract_df <- getCensusApi("http://api.census.gov/data/2010/sf1?", 
+                                 key = key, vars = vars, region = region_tract)
         tract_list <- tract_df$tract
-        
+
         for (t in 1:length(tract_list)) {
           print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
           
