@@ -13,10 +13,11 @@ named 'surname'.}
 \value{
 Output will be an object of class \code{data.frame}. It will 
  consist of the original user-input data with additional columns that 
- specify the part of the name matched with Census data ('surname.match'), 
+ specify the part of the name matched with Census data (\code{\var{surname.match}}), 
  and the probabilities Pr(Race | Surname) for each racial group 
- ('p_whi' for Whites, 'p_bla' for Blacks, 'p_his' for Hispanics/Latinos, 
- 'p_asi' for Asians, and 'p_oth' for Others).
+ (\code{\var{p_whi}} for Whites, \code{\var{p_bla}} for Blacks, 
+ \code{\var{p_his}} for Hispanics/Latinos, \code{\var{p_asi}} for Asians, and 
+ \code{\var{p_oth}} for Others).
 }
 \description{
 \code{name.clean} cleans surnames in user-input dataset and merges in racial 

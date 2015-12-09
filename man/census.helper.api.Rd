@@ -4,27 +4,29 @@
 \alias{census.helper.api}
 \title{Census helper function.}
 \usage{
-census.helper.api(key, voters, states = "all", geo = "tract", demo = F)
+census.helper.api(key, voters, states = "all", geo = "tract",
+  demo = FALSE)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
-key, which can be requested at http://api.census.gov/data/key_signup.html.}
+key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
 
-\item{voters}{An object of class \code{data.frame}. Must contain a field 
-named 'county', 'tract', and/or 'block' that specifies geolocation.}
+\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
+named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+that specifies geolocation.}
 
 \item{states}{A character vector specifying which states to extract 
-Census data for, e.g. c("NJ", "NY"). Default is "all", which extracts 
+Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
 Census data for all states contained in user-input data.}
 
 \item{geo}{A character object specifying what aggregation level to use. 
-Use "county", "tract", or "block". Default is "tract". 
-Warning: block takes very long.}
+Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
+Warning: extracting block-level data takes very long.}
 
-\item{demo}{A TRUE/FALSE object indicating whether to condition on 
-demographics (i.e., age and sex) or not. If TRUE, function will return 
-Pr(Geolocation, Age, Sex | Race). If FALSE, function wil return 
-Pr(Geolocation | Race). Default is FALSE.}
+\item{demo}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
+Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
+Pr(Geolocation | Race). Default is \code{FALSE}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -49,6 +51,6 @@ demo = TRUE)}
 }
 \references{
 Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 
-available at: http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html.
+available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
 
