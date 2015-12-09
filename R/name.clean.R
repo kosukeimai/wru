@@ -20,24 +20,22 @@
 #'  named 'surname'.
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns that 
-#'  specify the part of the name matched with Census data ('surname.match'), 
+#'  specify the part of the name matched with Census data (\code{\var{surname.match}}), 
 #'  and the probabilities Pr(Race | Surname) for each racial group 
-#'  ('p_whi' for Whites, 'p_bla' for Blacks, 'p_his' for Hispanics/Latinos, 
-#'  'p_asi' for Asians, and 'p_oth' for Others).
+#'  (\code{\var{p_whi}} for Whites, \code{\var{p_bla}} for Blacks, 
+#'  \code{\var{p_his}} for Hispanics/Latinos, \code{\var{p_asi}} for Asians, and 
+#'  \code{\var{p_oth}} for Others).
 #'
 #' @examples
 #' data(voters)
 #' name.clean(voters)
 #'
 #' @export
-
 name.clean <- function(voters) {
 
   if ("surname" %in% names(voters) == F) {
     stop('Data does not contain surname field.')
   }
-  ## Load Census Surname Data
-  data(names.all, envir = environment())
   names.all$surname <- as.character(names.all$surname)
   
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")

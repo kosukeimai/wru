@@ -8,19 +8,20 @@
 #' calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 #'
 #' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested at http://api.census.gov/data/key_signup.html.
-#' @param voters An object of class \code{data.frame}. Must contain a field 
-#'  named 'county', 'tract', and/or 'block' that specifies geolocation.
+#'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
+#' @param voters An object of class \code{data.frame}. Must contain field(s) 
+#'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+#'  that specifies geolocation.
 #' @param states A character vector specifying which states to extract 
-#'  Census data for, e.g. c("NJ", "NY"). Default is "all", which extracts 
+#'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
 #'  Census data for all states contained in user-input data.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use "county", "tract", or "block". Default is "tract". 
-#'  Warning: block takes very long.
-#' @param demo A TRUE/FALSE object indicating whether to condition on 
-#'  demographics (i.e., age and sex) or not. If TRUE, function will return 
-#'  Pr(Geolocation, Age, Sex | Race). If FALSE, function wil return 
-#'  Pr(Geolocation | Race). Default is FALSE.
+#'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
+#'  Warning: extracting block-level data takes very long.
+#' @param demo A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+#'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
+#'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
+#'  Pr(Geolocation | Race). Default is \code{FALSE}.
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
 #'  Census data.
@@ -33,12 +34,10 @@
 #'
 #' @references
 #' Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 
-#' available at: http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html.
+#' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = F) {
-
-  data(State.FIPS, envir = environment())
+census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = FALSE) {
 
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
