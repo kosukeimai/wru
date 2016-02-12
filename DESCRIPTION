@@ -7,7 +7,8 @@ Maintainer: Kabir Khanna <kkhanna@princeton.edu>
 Description: This open-source software package enables researchers to predict individual ethnicity using his/her surname, geolocation, and other attributes such as gender and age. The method utilizes the Bayes' rule to compute the posterior probability of each racial category for any given individual voter. The package implements methods described in Imai and Khanna (2015) "Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Records."
 Depends:
     R (>= 3.2.0),
-    utils
+    utils,
+    devtools
 Imports:
 Suggests:
 LazyLoad: yes
