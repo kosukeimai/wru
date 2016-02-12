@@ -53,7 +53,9 @@ name.clean <- function(voters) {
   
   ## Names with Hyphens or Spaces, e.g. Double-Barreled Names
   df3$nomatch <- 0
-  df3[df3$surname.upper %in% names.all$surname == F, ]$nomatch <- 1
+  if (nrow(df3[df3$surname.upper %in% names.all$surname == F, ]) > 0) {
+    df3[df3$surname.upper %in% names.all$surname == F, ]$nomatch <- 1
+  }
   df3$surname1 <- NA
   df3$surname2 <- NA
   df3[df3$nomatch == 1, ]$surname1[grep("-", df3[df3$nomatch == 1, ]$surname.upper)] <- sapply(strsplit(grep("-", df3$surname.upper, value = T), "-"), "[", 1)
@@ -65,20 +67,26 @@ name.clean <- function(voters) {
   df3[df3$nomatch == 1, ]$surname.match <- as.character(df3[df3$nomatch == 1 , ]$surname1)
   df3[df3$nomatch == 1, ] <- merge(df3[df3$nomatch == 1, names(df3) %in% p_eth == F], names.all[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df3)]
   df3$nomatch <- 0
-  df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
+  if (nrow(df3[df3$surname.match %in% names.all$surname == F, ]) > 0) {
+    df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
+  }
   
   ## Use second half of name to merge in priors for rest
   df3[df3$nomatch == 1, ]$surname.match <- as.character(df3[df3$nomatch == 1 , ]$surname2)
   df3[df3$nomatch == 1, ] <- merge(df3[df3$nomatch == 1, names(df3) %in% p_eth == F], names.all[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df3)]
   df3$nomatch <- 0
-  df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
+  if (nrow(df3[df3$surname.match %in% names.all$surname == F, ]) > 0) {
+    df3[df3$surname.match %in% names.all$surname == F, ]$nomatch <- 1
+  }
 
   ## Impute priors for names not on Census 2000 surname list or Spanish surname list
-  df3[df3$nomatch == 1, ]$p_whi <- .621 #.705
-  df3[df3$nomatch == 1, ]$p_bla <- .132 #.113
-  df3[df3$nomatch == 1, ]$p_his <- .174 #.111
-  df3[df3$nomatch == 1, ]$p_asi <- .054 #.070
-  df3[df3$nomatch == 1, ]$p_oth <- .019 #(neg)
+  if (nrow(df3[df3$nomatch == 1, ]) > 0) {
+    df3[df3$nomatch == 1, ]$p_whi <- .621 #.705
+    df3[df3$nomatch == 1, ]$p_bla <- .132 #.113
+    df3[df3$nomatch == 1, ]$p_his <- .174 #.111
+    df3[df3$nomatch == 1, ]$p_asi <- .054 #.070
+    df3[df3$nomatch == 1, ]$p_oth <- .019 #(neg)
+  }
   
   return(df3[c(names(voters), "surname.match", p_eth)])
 }
