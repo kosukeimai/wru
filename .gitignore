@@ -13,3 +13,6 @@ vignettes/*.html
 vignettes/*.pdf
 .Rproj.user
 
+# the local check files
+..Rcheck
+
