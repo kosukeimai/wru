@@ -17,9 +17,7 @@ Depends:
     utils,
     devtools
 Imports:
-    
 Suggests:
-    
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 2)
