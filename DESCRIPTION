@@ -20,5 +20,5 @@ Imports:
 Suggests:
 LazyLoad: yes
 LazyData: yes
-License: GPL (>= 2)
+License: GPL (>= 3)
 RoxygenNote: 5.0.1
