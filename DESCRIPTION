@@ -14,8 +14,7 @@ Description: This open-source software package enables researchers to predict
     Records."
 Depends:
     R (>= 3.2.0),
-    utils,
-    devtools
+    utils
 Imports:
     devtools (>= 1.10.0)
 Suggests:
