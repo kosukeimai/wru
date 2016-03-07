@@ -17,6 +17,7 @@ Depends:
     utils,
     devtools
 Imports:
+    devtools (>= 1.10.0)
 Suggests:
 LazyLoad: yes
 LazyData: yes
