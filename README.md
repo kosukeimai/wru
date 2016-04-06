@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru)
 # wru
 Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation
 
