@@ -1,15 +1,14 @@
-# wru [![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru)
-wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation
+# wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru)
 
-The R package implements the methods proposed in Imai, Kosuke and Kabir Khanna. (2016). ``Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.'' Political Analysis. doi: 10.1093/pan/mpw001 available at http://imai.princeton.edu/research/race.html
+The R package implements the methods proposed in Imai, Kosuke and Kabir Khanna. (2016). ``[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.](http://imai.princeton.edu/research/race.html)'' Political Analysis. doi: 10.1093/pan/mpw001 available at 
 
-## Using wru
+### Using wru
 
 To start using the package, get Census Data API Key from [http://api.census.gov/data/key_signup.html](http://api.census.gov/data/key_signup.html)
 
 Once you have the key, you can dive right in. The package downloads relevant data on demand.
 
-For instance, to get the race of someone with name last name Smith, write in: 
+For instance, to get the race of someone with name last name Smith, write in where `---' should be replaced with the Census Data API Key you obtained: 
 
 ```r
 race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", census.key "---", demo = TRUE, surname.only=TRUE)
