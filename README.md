@@ -13,7 +13,7 @@ For instance, to get the race of someone with name last name Smith, write in whe
 ```r
 race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", census.key "---", demo = TRUE, surname.only=TRUE)
 ```
-Which returns:
+which returns the predicted probabilities for each racial category:
 
 ```
 # surname pred.whi pred.bla pred.his
