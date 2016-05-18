@@ -26,6 +26,8 @@
 #'  \code{\var{p_his}} for Hispanics/Latinos, \code{\var{p_asi}} for Asians, and 
 #'  \code{\var{p_oth}} for Others).
 #'
+#' @import devtools
+#'
 #' @examples
 #' data(voters)
 #' name.clean(voters)
