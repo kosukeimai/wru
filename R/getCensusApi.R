@@ -38,6 +38,7 @@ getCensusApi <- function(data_url, key, vars, region) {
       get <- paste(vars, sep='', collapse=',')
       data <- list(getCensusApi2(data_url, key, get, region))
       }
+  
   ## Format output. If there were no errors, than paste the data together. If there is an error, just return the unformatted list.
   if(all(sapply(data, is.data.frame))){
     colnames <- unlist(lapply(data, names))
@@ -49,8 +50,9 @@ getCensusApi <- function(data_url, key, vars, region) {
     data <- data[,c(which(sapply(data, class)!='numeric'), which(sapply(data, class)=='numeric'))]
     return(data)
   }
+  
   else{
-    print('unable to create single data.frame in getCensusApi')
+    print('Unable to create single data.frame in getCensusApi')
     return(data)
     }
 }
