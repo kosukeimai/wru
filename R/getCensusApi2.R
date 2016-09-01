@@ -30,22 +30,18 @@
 #'
 #' @export
 getCensusApi2 <- function(data_url, key, get, region){
-  if(length(get)>1) {
-    get <- paste(get, collapse=',', sep='')
-  }
-  api_call <- paste(data_url, 'key=', key, '&get=', get, '&', region, sep='')
+  if(length(get)>1) get <- paste(get, collapse=',', sep='')
+  api_call <- paste(data_url, 
+                    'key=', key, 
+                    '&get=', get,
+                    '&', region,
+                    sep='')
+
   dat_raw <- try(readLines(api_call, warn="F"))
   if(class(dat_raw) == 'try-error') {
-    stop(print(api_call))
+    print(api_call)
     return
-  }
-  if (class(dat_raw) != 'try-error' & "TRUE" %in% names(table(grepl("Invalid Key", dat_raw)))) {
-    stop('Invalid Key: 
-         A valid key must be included with each data API request. 
-         You included a key with this request, however, it is not valid. 
-         Please check your key and try again.'
-         )
-  }
+    }
   dat_df <- data.frame()
 
   ## Split the datastream into a list with each row as an element.
