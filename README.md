@@ -11,7 +11,8 @@ Once you have the key, you can dive right in. The package downloads relevant dat
 For instance, to get the race of someone with name last name Smith, write in where `---' should be replaced with the Census Data API Key you obtained: 
 
 ```r
-race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", census.key "---", demo = TRUE, surname.only=TRUE)
+race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", 
+          census.key = "---", demo = TRUE, surname.only=TRUE)
 ```
 which returns the predicted probabilities for each racial category:
 
