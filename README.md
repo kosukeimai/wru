@@ -20,3 +20,5 @@ which returns the predicted probabilities for each racial category:
 # surname pred.whi pred.bla pred.his
 # 1   Smith   0.7335   0.2222   0.0156
 ```
+
+This package contains a sample data frame `voters`. Some function calls in the documentation reference this object.
