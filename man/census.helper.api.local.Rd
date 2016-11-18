@@ -12,6 +12,9 @@ census.helper.api.local(voters, states = "all", geo = "tract",
 named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 that specifies geolocation.}
 
+\item{states}{A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
+Default is \code{"NA"}.}
+
 \item{geo}{A character object specifying what aggregation level to use. 
 Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 Warning: extracting block-level data takes very long.}
@@ -23,12 +26,6 @@ Pr(Geolocation | Race). Default is \code{FALSE}.}
 
 \item{censusData}{A optional census object holding census data that is already 
 provided. If missing, function will retrive the census data online.}
-
-\item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
-
-\item{state}{A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
-Default is \code{"NA"}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 

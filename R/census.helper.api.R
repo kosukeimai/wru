@@ -233,12 +233,10 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #' at the tract or block level using the 'UScensus2010' package. Census data 
 #' calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 #'
-#' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
 #' @param voters An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  that specifies geolocation.
-#' @param state A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
+#' @param states A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
 #' Default is \code{"NA"}.
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 

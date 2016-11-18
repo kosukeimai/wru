@@ -10,6 +10,8 @@ censusData(key, state, geo = "tract", demo = FALSE)
 \item{key}{A required character object. Must contain user's Census API
 key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
 
+\item{state}{to extract Census data for, e.g. \code{"NJ"}.}
+
 \item{geo}{A character object specifying what aggregation level to use. 
 Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 Warning: extracting block-level data takes very long.}
@@ -18,9 +20,6 @@ Warning: extracting block-level data takes very long.}
 demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 Pr(Geolocation | Race). Default is \code{FALSE}.}
-
-\item{which}{states to extract 
-Census data for, e.g. \code{c("NJ", "NY")}.}
 }
 \value{
 Output will be an object of class \code{list}, indexed by state names. It will 

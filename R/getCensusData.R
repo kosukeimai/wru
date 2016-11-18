@@ -7,8 +7,7 @@
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
-#' @param which states to extract 
-#'  Census data for, e.g. \code{c("NJ", "NY")}.
+#' @param state to extract Census data for, e.g. \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 #'  Warning: extracting block-level data takes very long.
