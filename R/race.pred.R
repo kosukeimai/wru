@@ -55,6 +55,8 @@
 #' census = "tract", census.key = "...", demo = TRUE)}
 #' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
 #' census = "tract", census.key = "...", party = "PID")}
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' census = "tract", censusData = censusObjs, party = "PID")}
 #' @export
 
 ## Race Prediction Function
@@ -95,25 +97,30 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
-    if (is.na(censusData)) {
+
+#    
+#    if (is.na(censusData)) {
 #      voters <- census.helper.api.online(key = census.key, 
 #                                  voters = voters, 
-#                                  states = "All", 
+#                                  states = "all", 
 #                                  geo = "block", 
 #                                  demo = demo)
-      voters <- census.helper.api(key = census.key, 
-                                  voters = voters, 
-                                  states = ifelse(length(unique(voters$state)) > 1, 'All', unique(voters$state)[1]), 
-                                  geo = "block", 
-                                  demo = demo, 
-                                  censusData = censusData)
-    } else {
-        voters <- census.helper.api.local(voters = voters, 
-                                          state = unique(voters$state)[1], 
-                                          geo = "block", 
-                                          demo = demo, 
-                                          censusData = censusData)
-    }
+#    } else {
+#      voters <- census.helper.api.local(voters = voters, 
+#                                        state = unique(voters$state)[1], 
+#                                        geo = "block", 
+#                                        demo = demo, 
+#                                        censusData = censusData)
+#    }
+#
+    
+    voters <- census.helper.api(key = census.key, 
+                                voters = voters, 
+                                states = 'all', 
+                                geo = "block", 
+                                demo = demo, 
+                                censusData = censusData)
+
     options(warn = oldw)
   }
 
@@ -126,25 +133,30 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 data using UScensus2010 -- may take a long time!")
-    if (is.na(censusData)) {
+
+#   
+#    if (is.na(censusData)) {
 #      voters <- census.helper.api.online(key = census.key, 
 #                                  voters = voters, 
 #                                  states = "all", 
 #                                  geo = "tract", 
 #                                  demo = demo)
-      voters <- census.helper.api(key = census.key, 
-                                  voters = voters, 
-                                  states = ifelse(length(unique(voters$state)) > 1, 'All', unique(voters$state)[1]), 
-                                  geo = "tract", 
-                                  demo = demo, 
-                                  censusData = censusData)
-    } else {
-      voters <- census.helper.api.local(voters = voters, 
-                                        state = unique(voters$state)[1], 
-                                        geo = "tract", 
-                                        demo = demo, 
-                                        censusData = censusData)
-    }
+#    } else {
+#      voters <- census.helper.api.local(voters = voters, 
+#                                        state = unique(voters$state)[1], 
+#                                        geo = "tract", 
+#                                        demo = demo, 
+#                                        censusData = censusData)
+#    }
+#
+    
+    voters <- census.helper.api(key = census.key, 
+                                voters = voters, 
+                                states = 'all', 
+                                geo = "tract", 
+                                demo = demo, 
+                                censusData = censusData)
+      
     options(warn = oldw)
   }
   

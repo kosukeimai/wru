@@ -8,8 +8,7 @@
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
 #' @param which states to extract 
-#'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"ALL"}, which extracts 
-#'  Census data for all states contained in user-input data.
+#'  Census data for, e.g. \code{c("NJ", "NY")}.
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 #'  Warning: extracting block-level data takes very long.
@@ -17,14 +16,14 @@
 #'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 #'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 #'  Pr(Geolocation | Race). Default is \code{FALSE}.
-#' @return Output will be an object of class \code{data.frame}. It will 
+#' @return Output will be an object of class \code{list}, indexed by state names. It will 
 #'  consist of the original user-input data with additional columns of 
 #'  Census data.
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{censusData(key = "...", voters = voters, states = "nj", geo = "block")}
-#' \dontrun{censusData(key = "...", voters = voters, states = "all", geo = "tract", 
+#' \dontrun{censusData(key = "...", states = c("NJ", "DE"), geo = "block")}
+#' \dontrun{censusData(key = "...", states = "FL", geo = "tract", 
 #' demo = TRUE)}
 #'
 #' @references
@@ -32,11 +31,13 @@
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-censusData <- function(key, state = "FL", geo = "tract", demo = FALSE) {
+censusData <- function(key, state, geo = "tract", demo = FALSE) {
 
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
   }
+  
+  state <- toupper(state)
   
   df.out <- NULL
   
@@ -212,15 +213,14 @@ censusData <- function(key, state = "FL", geo = "tract", demo = FALSE) {
 }
 
 #' Title return
-#' #' Multilevel Census Data download function.
+#' Multilevel Census Data download function.
 #'
 #' \code{getStateCensusData} returns a Census data obj for a state.
 #' 
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
-#' @param state which states to extract 
-#'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"ALL"}, which extracts 
-#'  Census data for all states contained in user-input data.
+#' @param states which states to extract 
+#'  Census data for, e.g. \code{c("NJ", "NY")}.
 #' @param demo A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 #'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
@@ -232,15 +232,21 @@ censusData <- function(key, state = "FL", geo = "tract", demo = FALSE) {
 #' 
 #' @export
 #'
-#' @examples \dontrun{censusData(key = "...", states = "nj", demo = TRUE)}
-getStateCensusData <- function(key, state = "FL", demo = FALSE) {
+#' @examples \dontrun{censusData(key = "...", states = c("NJ", "DE"), demo = TRUE)}
+getStateCensusData <- function(key, states, demo = FALSE) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
   }
   
-  county = censusData(key, state, geo = "county", demo)
-  tract = censusData(key, state, geo = "tract", demo)
-  block = censusData(key, state, geo = "block", demo)
-  return(list(state = state, demo = demo, county = county, tract = tract, block = block))
+  states <- toupper(states)
+  
+  CensusObjs <- NULL
+  for (s in states) {
+      county = censusData(key, s, geo = "county", demo)
+      tract = censusData(key, s, geo = "tract", demo)
+      block = censusData(key, s, geo = "block", demo)
+      CensusObjs[[s]] <- list(state = s, demo = demo, county = county, tract = tract, block = block)
+  }
+  return(CensusObjs)
 }

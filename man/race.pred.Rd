@@ -6,7 +6,7 @@
 \usage{
 race.pred(voters, races = c("white", "black", "latino", "asian", "other"),
   name.clean = TRUE, surname.only = FALSE, census = "", census.key = "",
-  demo = FALSE, party)
+  demo = FALSE, party, censusData = NA)
 }
 \arguments{
 \item{voters}{An object of class \code{data.frame}. Must contain a field for 
@@ -53,6 +53,8 @@ May only be set to \code{TRUE} when \code{census} is specified.}
 \item{party}{An optional character object specifying party registration field. 
 Party registration should be coded as 1 for Democrat, 2 for Republican, and 
 0 for Other.}
+
+\item{censusData}{A census data object which contains state, demo, county, tract and block.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -74,5 +76,7 @@ race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
 census = "tract", census.key = "...", demo = TRUE)}
 \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
 census = "tract", census.key = "...", party = "PID")}
+\dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
+census = "tract", censusData = censusObjs, party = "PID")}
 }
 
