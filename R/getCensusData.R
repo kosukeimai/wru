@@ -214,7 +214,7 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
 #' Title return
 #' Multilevel Census Data download function.
 #'
-#' \code{getStateCensusData} returns a Census data obj for a state.
+#' \code{getCensusData} returns a Census data obj for a state.
 #' 
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
@@ -231,8 +231,8 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
 #' 
 #' @export
 #'
-#' @examples \dontrun{censusData(key = "...", states = c("NJ", "DE"), demo = TRUE)}
-getStateCensusData <- function(key, states, demo = FALSE) {
+#' @examples \dontrun{getCensusData(key = "...", states = c("NJ", "DE"), demo = TRUE)}
+getCensusData <- function(key, states, demo = FALSE) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')

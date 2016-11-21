@@ -5,7 +5,7 @@
 \title{Census helper function.}
 \usage{
 census.helper.api.local(voters, states = "all", geo = "tract",
-  demo = FALSE, censusData = NA)
+  demo = FALSE, census.data = NA)
 }
 \arguments{
 \item{voters}{An object of class \code{data.frame}. Must contain field(s) 
@@ -24,7 +24,7 @@ demographics (i.e., age and sex) or not. If \code{TRUE}, function will return
 Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 Pr(Geolocation | Race). Default is \code{FALSE}.}
 
-\item{censusData}{A optional census object holding census data that is already 
+\item{census.data}{A optional census object holding census data that is already 
 provided. If missing, function will retrive the census data online.}
 }
 \value{
@@ -43,8 +43,8 @@ calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 }
 \examples{
 \dontshow{data(voters)}
-\dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", censusData = x)}
-\dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, censusData = x)}
+\dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", census.data = x)}
+\dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
 
 }
 \references{

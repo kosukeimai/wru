@@ -245,7 +245,7 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 #'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 #'  Pr(Geolocation | Race). Default is \code{FALSE}.
-#' @param censusData A optional census object holding census data that is already 
+#' @param census.data A optional census object holding census data that is already 
 #' provided. If missing, function will retrive the census data online. 
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
@@ -253,17 +253,17 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", censusData = x)}
-#' \dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, censusData = x)}
+#' \dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", census.data = x)}
+#' \dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
 #'
 #' @references
 #' Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api.local <- function(voters, states = "all", geo = "tract", demo = FALSE, censusData = NA) {
+census.helper.api.local <- function(voters, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
   
-  if (is.na(censusData)) {
+  if (is.na(census.data)) {
     stop('Without pre-downloaded census data, please use census.helper.api to access http://api.census.gov/data/key_signup.html.')
   } 
   
@@ -278,25 +278,25 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
     
     state <- states[s]
     
-    if ((is.null(censusData[[state]])) || (censusData[[state]]$demo != demo)) {
-      lstate <- paste(names(censusData), collapse=";")
+    if ((is.null(census.data[[state]])) || (census.data[[state]]$demo != demo)) {
+      lstate <- paste(names(census.data), collapse=";")
       print(paste("The census object includes", lstate, ". But the state here is", state))
       stop('Mismatch census data, please provide matching census data or use census.helper.api to access http://api.census.gov/data/key_signup.html.')
     }
     
     if (geo == "county") {
       geo.merge <- c("state", "county")
-      census <- censusData[[state]]$county
+      census <- census.data[[state]]$county
     }
     
     if (geo == "tract") {
       geo.merge <- c("state", "county", "tract")
-      census <- censusData[[state]]$tract
+      census <- census.data[[state]]$tract
     }
     
     if (geo == "block") {
       geo.merge <- c("state", "county", "tract", "block")
-      census <- censusData[[state]]$block
+      census <- census.data[[state]]$block
     }
     
     if (demo == F) {
@@ -417,7 +417,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 #'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 #'  Pr(Geolocation | Race). Default is \code{FALSE}.
-#' @param censusData A optional census object holding census data that is already 
+#' @param census.data A optional census object holding census data that is already 
 #' provided. If missing, function will retrive the census data online. 
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
@@ -434,9 +434,9 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = FALSE, censusData = NA) {
+census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
   
-  if (is.na(censusData) || (typeof(censusData) != "list")) {
+  if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
   } else {
     toDownload = FALSE
@@ -461,28 +461,28 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
     
     if (geo == "county") {
       geo.merge <- c("state", "county")
-      if ((toDownload) || (is.null(censusData[[state]])) || (censusData[[state]]$demo != demo)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$demo != demo)) {
         census <- censusData(key, state, geo = "county", demo)
       } else {
-        census <- censusData[[state]]$county
+        census <- census.data[[state]]$county
       }
     }
     
     if (geo == "tract") {
       geo.merge <- c("state", "county", "tract")
-      if ((toDownload) || (is.null(censusData[[state]])) || (censusData[[state]]$demo != demo)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$demo != demo)) {
         census <- censusData(key, state, geo = "tract", demo)
       } else {
-        census <- censusData[[state]]$tract
+        census <- census.data[[state]]$tract
       }
     }
     
     if (geo == "block") {
       geo.merge <- c("state", "county", "tract", "block")
-      if ((toDownload) || (is.null(censusData[[state]])) || (censusData[[state]]$demo != demo)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$demo != demo)) {
         census <- censusData(key, state, geo = "block", demo)
       } else {
-        census <- censusData[[state]]$block
+        census <- census.data[[state]]$block
       }
     }
     
