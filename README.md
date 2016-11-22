@@ -13,9 +13,22 @@ For instance, to get the race of someone with name last name Smith, write in whe
 ```r
 race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", census.key "---", demo = TRUE, surname.only=TRUE)
 ```
+
 which returns the predicted probabilities for each racial category:
 
 ```
 # surname pred.whi pred.bla pred.his
 # 1   Smith   0.7335   0.2222   0.0156
 ```
+
+It is also possible to pre-download and save the census data for the intended states. For example, suppose the voters data involves people in DE, FL, NJ:
+```r
+censusObj <- getCensusData("...", state = c("FL", "NJ", "DE"), demo = TRUE)         
+# where ... is the census key to access the census website
+race.pred(voters = data.frame(surname="Smith"), races = c("white", "black", "latino"), census = "tract", demo = TRUE, surname.only=TRUE, census.data = censusObj)
+```
+
+This is useful for the following reasons:
+(1) the machine runs race.pred may not have internet access. 
+(2) No redundent download of the census data for each state. 
+(3) Timely snapshots of the census data that match the voter data.
