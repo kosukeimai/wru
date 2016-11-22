@@ -5,18 +5,11 @@
 #' This function implements the Bayesian race prediction methods outlined in 
 #' Imai and Khanna (2015). The function produces probabilistics estimates of 
 #' individual-level race/ethnicity, based on surname, geolocation, and party.
-#'
-#' @param voters An object of class \code{data.frame}. Must contain a field for 
-#'  surname (\code{surname}). Optional fields include Census county (\code{county}), 
-#'  tract (\code{tract}), block (\code{block}), party registration (\code{party}), 
-#'  age (\code{age}), and sex (\code{sex}).
-#'  
 #' @param voters An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
 #'  tract should be six characters, and block should be four characters.
-
 #' @param races A character vector specifying which racial groups to generate 
 #'  predicted probabilities for. Can include any subset of the default vector, 
 #'  which is \code{c("white", "black", "latino", "asian", "other")}.
@@ -48,6 +41,7 @@
 #' @param party An optional character object specifying party registration field. 
 #'  Party registration should be coded as 1 for Democrat, 2 for Republican, and 
 #'  0 for Other.
+#' @param census.data A census data object, s list indexed by state names, which contains census data on demo, county, tract and block.
 #' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will 
 #'  only use surname data and calculate Pr(Race | Surnname). Default is \code{FALSE}
 #' @return Output will be an object of class \code{data.frame}. It will 
@@ -61,12 +55,14 @@
 #' census = "tract", census.key = "...", demo = TRUE)}
 #' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
 #' census = "tract", census.key = "...", party = "PID")}
+#' \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' census = "tract", census.data = censusObjs, party = "PID")}
 #' @export
 
 ## Race Prediction Function
 race.pred <- function(voters, races = c("white", "black", "latino", "asian", "other"), 
                       name.clean = TRUE, surname.only = FALSE, 
-                      census = "", census.key = "", demo = FALSE, party) {
+                      census = "", census.key = "", demo = FALSE, party, census.data = NA) {
   
   vars.orig <- names(voters)
   
@@ -101,11 +97,29 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 block-level data -- may take a long time!")
+
+    #    
+    #    if (is.na(census.data)) {
+    #      voters <- census.helper.api.online(key = census.key, 
+    #                                  voters = voters, 
+    #                                  states = "all", 
+    #                                  geo = "block", 
+    #                                  demo = demo)
+    #    } else {
+    #      voters <- census.helper.api.local(voters = voters, 
+    #                                        state = unique(voters$state)[1], 
+    #                                        geo = "block", 
+    #                                        demo = demo, 
+    #                                        census.data = census.data)
+    #    }
+    #
+    
     voters <- census.helper.api(key = census.key, 
                                 voters = voters, 
-                                states = "All", 
+                                states = "all", 
                                 geo = "block", 
-                                demo = demo)
+                                demo = demo,
+                                census.data = census.data)
     options(warn = oldw)
   }
 
@@ -118,11 +132,29 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 tract-level data -- may take a long time!")
+    
+    #   
+    #    if (is.na(census.data)) {
+    #      voters <- census.helper.api.online(key = census.key, 
+    #                                  voters = voters, 
+    #                                  states = "all", 
+    #                                  geo = "tract", 
+    #                                  demo = demo)
+    #    } else {
+    #      voters <- census.helper.api.local(voters = voters, 
+    #                                        state = unique(voters$state)[1], 
+    #                                        geo = "tract", 
+    #                                        demo = demo, 
+    #                                        census.data = census.data)
+    #    }
+    #
+    
     voters <- census.helper.api(key = census.key, 
                                      voters = voters, 
                                      states = "all", 
                                      geo = "tract", 
-                                     demo = demo)
+                                     demo = demo, 
+                                     census.data = census.data)
     options(warn = oldw)
   }
   
@@ -130,11 +162,29 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 county-level data -- may take a long time!")
+    
+    #   
+    #    if (is.na(census.data)) {
+    #      voters <- census.helper.api.online(key = census.key, 
+    #                                  voters = voters, 
+    #                                  states = "all", 
+    #                                  geo = "county", 
+    #                                  demo = demo)
+    #    } else {
+    #      voters <- census.helper.api.local(voters = voters, 
+    #                                        state = unique(voters$state)[1], 
+    #                                        geo = "county", 
+    #                                        demo = demo, 
+    #                                        census.data = census.data)
+    #    }
+    #
+    
     voters <- census.helper.api(key = census.key, 
                                      voters = voters, 
                                      states = "all", 
                                      geo = "county", 
-                                     demo = demo)
+                                     demo = demo, 
+                                     census.data = census.data)
     options(warn = oldw)
   }
   

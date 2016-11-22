@@ -6,13 +6,14 @@
 \usage{
 race.pred(voters, races = c("white", "black", "latino", "asian", "other"),
   name.clean = TRUE, surname.only = FALSE, census = "", census.key = "",
-  demo = FALSE, party)
+  demo = FALSE, party, census.data = NA)
 }
 \arguments{
-\item{voters}{An object of class \code{data.frame}. Must contain a field for 
-surname (\code{surname}). Optional fields include Census tract (\code{tract}), 
-Census block (\code{block}), party registration (\code{party}), 
-age (\code{age}), and sex (\code{sex}).}
+\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
+named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+specifying geolocation. These should be character variables that match up with 
+U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
+tract should be six characters, and block should be four characters.}
 
 \item{races}{A character vector specifying which racial groups to generate 
 predicted probabilities for. Can include any subset of the default vector, 
@@ -31,10 +32,10 @@ only use surname data and calculate Pr(Race | Surnname). Default is \code{FALSE}
 
 \item{census}{An optional character vector specifying what level of 
 geography to use to merge in U.S. Census 2010 data. Currently only 
-\code{tract} and \code{"block"} are supported. 
-If \code{"tract"} or \code{"block"} is specified, 
-function will call \code{census.helper.api} to merge in tract- or block-
-level data. If left unspecified, \code{voters} must contain fields 
+\code{county}, \code{tract}, and \code{"block"} are supported. 
+If \code{tract}, \code{"tract"}, or \code{"block"} is specified, 
+function will call \code{census.helper.api} to merge in Census data. 
+If left unspecified, \code{voters} must contain fields 
 specifying Pr(Geolocation | Race), including any of the following: 
 \code{\var{r_whi}}, \code{\var{r_bla}}, \code{\var{r_his}}, 
 \code{\var{r_asi}}, and/or \code{\var{r_oth}}.}
@@ -53,6 +54,8 @@ May only be set to \code{TRUE} when \code{census} is specified.}
 \item{party}{An optional character object specifying party registration field. 
 Party registration should be coded as 1 for Democrat, 2 for Republican, and 
 0 for Other.}
+
+\item{census.data}{A census data object, s list indexed by state names, which contains census data on demo, county, tract and block.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -74,5 +77,7 @@ race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
 census = "tract", census.key = "...", demo = TRUE)}
 \dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
 census = "tract", census.key = "...", party = "PID")}
+\dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
+census = "tract", census.data = censusObjs, party = "PID")}
 }
 
