@@ -10,7 +10,9 @@ census.helper.api.local(voters, states = "all", geo = "tract",
 \arguments{
 \item{voters}{An object of class \code{data.frame}. Must contain field(s) 
 named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
-that specifies geolocation.}
+specifying geolocation. These should be character variables that match up with 
+U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
+tract should be six characters, and block should be four characters.}
 
 \item{states}{A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
 Default is \code{"NA"}.}

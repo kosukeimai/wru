@@ -235,7 +235,9 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #'
 #' @param voters An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
-#'  that specifies geolocation.
+#'  specifying geolocation. These should be character variables that match up with 
+#'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
+#'  tract should be six characters, and block should be four characters.
 #' @param states A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
 #' Default is \code{"NA"}.
 #' @param geo A character object specifying what aggregation level to use. 
@@ -406,7 +408,9 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
 #' @param voters An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
-#'  that specifies geolocation.
+#'  specifying geolocation. These should be character variables that match up with 
+#'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
+#'  tract should be six characters, and block should be four characters.
 #' @param states A character vector specifying which states to extract 
 #'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
 #'  Census data for all states contained in user-input data.

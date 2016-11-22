@@ -9,10 +9,11 @@ race.pred(voters, races = c("white", "black", "latino", "asian", "other"),
   demo = FALSE, party, census.data = NA)
 }
 \arguments{
-\item{voters}{An object of class \code{data.frame}. Must contain a field for 
-surname (\code{surname}). Optional fields include Census county (\code{county}), 
-tract (\code{tract}), block (\code{block}), party registration (\code{party}), 
-age (\code{age}), and sex (\code{sex}).}
+\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
+named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+specifying geolocation. These should be character variables that match up with 
+U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
+tract should be six characters, and block should be four characters.}
 
 \item{races}{A character vector specifying which racial groups to generate 
 predicted probabilities for. Can include any subset of the default vector, 
@@ -55,12 +56,6 @@ Party registration should be coded as 1 for Democrat, 2 for Republican, and
 0 for Other.}
 
 \item{census.data}{A census data object, s list indexed by state names, which contains census data on demo, county, tract and block.}
-
-\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
-named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
-specifying geolocation. These should be character variables that match up with 
-U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
-tract should be six characters, and block should be four characters.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 

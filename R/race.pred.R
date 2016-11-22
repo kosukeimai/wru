@@ -5,18 +5,11 @@
 #' This function implements the Bayesian race prediction methods outlined in 
 #' Imai and Khanna (2015). The function produces probabilistics estimates of 
 #' individual-level race/ethnicity, based on surname, geolocation, and party.
-#'
-#' @param voters An object of class \code{data.frame}. Must contain a field for 
-#'  surname (\code{surname}). Optional fields include Census county (\code{county}), 
-#'  tract (\code{tract}), block (\code{block}), party registration (\code{party}), 
-#'  age (\code{age}), and sex (\code{sex}).
-#'  
 #' @param voters An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
 #'  tract should be six characters, and block should be four characters.
-
 #' @param races A character vector specifying which racial groups to generate 
 #'  predicted probabilities for. Can include any subset of the default vector, 
 #'  which is \code{c("white", "black", "latino", "asian", "other")}.
