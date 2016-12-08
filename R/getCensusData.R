@@ -129,7 +129,7 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       # drop <- grep("P005", names(census))
-      # voters.census <- merge(voters[voters$state == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
+      # voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
     
@@ -166,7 +166,7 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
       }
       
       # drop <- grep("P012", names(census))
-      # voters.census <- merge(voters[voters$state == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
+      # voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
       ## Add Census Age Categories
       # voters.census$agecat <- NA

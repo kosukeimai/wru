@@ -107,7 +107,7 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     #                                  demo = demo)
     #    } else {
     #      voters <- census.helper.api.local(voters = voters, 
-    #                                        state = unique(voters$state)[1], 
+    #                                        state = toupper(unique(voters$state)[1]), 
     #                                        geo = "block", 
     #                                        demo = demo, 
     #                                        census.data = census.data)
@@ -142,7 +142,7 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     #                                  demo = demo)
     #    } else {
     #      voters <- census.helper.api.local(voters = voters, 
-    #                                        state = unique(voters$state)[1], 
+    #                                        state = toupper(unique(voters$state)[1]), 
     #                                        geo = "tract", 
     #                                        demo = demo, 
     #                                        census.data = census.data)
@@ -172,7 +172,7 @@ race.pred <- function(voters, races = c("white", "black", "latino", "asian", "ot
     #                                  demo = demo)
     #    } else {
     #      voters <- census.helper.api.local(voters = voters, 
-    #                                        state = unique(voters$state)[1], 
+    #                                        state = toupper(unique(voters$state)[1]), 
     #                                        geo = "county", 
     #                                        demo = demo, 
     #                                        census.data = census.data)
