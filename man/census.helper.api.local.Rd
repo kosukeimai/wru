@@ -46,7 +46,8 @@ calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 \examples{
 \dontshow{data(voters)}
 \dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", census.data = x)}
-\dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
+\dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, 
+census.data = x)}
 
 }
 \references{
