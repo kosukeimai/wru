@@ -128,9 +128,6 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
       census$r_asi <- (census$P0050006 + census$P0050007) / (sum(census$P0050006) + sum(census$P0050007)) #Pr(Tract | Asian or NH/PI)
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
-      # drop <- grep("P005", names(census))
-      # voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
-      
     }
     
     if (demo == T) {
@@ -165,49 +162,10 @@ censusData <- function(key, state, geo = "tract", demo = FALSE) {
         }
       }
       
-      # drop <- grep("P012", names(census))
-      # voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
-      
-      ## Add Census Age Categories
-      # voters.census$agecat <- NA
-      # voters.census$agecat <- ifelse(voters.census$age >= 18 & voters.census$age <= 19, 5, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age == 20, 6, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age == 21, 7, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 22 & voters.census$age <= 24, 8, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 25 & voters.census$age <= 29, 9, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 30 & voters.census$age <= 34, 10, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 35 & voters.census$age <= 39, 11, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 40 & voters.census$age <= 44, 12, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 45 & voters.census$age <= 49, 13, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 50 & voters.census$age <= 54, 14, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 55 & voters.census$age <= 59, 15, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 60 & voters.census$age <= 61, 16, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 62 & voters.census$age <= 64, 17, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 65 & voters.census$age <= 66, 18, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 67 & voters.census$age <= 69, 19, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 70 & voters.census$age <= 74, 20, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 75 & voters.census$age <= 79, 21, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 80 & voters.census$age <= 84, 22, voters.census$agecat)
-      # voters.census$agecat <- ifelse(voters.census$age >= 85, 23, voters.census$agecat)
-
-      # for (i in 1:length(eth.cen)) {
-      #   for (j in 5:23) {
-      #     voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
-      #                  paste("r", eth.cen[i], sep = "_")] <- voters.census[paste("r_mal", j, eth.cen[i], sep = "_")]
-      #     voters.census[voters.census$sex == 1 & voters.census$agecat == j, 
-      #                 paste("r", eth.cen[i], sep = "_")] <- voters.census[paste("r_fem", j, eth.cen[i], sep = "_")]
-      #   }
-      # }
-      
-      # drop <- c(grep("_mal_", names(voters.census)), grep("_fem_", names(voters.census)))
-      #  voters.census <- voters.census[, -drop]
     }
-  
-  # df.out <- as.data.frame(rbind(df.out, voters.census[names(voters.census) != "agecat"]))
   
   }
   
-  # return(df.out)
   return(census)
 }
 
