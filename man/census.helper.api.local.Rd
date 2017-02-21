@@ -4,11 +4,11 @@
 \alias{census.helper.api.local}
 \title{Census helper function.}
 \usage{
-census.helper.api.local(voters, states = "all", geo = "tract",
+census.helper.api.local(voter.file, states = "all", geo = "tract",
   demo = FALSE, census.data = NA)
 }
 \arguments{
-\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
+\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) 
 named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 specifying geolocation. These should be character variables that match up with 
 U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
@@ -45,9 +45,8 @@ calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 }
 \examples{
 \dontshow{data(voters)}
-\dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", census.data = x)}
-\dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, 
-census.data = x)}
+\dontrun{census.helper.api.local(voter.file = voters, states = "nj", geo = "block", census.data = x)}
+\dontrun{census.helper.api.local(voter.file = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
 
 }
 \references{

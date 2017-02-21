@@ -4,16 +4,16 @@
 \alias{race.pred}
 \title{Race prediction function.}
 \usage{
-race.pred(voters, races = c("white", "black", "latino", "asian", "other"),
-  name.clean = TRUE, surname.only = FALSE, census = "", census.key = "",
-  demo = FALSE, party, census.data = NA)
+race.pred(voter.file, races = c("white", "black", "latino", "asian", "other"),
+  census.surname = TRUE, census.year = 2010, surname.only = FALSE,
+  census.geo, census.key, demo = FALSE, census.data = NA, party)
 }
 \arguments{
-\item{voters}{An object of class \code{data.frame}. Must contain a row for each individual being 
+\item{voter.file}{An object of class \code{data.frame}. Must contain a row for each individual being 
 predicted, as well as a field named \code{\var{surname}} containing each individual's surname.
-If using geolocation in predictions, \code{\var{voters}} must contain a field named \code{\var{state}}, 
+If using geolocation in predictions, \code{\var{voter.file}} must contain a field named \code{\var{state}}, 
 which contains the two-character abbreviation for each individual's state of residence (e.g., "nj" for New Jersey). 
-If using geolocation, \code{\var{voters}} must also contain at least one of the following fields: 
+If using geolocation, \code{\var{voter.file}} must also contain at least one of the following fields: 
 \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}}. 
 These fields should contain character strings matching U.S. Census categories. 
 County is three characters (e.g., "031" not "31"), tract is six characters, and block is four characters. 
@@ -23,22 +23,31 @@ See below for other optional fields.}
 predicted probabilities for. Can include any subset of the default vector, 
 which is \code{c("white", "black", "latino", "asian", "other")}.}
 
-\item{name.clean}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, function will call
-\code{name.clean} to merge in data from U.S. Census 2000 Surname List 
-and Spanish Surname List. If \code{FALSE}, voters object must contain additional fields 
-specifying Pr(Race | Surname), named as follows: 
-\code{\var{p_whi}} for Whites, \code{\var{p_bla}} for Blacks, 
-\code{\var{p_his}} for Hispanics/Latinos, \code{\var{p_asi}} for Asians, 
-and/or \code{\var{p_oth}} for Other. Default is \code{TRUE}.}
+\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
+function will call \code{census.surname} to merge in Pr(Race | Surname) 
+from U.S. Census Surname List (2000 or 2010) and Spanish Surname List. 
+If \code{FALSE}, \code{voter.file} object must contain additional fields specifying 
+Pr(Race | Surname), named as follows: \code{\var{p_whi}} for Whites, 
+\code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
+\code{\var{p_asi}} for Asians, and/or \code{\var{p_oth}} for Other. 
+Default is \code{TRUE}.}
+
+\item{census.year}{A number to specify the year of the census surname statistics. 
+These surname statistics is stored in the data, and will be automatically loaded.
+The default value is \code{2010}, which means the surname statistics from the 
+2010 census will be used. At this moment, the other available choice is \code{2000}.}
 
 \item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will 
 only use surname data and calculate Pr(Race | Surnname). Default is \code{FALSE}.}
 
-\item{census}{An optional character vector specifying what level of 
+\item{census.geo}{An optional character vector specifying what level of 
 geography to use to merge in U.S. Census 2010 data. Can be one of 
 \code{"county"}, \code{"tract"}, or \code{"block"}. 
+Note: sufficient information must be in the input data, voter.file. 
+For example when census.geo is \code{tract}, voter.file must have columns 
+named \code{county} and \code{tract}.
 Function calls \code{census.helper.api} to merge in Census data at specified level. 
-If left unspecified, \code{voters} must contain additional fields 
+If left unspecified, \code{voter.file} must contain additional fields 
 specifying Pr(Geolocation | Race), including any of the following: 
 \code{\var{r_whi}}, \code{\var{r_bla}}, \code{\var{r_his}}, 
 \code{\var{r_asi}}, and/or \code{\var{r_oth}}.}
@@ -51,18 +60,18 @@ key. Required if \code{census} is specified, because
 condition race predictions on individual age and sex (in addition to geolocation). 
 Default is \code{FALSE}. 
 May only be set to \code{TRUE} if \code{census} option is specified. 
-If \code{TRUE}, \code{voters} should include numerical variables 
+If \code{TRUE}, \code{voter.file} should include numerical variables 
 \code{\var{age}} and \code{\var{sex}}, where \code{\var{sex}} coded as 0 for 
 males and 1 for females.}
 
-\item{party}{An optional character object specifying party registration field in \code{\var{voters}}, 
-e.g., \code{\var{party} = "PartyReg"}. If specified, race/ethnicity predictions will be conditioned 
-on individual's party registration (in addition to geolocation). 
-Whatever the name of the party registration field in \code{\var{voters}}, 
-it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
-
 \item{census.data}{A census data object, a list indexed by state names, 
 which contains census data on demo, county, tract and block.}
+
+\item{party}{An optional character object specifying party registration field in \code{\var{voter.file}}, 
+e.g., \code{\var{party} = "PartyReg"}. If specified, race/ethnicity predictions will be conditioned 
+on individual's party registration (in addition to geolocation). 
+Whatever the name of the party registration field in \code{\var{voter.file}}, 
+it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -76,15 +85,5 @@ Output will be an object of class \code{data.frame}. It will
 This function implements the Bayesian race prediction methods outlined in 
 Imai and Khanna (2015). The function produces probabilistic estimates of 
 individual-level race/ethnicity, based on surname, geolocation, and party.
-}
-\examples{
-data(voters)
-race.pred(voters = voters, races = c("asian"), surname.only = TRUE)
-\dontrun{race.pred(voters = voters, races = c("white", "black", "latino"), 
-census = "tract", census.key = "...", demo = TRUE)}
-\dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
-census = "tract", census.key = "...", party = "PID")}
-\dontrun{race.pred(voters = voters, races = c("white", "black", "latino", "asian", "other"), 
-census = "tract", census.data = censusObjs, party = "PID")}
 }
 

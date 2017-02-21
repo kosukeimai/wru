@@ -4,14 +4,14 @@
 \alias{census.helper.api}
 \title{Census helper function.}
 \usage{
-census.helper.api(key, voters, states = "all", geo = "tract",
+census.helper.api(key, voter.file, states = "all", geo = "tract",
   demo = FALSE, census.data = NA)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
 key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
 
-\item{voters}{An object of class \code{data.frame}. Must contain field(s) 
+\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) 
 named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 specifying geolocation. These should be character variables that match up with 
 U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
@@ -49,8 +49,8 @@ calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 }
 \examples{
 \dontshow{data(voters)}
-\dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
-\dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", 
+\dontrun{census.helper.api(key = "...", voter.file = voters, states = "nj", geo = "block")}
+\dontrun{census.helper.api(key = "...", voter.file = voters, states = "all", geo = "tract", 
 demo = TRUE)}
 
 }

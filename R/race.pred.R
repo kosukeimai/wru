@@ -25,9 +25,16 @@
 #'  \code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
 #'  \code{\var{p_asi}} for Asians, and/or \code{\var{p_oth}} for Other. 
 #'  Default is \code{TRUE}.
+#' @param census.year A number to specify the year of the census surname statistics. 
+#' These surname statistics is stored in the data, and will be automatically loaded.
+#' The default value is \code{2010}, which means the surname statistics from the 
+#' 2010 census will be used. At this moment, the other available choice is \code{2000}.
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 data. Can be one of 
 #' \code{"county"}, \code{"tract"}, or \code{"block"}. 
+#' Note: sufficient information must be in the input data, voter.file. 
+#' For example when census.geo is \code{tract}, voter.file must have columns 
+#' named \code{county} and \code{tract}.
 #' Function calls \code{census.helper.api} to merge in Census data at specified level. 
 #' If left unspecified, \code{voter.file} must contain additional fields 
 #' specifying Pr(Geolocation | Race), including any of the following: 
@@ -58,42 +65,94 @@
 #'
 #' @examples
 #' data(voters)
-#' race.pred(voter.file = voters, races = c("asian"), surname.only = TRUE)
+#' race.pred(voters, surname.only = T)
+#' race.pred(voter.file = voters, races = "asian", surname.only = TRUE)
 #' \dontrun{race.pred(voter.file = voters, races = c("white", "black", "latino"), 
-#' census = "tract", census.key = "...", demo = TRUE)}
+#' census.geo = "tract", census.key = "...", demo = TRUE)}
 #' \dontrun{race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
-#' census = "tract", census.key = "...", party = "PID")}
-#' \dontrun{race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
-#' census = "tract", census.data = censusObjs, party = "PID")}
+#' census.geo = "tract", census.key = "...", party = "PID")}
+#' \dontrun{censusObjs <- getCensusData("k"...", state = c("NY", "DC", "NJ")); 
+#' race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' census.geo = "tract", census.data = censusObjs, party = "PID")}
+#' \dontrun{censusObjs <- getCensusData("...", state = c("NY", "DC", "NJ"), demo = TRUE); 
+#' race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' census.geo = "tract", census.data = censusObjs, party = "PID", demo = TRUE)}
 #' @export
 
 ## Race Prediction Function
 race.pred <- function(voter.file, races = c("white", "black", "latino", "asian", "other"), 
-                      census.surname = TRUE, surname.only = FALSE, 
+                      census.surname = TRUE, census.year = 2010, surname.only = FALSE, 
                       census.geo, census.key, demo = FALSE, census.data = NA, party) {
+   
+  if (!missing(census.geo) && (census.geo == "precinct")) {
+    # geo <- "precinct"
+    stop('Error: census.helper function does not currently support merging precinct-level data.')
+  }
   
   vars.orig <- names(voter.file)
   
   ## Subset user-specified races (maximum of five)
   eth <- c("whi", "bla", "his", "asi", "oth")[c("white", "black", "latino", "asian", "other") %in% races]
   
-  if (surname.only == F & census.geo %in% c("county", "tract", "block") == F) {
-    surname.only <- T
-    warning("Proceeding with surname-only predictions because census.geo is improperly specified")
-  }
-
-  if (surname.only == F & missing(census.key)) {
-    surname.only <- T
-    warning("Proceeding with surname-only predictions because census.key is missing")
-  }
-  
-  if (census.geo %in% c("county", "tract", "block") == F & demo == TRUE) {
-    stop('Cannot set demo to TRUE without specifying census option.')
+  if (surname.only == T) {
+    print("Proceeding with surname-only predictions ...")
+    if (!("surname" %in% names(voter.file))) {
+      stop("Voter data frame needs to have a column named surname")
+    }
+    if (demo == TRUE) {
+      if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block") == F) {
+        stop('Cannot set demo to TRUE without specifying census option')
+      } else {
+        print(paste("Proceeding with census.geo =", census.geo,"and demo =", demo, "..."))
+      }
+    }
+  } else {
+    print("Proceeding to use census information to predict ...")
+    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block") == F) {
+      stop("census.geo must be either 'county', 'tract', or 'block'")
+    } else {
+      print(paste("Proceeding with census.geo =", census.geo,"..."))
+    }
+    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
+      if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
+        stop("Need to provide a valid census key")
+      } else {
+        print("Proceeding with the provided census key to download the online census data ...")
+      }
+    } else {
+      if (!("state" %in% names(voter.file))) {
+        stop("Voter data frame needs to have a column named state")
+      }
+      if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
+        print("The census object does not cover all the states in the input voter data ...")
+        if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
+          stop("Need to provide either a valid census key, or a valid census object that covers all the states (using two-letter abbreviations) in the voter data")
+        } else {
+          print("Proceeding with the provided census key to download the online census data for states that the census object does not cover ...")
+        }
+      } else {
+        print("Proceeding with the census statistics from the provided census object ...")
+      }
+    }
   }
 
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname == TRUE) {
-    voter.file <- census.surname(voter.file)
+    if (census.year == 2010) {
+      voter.file <- census.surname(voter.file)
+    } else {
+      if (census.year == 2000) {
+        voter.file <- census.surname(voter.file, census.year = census.year)
+      } else {
+        # The year is not right - has to be 2000 or 2010
+        stop(paste(census.year, "is not a valid census.year. It should be either 2000 (default) or 2010."))
+      }
+    } 
+  } else {
+    # To check if the voter.file has the nessary data
+   if (!(("p_whi" %in% names(voter.file)) || ("p_bla" %in% names(voter.file)) || ("p_his" %in% names(voter.file)) || ("p_asi" %in% names(voter.file)) || ("p_oth" %in% names(voter.file)))) {
+      stop("Voter data frame need to have some columns named p_whi, p_bla, p_his, p_asi, and p_oth")
+    }
   }
   
   ## Surname-Only Predictions
@@ -112,6 +171,9 @@ race.pred <- function(voter.file, races = c("white", "black", "latino", "asian",
   }
   
   if (census.geo == "block") {
+    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
+      stop("Voter data frame needs to have columns named block, tract and county")
+    }
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 block-level data -- may take a long time!")
@@ -131,6 +193,9 @@ race.pred <- function(voter.file, races = c("white", "black", "latino", "asian",
   }
 
   if (census.geo == "tract") {
+    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
+      stop("Voter data frame needs to have columns named tract and county")
+    }
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 tract-level data -- may take a long time!")
@@ -145,6 +210,9 @@ race.pred <- function(voter.file, races = c("white", "black", "latino", "asian",
   }
   
   if (census.geo == "county") {
+    if (!("county" %in% names(voter.file))) {
+      stop("Voter data frame needs to have a column named county")
+    }
     oldw <- getOption("warn")
     options(warn = -1)
     warning("Extracting U.S. Census 2010 county-level data -- may take a long time!")
