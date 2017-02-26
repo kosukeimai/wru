@@ -47,8 +47,8 @@
 #' @import devtools
 #'
 #' @examples
-#' data(voter.file)
-#' census.surname(voter.file)
+#' data(voters)
+#' census.surname(voters)
 #'
 #' @export
 census.surname <- function(voter.file, census.year = 2010, clean.surname = T, impute.missing = T) {
