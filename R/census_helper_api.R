@@ -153,14 +153,14 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
       eth.let <- c("I", "B", "H", "D", "F")
       sex <- c("mal", "fem")
-      age.cat <- c(seq(5, 23), seq(5, 23))
-      age.cen <- as.character(c(c("07", "08", "09"), seq(10, 25), seq(31, 49)))
+      age.cat <- c(seq(1, 23), seq(1, 23))
+      age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
       
       for (i in 1:length(eth.cen)) {
         for (k in 1:length(sex)) {
-          for (j in 1:19) {
+          for (j in 1:23) {
             if (k == 2) {
-              j <- j + 19
+              j <- j + 23
             }
             if (i != 4 & i != 5) {
               census[paste("r", sex[k], age.cat[j], eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -182,6 +182,10 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
+      voters.census$agecat <- ifelse(voters.census$age <= 4, 1, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 5 & voters.census$age <= 9, 2, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 10 & voters.census$age <= 14, 3, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 15 & voters.census$age <= 17, 4, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age >= 18 & voters.census$age <= 19, 5, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 20, 6, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 21, 7, voters.census$agecat)
@@ -203,7 +207,7 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       voters.census$agecat <- ifelse(voters.census$age >= 85, 23, voters.census$agecat)
 
       for (i in 1:length(eth.cen)) {
-        for (j in 5:23) {
+        for (j in 1:23) {
           voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
                         paste("r", eth.cen[i], sep = "_")] <- voters.census[paste("r_mal", j, eth.cen[i], sep = "_")]
           voters.census[voters.census$sex == 1 & voters.census$agecat == j, 
@@ -324,14 +328,14 @@ census.helper.local <- function(voter.file, states = "all", geo = "tract", demo 
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
       eth.let <- c("I", "B", "H", "D", "F")
       sex <- c("mal", "fem")
-      age.cat <- c(seq(5, 23), seq(5, 23))
-      age.cen <- as.character(c(c("07", "08", "09"), seq(10, 25), seq(31, 49)))
+      age.cat <- c(seq(1, 23), seq(1, 23))
+      age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
       
       for (i in 1:length(eth.cen)) {
         for (k in 1:length(sex)) {
-          for (j in 1:19) {
+          for (j in 1:23) {
             if (k == 2) {
-              j <- j + 19
+              j <- j + 23
             }
             if (i != 4 & i != 5) {
               census[paste("r", sex[k], age.cat[j], eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -353,6 +357,10 @@ census.helper.local <- function(voter.file, states = "all", geo = "tract", demo 
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
+      voters.census$agecat <- ifelse(voters.census$age <= 4, 1, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 5 & voters.census$age <= 9, 2, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 10 & voters.census$age <= 14, 3, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 15 & voters.census$age <= 17, 4, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age >= 18 & voters.census$age <= 19, 5, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 20, 6, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 21, 7, voters.census$agecat)
@@ -374,7 +382,7 @@ census.helper.local <- function(voter.file, states = "all", geo = "tract", demo 
       voters.census$agecat <- ifelse(voters.census$age >= 85, 23, voters.census$agecat)
       
       for (i in 1:length(eth.cen)) {
-        for (j in 5:23) {
+        for (j in 1:23) {
           voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
                         paste("r", eth.cen[i], sep = "_")] <- voters.census[paste("r_mal", j, eth.cen[i], sep = "_")]
           voters.census[voters.census$sex == 1 & voters.census$agecat == j, 
@@ -513,14 +521,14 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
       eth.let <- c("I", "B", "H", "D", "F")
       sex <- c("mal", "fem")
-      age.cat <- c(seq(5, 23), seq(5, 23))
-      age.cen <- as.character(c(c("07", "08", "09"), seq(10, 25), seq(31, 49)))
+      age.cat <- c(seq(1, 23), seq(1, 23))
+      age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
       
       for (i in 1:length(eth.cen)) {
         for (k in 1:length(sex)) {
-          for (j in 1:19) {
+          for (j in 1:23) {
             if (k == 2) {
-              j <- j + 19
+              j <- j + 23
             }
             if (i != 4 & i != 5) {
               census[paste("r", sex[k], age.cat[j], eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -542,6 +550,10 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
+      voters.census$agecat <- ifelse(voters.census$age <= 4, 1, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 5 & voters.census$age <= 9, 2, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 10 & voters.census$age <= 14, 3, voters.census$agecat)
+      voters.census$agecat <- ifelse(voters.census$age >= 15 & voters.census$age <= 17, 4, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age >= 18 & voters.census$age <= 19, 5, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 20, 6, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age == 21, 7, voters.census$agecat)
@@ -563,7 +575,7 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       voters.census$agecat <- ifelse(voters.census$age >= 85, 23, voters.census$agecat)
       
       for (i in 1:length(eth.cen)) {
-        for (j in 5:23) {
+        for (j in 1:23) {
           voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
                         paste("r", eth.cen[i], sep = "_")] <- voters.census[paste("r_mal", j, eth.cen[i], sep = "_")]
           voters.census[voters.census$sex == 1 & voters.census$agecat == j, 
