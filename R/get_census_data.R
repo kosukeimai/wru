@@ -138,14 +138,14 @@ census_data <- function(key, state, geo = "tract", demo = FALSE) {
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
       eth.let <- c("I", "B", "H", "D", "F")
       sex <- c("mal", "fem")
-      age.cat <- c(seq(5, 23), seq(5, 23))
-      age.cen <- as.character(c(c("07", "08", "09"), seq(10, 25), seq(31, 49)))
+      age.cat <- c(seq(1, 23), seq(1, 23))
+      age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
       
       for (i in 1:length(eth.cen)) {
         for (k in 1:length(sex)) {
-          for (j in 1:19) {
+          for (j in 1:23) {
             if (k == 2) {
-              j <- j + 19
+              j <- j + 23
             }
             if (i != 4 & i != 5) {
               census[paste("r", sex[k], age.cat[j], eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
