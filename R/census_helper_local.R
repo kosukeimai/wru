@@ -1,22 +1,19 @@
 #' Census helper function.
 #'
-#' \code{census_helper_api} links user-input dataset with Census geographic data.
+#' \code{census_helper_local} links user-input dataset with Census data.
 #'
 #' This function allows users to link their geocoded dataset (e.g., voter file) 
 #' with U.S. Census 2010 data. The function extracts Census Summary File data 
 #' at the county, tract, or block level. Function returns Pr(Geolocation | Race) 
-#' where geolocation is Census county, tract, or block.
+#' where geolocation is county, tract, or block.
 #'
-#' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
 #' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
 #'  tract should be six characters, and block should be four characters.
-#' @param states A character vector specifying which states to extract 
-#'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
-#'  Census data for all states contained in user-input data.
+#' @param states A state to use Census data for, e.g. \code{c("NJ", "NY")}. 
+#' Default is \code{"NA"}.
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 #'  Warning: extracting block-level data takes very long.
@@ -24,27 +21,28 @@
 #'  demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
 #'  Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
 #'  Pr(Geolocation | Race). Default is \code{FALSE}.
+#' @param census.data An optional census object holding Census data that is already 
+#' provided. If missing, function will retrieve the Census geographic data via API. 
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
 #'  Census data.
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census_helper_api(key = "...", voter.file = voters, states = "nj", geo = "block")}
-#' \dontrun{census_helper_api(key = "...", voter.file = voters, states = "all", geo = "tract", 
-#' demo = TRUE)}
+#' \dontrun{census_helper_local(voter.file = voters, states = "nj", geo = "block", census.data = x)}
+#' \dontrun{census_helper_local(voter.file = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
 #'
 #' @references
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census_helper_api <- function(key, voter.file, states = "all", geo = "tract", demo = FALSE) {
-
-  if (missing(key)) {
-    stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
-  }
-
+census_helper_local <- function(voter.file, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
+  
+  if (is.na(census.data)) {
+    stop('Without pre-downloaded census data, please use census_helper_api to access http://api.census.gov/data/key_signup.html.')
+  } 
+  
   states <- toupper(states)
   if (states == "ALL") {
     states <- toupper(as.character(unique(voter.file$state)))
@@ -54,84 +52,32 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
   
   for (s in 1:length(states)) {
     
-    print(paste("State ", s, " of ", length(states), ": ", states[s], sep = ""))
-    fips.codes <- get("State.FIPS")
-    state.fips <- fips.codes[fips.codes$State == states[s], "FIPS"]
-
-    if (demo == F) {
-      num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
-      vars <- paste("P00500", num, sep = "")
-    }
+    state <- states[s]
     
-    if (demo == T) {
-      eth.let <- c("I", "B", "H", "D", "E", "F", "C")
-      num <- as.character(c(c("01", "07", "08", "09"), seq(10, 25), seq(31, 49)))
-      vars <- NULL
-      for (e in 1:length(eth.let)) {
-        vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
-      }
+    if ((is.null(census.data[[state]])) || (census.data[[state]]$demo != demo)) {
+      lstate <- paste(names(census.data), collapse=";")
+      print(paste("The census object includes", lstate, ". But the state here is", state))
+      stop('Mismatch census data, please provide matching census data or use census_helper_api to access http://api.census.gov/data/key_signup.html.')
     }
     
     if (geo == "county") {
-      print(paste("Getting county-level data in", states[s]))
       geo.merge <- c("state", "county")
-      region <- paste("for=county:*&in=state:", state.fips, sep = "")
-      census <- get_census_api("http://api.census.gov/data/2010/sf1?", 
-                             key = key, vars = vars, region = region)
+      census <- census.data[[state]]$county
     }
     
     if (geo == "tract") {
-
       geo.merge <- c("state", "county", "tract")
-      
-      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-      county_df <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county)
-      county_list <- county_df$county
-      
-      census <- NULL
-      for (c in 1:length(county_list)) {
-        print(paste("Getting tract-level data in county ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-        region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-        census.temp <- get_census_api("http://api.census.gov/data/2010/sf1?", 
-                                    key = key, vars = vars, region = region_county)
-        census <- rbind(census, census.temp)
-      }
-      rm(census.temp)
+      census <- census.data[[state]]$tract
     }
     
     if (geo == "block") {
-      
       geo.merge <- c("state", "county", "tract", "block")
-
-      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-      county_df <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county)
-      county_list <- county_df$county
-
-      census <- NULL
-      
-      for (c in 1:length(county_list)) {
-        print(paste("Getting block-level data in county ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-        
-        region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-        print(region_tract)
-        tract_df <- get_census_api("http://api.census.gov/data/2010/sf1?", 
-                                 key = key, vars = vars, region = region_tract)
-        tract_list <- tract_df$tract
-
-        for (t in 1:length(tract_list)) {
-          region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-          census.temp <- get_census_api("http://api.census.gov/data/2010/sf1?", 
-                                      key = key, vars = vars, region = region_block)
-          census <- rbind(census, census.temp)
-        }
-      }
-      rm(census.temp)
-      
+      census <- census.data[[state]]$block
     }
-
+    
     if (demo == F) {
       
-      census$state <- states[s]
+      census$state <- state
       
       ## Calculate Pr(Geolocation | Race)
       census$r_whi <- census$P0050003 / sum(census$P0050003) #Pr(Tract|White)
@@ -141,13 +87,13 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       drop <- grep("P005", names(census))
-      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
     
     if (demo == T) {
       
-      census$state <- states[s]
+      census$state <- state
       
       ## Calculate Pr(Tract, Sex, Age Category | Race)
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
@@ -178,7 +124,7 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       }
       
       drop <- grep("P012", names(census))
-      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
@@ -205,7 +151,7 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       voters.census$agecat <- ifelse(voters.census$age >= 75 & voters.census$age <= 79, 21, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age >= 80 & voters.census$age <= 84, 22, voters.census$agecat)
       voters.census$agecat <- ifelse(voters.census$age >= 85, 23, voters.census$agecat)
-
+      
       for (i in 1:length(eth.cen)) {
         for (j in 1:23) {
           voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
@@ -218,9 +164,9 @@ census_helper_api <- function(key, voter.file, states = "all", geo = "tract", de
       drop <- c(grep("_mal_", names(voters.census)), grep("_fem_", names(voters.census)))
       voters.census <- voters.census[, -drop]
     }
-  
-  df.out <- as.data.frame(rbind(df.out, voters.census[names(voters.census) != "agecat"]))
-  
+    
+    df.out <- as.data.frame(rbind(df.out, voters.census[names(voters.census) != "agecat"]))
+    
   }
   
   return(df.out)

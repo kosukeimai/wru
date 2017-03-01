@@ -5,14 +5,18 @@
 #' This function implements the Bayesian race prediction methods outlined in 
 #' Imai and Khanna (2015). The function produces probabilistic estimates of 
 #' individual-level race/ethnicity, based on surname, geolocation, and party.
-#' @param voter.file An object of class \code{data.frame}. Must contain a row for each individual being 
-#' predicted, as well as a field named \code{\var{surname}} containing each individual's surname.
-#' If using geolocation in predictions, \code{\var{voter.file}} must contain a field named \code{\var{state}}, 
-#' which contains the two-character abbreviation for each individual's state of residence (e.g., "nj" for New Jersey). 
-#' If using geolocation, \code{\var{voter.file}} must also contain at least one of the following fields: 
+#' @param voter.file An object of class \code{data.frame}. 
+#' Must contain a row for each individual being predicted, 
+#' as well as a field named \code{\var{surname}} containing each individual's surname.
+#' If using geolocation in predictions, \code{\var{voter.file}} must contain a field named 
+#' \code{\var{state}}, which contains the two-character abbreviation for each individual's 
+#' state of residence (e.g., \code{"nj"} for New Jersey). 
+#' If using Census geographic data in race/ethnicity predictions, 
+#' \code{\var{voter.file}} must also contain at least one of the following fields: 
 #' \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}}. 
 #' These fields should contain character strings matching U.S. Census categories. 
-#' County is three characters (e.g., "031" not "31"), tract is six characters, and block is four characters. 
+#' County is three characters (e.g., \code{"031"} not \code{"31"}), 
+#' tract is six characters, and block is four characters. 
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
@@ -29,51 +33,59 @@
 #' The default value is \code{2010}, which means the surname statistics from the 
 #' 2010 census will be used. Currently, the other available choice is \code{2000}.
 #' @param census.geo An optional character vector specifying what level of 
-#' geography to use to merge in U.S. Census 2010 data. Can be one of 
-#' \code{"county"}, \code{"tract"}, or \code{"block"}. 
-#' Note: sufficient information must be in the input data, voter.file. 
-#' For example when census.geo is \code{tract}, voter.file must have columns 
-#' named \code{county} and \code{tract}.
-#' Function calls \code{census_helper_api} to merge in Census data at specified level. 
-#' If left unspecified, \code{voter.file} must contain additional fields 
-#' specifying Pr(Geolocation | Race), including any of the following: 
-#' \code{\var{r_whi}}, \code{\var{r_bla}}, \code{\var{r_his}}, 
-#' \code{\var{r_asi}}, and/or \code{\var{r_oth}}. 
+#' geography to use to merge in U.S. Census 2010 geographic data. Currently
+#' \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
+#' Note: sufficient information must be in user-defined \code{\var{voter.file}} object. 
+#' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}} 
+#' must have column named \code{county}.
+#' If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}} 
+#' must have columns named \code{county} and \code{tract}.
+#' And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}} 
+#' must have columns named \code{county}, \code{tract}, and \code{block}.
+#' Specifying \code{\var{census.geo}} will call \code{census_helper} function 
+#' to merge Census geographic data at specified level of geography. 
 #' @param census.key A character object specifying user's Census API 
-#'  key. Required if \code{census} is specified, because 
-#'  \code{census.helper} function requires a Census API key to operate.
-#' @param census.data A Census data object, a list indexed by state names, 
-#' which contains Census geographic data.
+#'  key. Required if \code{\var{census.geo}}} is specified, because 
+#'  a valid Census API key is required to download Census geographic data.
+#' @param census.data A list indexed by two-letter state abbreviations, 
+#' which contains pre-saved Census geographic data. 
+#' Can be generated using \code{get_census_data} function.
 #' @param demo An optional \code{TRUE}/\code{FALSE} object specifying whether to 
 #' condition race predictions on individual age and sex (in addition to geolocation). 
-#' Default is \code{FALSE}. 
-#' May only be set to \code{TRUE} if \code{census} option is specified. 
-#' If \code{TRUE}, \code{voter.file} should include numerical variables 
+#' Default is \code{FALSE}. Must be same as \code{\var{demo}} in \code{\var{census.data}} object.
+#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
+#' If \code{TRUE}, \code{\var{voter.file}} should include numerical variables 
 #' \code{\var{age}} and \code{\var{sex}}, where \code{\var{sex}} coded as 0 for 
 #' males and 1 for females.
-#' @param party An optional character object specifying party registration field in \code{\var{voter.file}}, 
-#' e.g., \code{\var{party} = "PartyReg"}. If specified, race/ethnicity predictions will be conditioned 
+#' @param party An optional character object specifying party registration field 
+#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}. 
+#' If specified, race/ethnicity predictions will be conditioned 
 #' on individual's party registration (in addition to geolocation). 
 #' Whatever the name of the party registration field in \code{\var{voter.file}}, 
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @return Output will be an object of class \code{data.frame}. It will 
-#'  consist of the original user-input data with additional columns that 
-#'  contain predicted probabilities for each race in \code{races}.
-#'
+#'  consist of the original user-input data with additional columns with 
+#'  predicted probabilities for each of the five major racial categories: 
+#'  \code{\var{pred.whi}} for White, 
+#'  \code{\var{pred.bla}} for Black, 
+#'  \code{\var{pred.his}} for Hispanic/Latino, 
+#'  \code{\var{pred.asi}} for Asian/Pacific Islander, and 
+#'  \code{\var{pred.oth}} for Other/Mixed.
+#'  
 #' @examples
 #' data(voters)
 #' predict_race(voters, surname.only = T)
-#' predict_race(voter.file = voters, races = "asian", surname.only = TRUE)
-#' \dontrun{predict_race(voter.file = voters, races = c("white", "black", "latino"), 
+#' predict_race(voter.file = voters, surname.only = TRUE)
+#' \dontrun{predict_race(voter.file = voters, 
 #' census.geo = "tract", census.key = "...", demo = TRUE)}
-#' \dontrun{predict_race(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
+#' \dontrun{predict_race(voter.file = voters, 
 #' census.geo = "tract", census.key = "...", party = "PID")}
-#' \dontrun{censusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
-#' predict_race(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
-#' census.geo = "tract", census.data = censusObj, party = "PID")}
-#' \dontrun{censusObj <- get_census_data("...", state = c("NY", "DC", "NJ"), demo = TRUE); 
-#' predict_race(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), 
-#' census.geo = "tract", census.data = censusObj, party = "PID", demo = TRUE)}
+#' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
+#' predict_race(voter.file = voters, 
+#' census.geo = "tract", census.data = CensusObj, party = "PID")}
+#' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ"), demo = TRUE); 
+#' predict_race(voter.file = voters, 
+#' census.geo = "tract", census.data = CensusObj, party = "PID", demo = TRUE)}
 #' @export
 
 ## Race Prediction Function
@@ -83,7 +95,7 @@ predict_race <- function(voter.file,
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
-    stop('Error: census.helper function does not currently support merging precinct-level data.')
+    stop('Error: census_helper function does not currently support merging precinct-level data.')
   }
   
   vars.orig <- names(voter.file)
@@ -93,39 +105,31 @@ predict_race <- function(voter.file,
     if (!("surname" %in% names(voter.file))) {
       stop("Voter data frame needs to have a column named surname")
     }
-    if (demo == TRUE) {
-      if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block") == F) {
-        stop('Cannot set demo to TRUE without specifying census option')
-      } else {
-        print(paste("Proceeding with census.geo = ", census.geo," and demo = ", demo, "...", sep = ""))
-      }
-    }
   } else {
-    print("Proceeding to use Census geographic data to predict race/ethnicity...")
     if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block") == F) {
       stop("census.geo must be either 'county', 'tract', or 'block'")
     } else {
-      print(paste("Proceeding with census.geo = ", census.geo,"...", sep = ""))
+      print(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
     if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
       if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-        stop("Need to provide a valid Census API key")
+        stop("Please provide a valid Census API key using census.key option.")
       } else {
-        print("Proceeding with provided Census API key to download Census geographic data...")
+        print("Downloading Census geographic data using provided API key...")
       }
     } else {
       if (!("state" %in% names(voter.file))) {
-        stop("Voter data frame needs to have a column named state.")
+        stop("voter.file object needs to have a column named state.")
       }
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
-        print("census.data object does not include all states in voter.file object...")
+        print("census.data object does not include all states in voter.file object.")
         if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-          stop("Need to provide either a valid Census API key, or a valid census object that covers all the states (using two-letter abbreviations) in the voter data")
+          stop("Please provide either a valid Census API key or valid census.data object that covers all states in voter.file object.")
         } else {
-          print("Proceeding with provided Census API key to download the Census geographic data for states not included in census.data object...")
+          print("Downloading Census geographic data for states not included in census.data object...")
         }
       } else {
-        print("Proceeding by using Census statistics from provided census.data object ...")
+        print("Using Census geographic data from provided census.data object...")
       }
     }
   }
@@ -169,58 +173,43 @@ predict_race <- function(voter.file,
   
   if (census.geo == "block") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
-      stop("voter.file needs to have columns named block, tract, and county.")
+      stop("voter.file object needs to have columns named block, tract, and county.")
     }
-    oldw <- getOption("warn")
-    options(warn = -1)
-    warning("Extracting U.S. Census 2010 block-level data -- may take a long time!")
-
-    voter.file <- census_helper_api(key = census.key, 
-                                    voter.file = voter.file, 
-                                    states = "all", 
-                                    geo = "block", 
-                                    demo = demo,
-                                    census.data = census.data)
-    options(warn = oldw)
+    voter.file <- census_helper(key = census.key, 
+                                voter.file = voter.file, 
+                                states = "all", 
+                                geo = "block", 
+                                demo = demo,
+                                census.data = census.data)
   }
 
   if (census.geo == "precinct") {
     geo <- "precinct"
-    stop('Error: census.helper function does not currently support merging precinct-level data.')
+    stop('Error: census_helper function does not currently support precinct-level data.')
   }
 
   if (census.geo == "tract") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
-      stop("voter.file needs to have columns named tract and county.")
+      stop("voter.file object needs to have columns named tract and county.")
     }
-    oldw <- getOption("warn")
-    options(warn = -1)
-    warning("Extracting U.S. Census 2010 tract-level data -- may take a long time!")
-    
-    voter.file <- census_helper_api(key = census.key, 
-                                     voter.file = voter.file, 
-                                     states = "all", 
-                                     geo = "tract", 
-                                     demo = demo, 
-                                     census.data = census.data)
-    options(warn = oldw)
+    voter.file <- census_helper(key = census.key, 
+                                voter.file = voter.file, 
+                                states = "all", 
+                                geo = "tract", 
+                                demo = demo, 
+                                census.data = census.data)
   }
   
   if (census.geo == "county") {
     if (!("county" %in% names(voter.file))) {
-      stop("voter.file needs to have a column named county.")
+      stop("voter.file object needs to have a column named county.")
     }
-    oldw <- getOption("warn")
-    options(warn = -1)
-    warning("Extracting U.S. Census 2010 county-level data -- may take a long time!")
-    
-    voter.file <- census_helper_api(key = census.key, 
-                                     voter.file = voter.file, 
-                                     states = "all", 
-                                     geo = "county", 
-                                     demo = demo, 
-                                     census.data = census.data)
-    options(warn = oldw)
+    voter.file <- census_helper(key = census.key, 
+                                voter.file = voter.file, 
+                                states = "all", 
+                                geo = "county", 
+                                demo = demo, 
+                                census.data = census.data)
   }
   
   ## Pr(Race | Surname, Geolocation)

@@ -48,8 +48,8 @@
 #' @import devtools
 #'
 #' @examples
-#' data(voter.file)
-#' merge_surnames(voter.file)
+#' data(voters)
+#' merge_surnames(voters)
 #'
 #' @export
 merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, impute.missing = T) {
@@ -147,8 +147,9 @@ merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, i
   ## Impute priors for names not on Census lists
   if (impute.missing) {
     if (nrow(df2) > 0) {
+      df2$surname.match <- ""
       df2$p_whi <- .6665; df2$p_bla <- .0853; df2$p_his <- .1367; df2$p_asi <- .0797; df2$p_oth <- .0318
-      warning(paste("Probabilities were imputed for", nrow(df2), ifelse(nrow(df2) == 1, "surname.", "surnames.")))
+      warning(paste("Probabilities were imputed for", nrow(df2), ifelse(nrow(df2) == 1, "surname", "surnames"), "that could not be matched to Census list."))
     }
   } else warning(paste(nrow(df2), ifelse(nrow(df2) == 1, "surname was", "surnames were"), "not matched."))
   
