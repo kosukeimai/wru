@@ -11,4 +11,4 @@
 #'   \item{p_asi}{Pr(Asian/Pacific Islander | Surname)}
 #'   \item{p_oth}{Pr(Other | Surname)}
 #'   #' }
-"surname2010"
+"surnames"

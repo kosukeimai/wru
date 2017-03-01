@@ -45,7 +45,7 @@
 #' Specifying \code{\var{census.geo}} will call \code{census_helper} function 
 #' to merge Census geographic data at specified level of geography. 
 #' @param census.key A character object specifying user's Census API 
-#'  key. Required if \code{\var{census.geo}}} is specified, because 
+#'  key. Required if \code{\var{census.geo}} is specified, because 
 #'  a valid Census API key is required to download Census geographic data.
 #' @param census.data A list indexed by two-letter state abbreviations, 
 #' which contains pre-saved Census geographic data. 
