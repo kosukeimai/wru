@@ -9,7 +9,7 @@
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
-#' @param voters An object of class \code{data.frame}. Must contain field(s) 
+#' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
@@ -30,8 +30,8 @@
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
-#' \dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", 
+#' \dontrun{census.helper.api(key = "...", voter.file = voters, states = "nj", geo = "block")}
+#' \dontrun{census.helper.api(key = "...", voter.file = voters, states = "all", geo = "tract", 
 #' demo = TRUE)}
 #'
 #' @references
@@ -39,7 +39,7 @@
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api.online <- function(key, voters, states = "all", geo = "tract", demo = FALSE) {
+census.helper.api.online <- function(key, voter.file, states = "all", geo = "tract", demo = FALSE) {
 
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
@@ -47,7 +47,7 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 
   states <- toupper(states)
   if (states == "ALL") {
-    states <- toupper(as.character(unique(voters$state)))
+    states <- toupper(as.character(unique(voter.file$state)))
   }
   
   df.out <- NULL
@@ -142,7 +142,7 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       drop <- grep("P005", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
     
@@ -179,7 +179,7 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
       }
       
       drop <- grep("P012", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
@@ -233,7 +233,7 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #' at the tract or block level using the 'UScensus2010' package. Census data 
 #' calculated are Pr(Geolocation | Race) where geolocation is tract or block.
 #'
-#' @param voters An object of class \code{data.frame}. Must contain field(s) 
+#' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
@@ -255,15 +255,15 @@ census.helper.api.online <- function(key, voters, states = "all", geo = "tract",
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census.helper.api.local(voters = voters, states = "nj", geo = "block", census.data = x)}
-#' \dontrun{census.helper.api.local(voters = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
+#' \dontrun{census.helper.api.local(voter.file = voters, states = "nj", geo = "block", census.data = x)}
+#' \dontrun{census.helper.api.local(voter.file = voters, states = "all", geo = "tract", demo = TRUE, census.data = x)}
 #'
 #' @references
 #' Relies on getCensusApi, getCensusApi2, and vecToChunk functions authored by Nicholas Nagle, 
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api.local <- function(voters, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
+census.helper.api.local <- function(voter.file, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
   
   if (is.na(census.data)) {
     stop('Without pre-downloaded census data, please use census.helper.api to access http://api.census.gov/data/key_signup.html.')
@@ -271,7 +271,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
   
   states <- toupper(states)
   if (states == "ALL") {
-    states <- toupper(as.character(unique(voters$state)))
+    states <- toupper(as.character(unique(voter.file$state)))
   }
   
   df.out <- NULL
@@ -313,7 +313,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       drop <- grep("P005", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
     
@@ -350,7 +350,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
       }
       
       drop <- grep("P012", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(state), ], census[, -drop], by = geo.merge, all.x  = T)
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
@@ -406,7 +406,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
-#' @param voters An object of class \code{data.frame}. Must contain field(s) 
+#' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
@@ -429,8 +429,8 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census.helper.api(key = "...", voters = voters, states = "nj", geo = "block")}
-#' \dontrun{census.helper.api(key = "...", voters = voters, states = "all", geo = "tract", 
+#' \dontrun{census.helper.api(key = "...", voter.file = voters, states = "nj", geo = "block")}
+#' \dontrun{census.helper.api(key = "...", voter.file = voters, states = "all", geo = "tract", 
 #' demo = TRUE)}
 #'
 #' @references
@@ -438,7 +438,7 @@ census.helper.api.local <- function(voters, states = "all", geo = "tract", demo 
 #' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census.helper.api <- function(key, voters, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
+census.helper.api <- function(key, voter.file, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
   
   if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
@@ -454,7 +454,7 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
   
   states <- toupper(states)
   if (states == "ALL") {
-    states <- toupper(as.character(unique(voters$state)))
+    states <- toupper(as.character(unique(voter.file$state)))
   }
   
   df.out <- NULL
@@ -502,7 +502,7 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
       census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       drop <- grep("P005", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
     
@@ -539,7 +539,7 @@ census.helper.api <- function(key, voters, states = "all", geo = "tract", demo =
       }
       
       drop <- grep("P012", names(census))
-      voters.census <- merge(voters[toupper(voters$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
       ## Add Census Age Categories
       voters.census$agecat <- NA
