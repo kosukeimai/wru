@@ -35,8 +35,7 @@ at either the county, tract, or block level, for a particular state.
 \examples{
 \dontshow{data(voters)}
 \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
-\dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", 
-demo = TRUE)}
+\dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", demo = TRUE)}
 
 }
 \references{

@@ -19,5 +19,8 @@ surnames2000
 \description{
 Census Surname List from 2000 with race/ethnicity probabilities by surname.
 }
+\examples{
+data(surnames2000)
+}
 \keyword{datasets}
 

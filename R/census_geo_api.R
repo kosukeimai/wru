@@ -21,8 +21,7 @@
 #' @examples
 #' \dontshow{data(voters)}
 #' \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
-#' \dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", 
-#' demo = TRUE)}
+#' \dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", demo = TRUE)}
 #'
 #' @references
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 

@@ -17,4 +17,9 @@
 #'   \item{party}{Party registration (character)}
 #'   \item{PID}{Party registration (numeric)}
 #'   #' }
+#' @docType data
+#' @keywords datasets
+#' @name voters
+#' @examples
+#' data(voters)
 "voters"

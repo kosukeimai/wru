@@ -53,8 +53,7 @@ calculated are Pr(Geolocation | Race) where geolocation is county, tract, or blo
 \examples{
 \dontshow{data(voters)}
 \dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", 
-demo = TRUE)}
+\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", demo = TRUE)}
 
 }
 

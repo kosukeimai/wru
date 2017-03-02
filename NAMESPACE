@@ -2,8 +2,6 @@
 
 export(census_geo_api)
 export(census_helper)
-export(census_helper_api)
-export(census_helper_local)
 export(get_census_api)
 export(get_census_api_2)
 export(get_census_data)

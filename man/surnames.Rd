@@ -19,5 +19,8 @@ surnames
 \description{
 Census Surname List from 2010 with race/ethnicity probabilities by surname.
 }
+\examples{
+data(surnames)
+}
 \keyword{datasets}
 

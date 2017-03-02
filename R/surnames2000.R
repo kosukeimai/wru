@@ -11,4 +11,10 @@
 #'   \item{p_asi}{Pr(Asian/Pacific Islander | Surname)}
 #'   \item{p_oth}{Pr(Other | Surname)}
 #'   #' }
+#'
+#' @docType data
+#' @keywords datasets
+#' @name surnames2000
+#' @examples
+#' data(surnames2000)
 "surnames2000"

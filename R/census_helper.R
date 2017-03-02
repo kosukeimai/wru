@@ -36,15 +36,14 @@
 #' @examples
 #' \dontshow{data(voters)}
 #' \dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-#' \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", 
-#' demo = TRUE)}
+#' \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", demo = TRUE)}
 #'
 #' @export
 census_helper <- function(key, voter.file, states = "all", geo = "tract", demo = FALSE, census.data = NA) {
   
-  if (demo != census.data[[state]]$demo) {
-    stop(paste("demo = ", demo, " in this function, but demo = ", CensusObj[[state]]$demo, " in census.data object provided.", sep = ""))
-  }
+#  if (demo != census.data[[state]]$demo) {
+#    stop(paste("demo = ", demo, " in this function, but demo = ", CensusObj[[state]]$demo, " in census.data object provided.", sep = ""))
+#  }
 
     if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
