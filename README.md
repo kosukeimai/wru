@@ -88,12 +88,12 @@ censusObj2[["NJ"]] <- list(state = "NJ", demo = TRUE, county = county.nj, tract 
 
 After saving the data in censusObj2 above, we can condition race/ethnicity predictions on different combinations of input variables, without having to re-download the relevant Census data.
 ```r
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2)  # Pr(Race | Surname, Tract)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2)  # Pr(Race | Surname, County)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, Tract, Age/Sex)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2)  # Pr(Race | Surname, Tract)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, County, Age/Sex)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, Tract, Party)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, Tract, Age/Sex)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, County, Party)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, Tract, Age/Sex, Party)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, Tract, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, County, Age/Sex, Party)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, Tract, Age/Sex, Party)
 ```
