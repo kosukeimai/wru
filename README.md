@@ -1,11 +1,11 @@
 # wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/wru)](https://cran.r-project.org/package=wru)
 
 
-This R package implements the methods proposed in Imai, K. and Khanna, K. (2016). ``[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.](http://imai.princeton.edu/research/race.html)'' Political Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
+This R package implements the methods proposed in Imai, K. and Khanna, K. (2016). "[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.](http://imai.princeton.edu/research/race.html)" Political Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
 
 ### Using wru
 
-Here is an simple example that predicts the race/ethnicity of voters based only on their surnames. 
+Here is a simple example that predicts the race/ethnicity of voters based only on their surnames. 
 ```r
 library(wru)
 data(voters)
@@ -28,9 +28,9 @@ The above produces the following output, where the last five columns are probabi
 #      10      Morse    DC  0    001 001301  3005           29   1   Rep   2   0.9054 0.04310000 0.02060000 0.00720000  0.02370
 ```
 
-In order to predict race/ethnicity based on surnames AND geolocation, first request a U.S. Census API key from [http://api.census.gov/data/key_signup.html](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on voters' geolocation (county, tract, and block currently supported).
+In order to predict race/ethnicity based on surnames AND geolocation, first request a U.S. Census API key [here](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, or block).
 
-The following example predicts the race/ethnicity of voters based on their surnames, which Census tract they reside in (census.geo = "tract"), and which party they are registered with (party = "PID"). Note that a valid API key must be provided in the input parameter 'census.key' in order for the function to download the relevant tract-level data.
+The following example predicts the race/ethnicity of voters based on their surnames, Census tract of residence (census.geo = "tract"), and which party registration (party = "PID"). Note that a valid API key must be provided in the input parameter 'census.key' in order for the function to download the relevant tract-level data.
 ```r
 library(wru)
 data(voters)
@@ -52,10 +52,9 @@ The above returns the following output.
 #      10      Morse    DC  0    001 001301  3005           29   1   Rep   2 0.983300770 0.0006116706 0.0034070782 0.004823439 0.007857042
 ```
 
-It is also possible to pre-download Census geographic data, which can save time when running predict_race(). The example dataset 'voters'  includes people in DC, NJ, and NY. The following example subsets voters in DC and NJ, and then uses get_census_data() to download Census geographic data in these two states (note that a valid API key must be provided). Census data is assigned to an object named census.dc.nj. Running predict_race() with census.data = census.dc.nj predicts the race/ethnicity of voters in DC and NJ using the pre-saved Census data. This example conditions race/ethnicity predictions on voters' surnames, block of residence (census.geo = "block"), age and sex (demo = TRUE), and party registration (party = "PID").
+It is also possible to pre-download Census geographic data, which can save time when running predict_race(). The example dataset 'voters'  includes people in DC, NJ, and NY. The following example subsets voters in DC and NJ, and then uses get_census_data() to download Census geographic data in these two states (input parameter 'key' requires valid API key). Census data is assigned to an object named census.dc.nj. The predict_race() statement predicts the race/ethnicity of voters in DC and NJ using the pre-saved Census data (census.data = census.dc.nj). This example conditions race/ethnicity predictions on voters' surnames, block of residence (census.geo = "block"), age/sex (demo = TRUE), and party registration (party = "PID").
 
-Please note that the input parameter 'demo' must have the same value in get_census_data() and predict_race(), i.e., either TRUE in both or FALSE in both.
-
+Please note that the input parameter 'demo' must have the same value in get_census_data() and predict_race(), i.e., TRUE in both or FALSE in both. In this case, predictions are conditioned on age/sex, so demo = TRUE in both the get_census_data() and predict_race() statements.
 ```r
 library(wru)
 data(voters)
@@ -74,7 +73,7 @@ Using pre-downloaded Census data may be useful for the following reasons:
 * The machines used to run predict_race() may not have internet access; 
 * You can obtain timely snapshots of Census geographic data that match your voter file.
 
-Downloading data using get_census_data() may take a long time, especially at the block level or when demo = TRUE. The example below uses the census_geo_api() function to download county-level and tract-level data in DC and NJ, without downloading block-level data. Note that this function has the input paramemter 'state' that requires a particular state to proceed (two-letter abbreviation).
+Downloading data using get_census_data() may take a long time, especially at the block level or when demo = TRUE. The example below uses the census_geo_api() function to download county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
 ```r
 censusObj2  = list()
 
@@ -87,14 +86,14 @@ county.nj <- census_geo_api(key = "", state = "NJ", geo = "county", demo = TRUE)
 censusObj2[["NJ"]] <- list(state = "NJ", demo = TRUE, county = county.nj, tract = tract.nj)
 ```
 
-After saving the data in censusObj2 above, we can use condition race/ethnicity predictions on different combinations of input variables, without having to worry about re-downloading the relevant Census data.
+After saving the data in censusObj2 above, we can condition race/ethnicity predictions on different combinations of input variables, without having to re-download the relevant Census data.
 ```r
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2)  # Pr(Race | Surname, Tract)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, Tract, Age/Sex)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, Tract, Party)
-predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, Tract, Age/Sex, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2)  # Pr(Race | Surname, County)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, Tract, Age/Sex)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, demo = TRUE)  # Pr(Race | Surname, County, Age/Sex)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, Tract, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, party = "PID")  # Pr(Race | Surname, County, Party)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, Tract, Age/Sex, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, demo = TRUE, party = "PID") # Pr(Race | Surname, County, Age/Sex, Party)
 ```
