@@ -1,9 +1,9 @@
 #' Census API URL assembler.
 #'
-#' \code{getCensusApi2} assembles URL components for \code{getCensusApi}.
+#' \code{get_census_api_2} assembles URL components for \code{get_census_api}.
 #' 
 #' This function assembles the URL components and sends the request to the Census server. 
-#' It is used by the \code{getCensusApi} function. The user should not need to call this 
+#' It is used by the \code{get_census_api} function. The user should not need to call this 
 #' function directly.
 #'
 #' @param data_url URL root of the API, including the question mark, 
@@ -21,7 +21,7 @@
 #'  If unsuccessful, function prints the URL query that was constructed.
 #'
 #' @examples
-#' \dontrun{getCensusApi2(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+#' \dontrun{get_census_api_2(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
 #' get = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 #' 
 #' @references
@@ -29,7 +29,7 @@
 #' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-getCensusApi2 <- function(data_url, key, get, region){
+get_census_api_2 <- function(data_url, key, get, region){
   if(length(get)>1) {
     get <- paste(get, collapse=',', sep='')
   }
