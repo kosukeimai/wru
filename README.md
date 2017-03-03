@@ -11,7 +11,7 @@ Here is an simple example that predict the race only based on the surnames.
 ```r
 library(wru)
 data(voters)
-race.pred(voters, surname.only = T)
+predict_race(voters, surname.only = T)
 ```
 
 The above produce the following output:
@@ -37,7 +37,7 @@ For instance, to get the race of someone with name last name Smith, write in whe
 ```r
 library(wru)
 data(voters)
-race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), census.geo = "tract", census.key = '---', party = "PID")
+predict_race(voter.file = voters, census.geo = "tract", census.key = k, party = "PID")
 ```
 
 which returns the predicted probabilities for each racial category:
@@ -60,8 +60,12 @@ It is also possible to pre-download and save the census data for the intended st
 ```r
 library(wru)
 data(voters)
-censusObjs <- getCensusData('---', state = c("NY", "DC", "NJ"), demo = FALSE)   # Note: '---' is your census key
-race.pred(voter.file = voters, races = c("white", "black", "latino", "asian", "other"), census.geo = "tract", census.data = censusObjs, party = "PID")
+censusObjs <- get_census_data(k, state = c("DC", "NJ"))  # create a census object that covers only NJ and DC 
+v1 <- voters[c(-3,-7),]  # skip the NY case in the example, as it takes too long to get the census data of NY
+x1 <- predict_race(voter.file = v1, census.geo = "tract", census.data = censusObjs, party = "PID")
+x0 <- predict_race(voter.file = v1, census.geo = "tract", census.key = k, party = "PID")
+
+x1 == x0
 ```
 
 Please note that the input parameter $demo$ needs to be consistent in $getCensusData()$ and $race.pred()$, i.e. both FALSE or both TRUE.
@@ -69,6 +73,30 @@ Please note that the input parameter $demo$ needs to be consistent in $getCensus
 The result is same as the above that accesses online census data, instead of using a pre-downloaded census object.
 
 The feature of using a pre-downloaded census object is useful for the following reasons:
-(1) the machine runs race.pred may not have internet access. 
-(2) No redundent download of the census data for each state. 
-(3) Timely snapshots of the census data that match the voter data.
+
+* The machines to execute race.pred may not have internet access. 
+* No redundent download of the census data for each state. 
+* Timely snapshots of the census data that match the voter data.
+
+It is true that using the get_census_data function to generate a census object may take a long time to download necessary data at block level, expeciallly when demo = TRUE. Below is an example that the census_geo_api function may be used to create census objects at track level, without the extra unnecessary downloading of block level data.
+
+```r
+k <- '---'   # Note: '---' is your census key
+
+censusObjs2  = list()
+s <- "DC"
+county <- census_geo_api(k, s, geo = "county", demo = TRUE)
+tract <- census_geo_api(k, s, geo = "tract", demo = TRUE)
+censusObjs2[[s]] <- list(state = s, demo = TRUE, county = county, tract = tract)
+
+s <- "NJ"
+county <- census_geo_api(k, s, geo = "county", demo = TRUE)
+tract <- census_geo_api(k, s, geo = "tract", demo = TRUE)
+censusObjs2[[s]] <- list(state = s, demo = TRUE, county = county, tract = tract)
+
+v1 <- voters[c(-3,-7),]   # skip the NY case in the example, as it takes too long to get the census data of NY
+x1 <- predict_race(voter.file = v1, census.geo = "tract", census.data = censusObjs2, party = "PID", demo = TRUE)
+x0 <- predict_race(voter.file = v1, census.geo = "tract", census.key = k, party = "PID", demo = TRUE)
+
+x1 == x0
+```
