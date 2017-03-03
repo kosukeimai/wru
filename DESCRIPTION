@@ -3,7 +3,7 @@ Version: 0.1-1
 Date: 2016-12-12
 Title: Who Are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
-Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre]
+Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre], Hubert Jin [ctb]
 Maintainer: Kabir Khanna <kkhanna@princeton.edu>
 Description: This open-source software package enables researchers to predict
     individual ethnicity using his/her surname, geolocation, and other attributes
