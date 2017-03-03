@@ -1,3 +1,5 @@
 Date        Version  Comment
 2015-12-09  0.0-1    First version on CRAN
 2016-03-04  0.0-2    Minor improvements
+2016-12-13  0.1-1    New function to pre-download Census data and other minor improvements
+2017-03-03  0.1-2    Updated surname handling, enhanced demographics option, and improved error handling and documentation

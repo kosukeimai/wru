@@ -50,13 +50,17 @@
 #' @param census.data A list indexed by two-letter state abbreviations, 
 #' which contains pre-saved Census geographic data. 
 #' Can be generated using \code{get_census_data} function.
-#' @param demo An optional \code{TRUE}/\code{FALSE} object specifying whether to 
-#' condition race predictions on individual age and sex (in addition to geolocation). 
-#' Default is \code{FALSE}. Must be same as \code{\var{demo}} in \code{\var{census.data}} object.
+#' @param age An optional \code{TRUE}/\code{FALSE} object specifying whether to 
+#' condition race predictions on age (in addition to surname and geolocation). 
+#' Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
 #' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
-#' If \code{TRUE}, \code{\var{voter.file}} should include numerical variables 
-#' \code{\var{age}} and \code{\var{sex}}, where \code{\var{sex}} coded as 0 for 
-#' males and 1 for females.
+#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
+#' @param sex optional \code{TRUE}/\code{FALSE} object specifying whether to 
+#' condition race predictions on sex (in addition to surname and geolocation).
+#' Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
+#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
+#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}}, 
+#' where \code{\var{sex}} is coded as 0 for males and 1 for females.
 #' @param party An optional character object specifying party registration field 
 #' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}. 
 #' If specified, race/ethnicity predictions will be conditioned 
@@ -76,18 +80,18 @@
 #' data(voters)
 #' predict_race(voters, surname.only = TRUE)
 #' predict_race(voter.file = voters, surname.only = TRUE)
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", demo = TRUE)}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = TRUE)}
 #' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
-#' \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), demo = TRUE); 
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", demo = TRUE)}
+#' \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), age = TRUE, sex = TRUE); 
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", age = TRUE, sex = TRUE)}
 #' @export
 
 ## Race Prediction Function
 predict_race <- function(voter.file, 
                       census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                      census.geo, census.key, census.data = NA, demo = FALSE, party) {
+                      census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party) {
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
@@ -175,7 +179,8 @@ predict_race <- function(voter.file,
                                 voter.file = voter.file, 
                                 states = "all", 
                                 geo = "block", 
-                                demo = demo,
+                                age = age, 
+                                sex = sex, 
                                 census.data = census.data)
   }
 
@@ -192,7 +197,8 @@ predict_race <- function(voter.file,
                                 voter.file = voter.file, 
                                 states = "all", 
                                 geo = "tract", 
-                                demo = demo, 
+                                age = age, 
+                                sex = sex, 
                                 census.data = census.data)
   }
   
@@ -204,7 +210,8 @@ predict_race <- function(voter.file,
                                 voter.file = voter.file, 
                                 states = "all", 
                                 geo = "county", 
-                                demo = demo, 
+                                age = age, 
+                                sex = sex, 
                                 census.data = census.data)
   }
   
