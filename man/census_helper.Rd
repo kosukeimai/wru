@@ -4,8 +4,8 @@
 \alias{census_helper}
 \title{Census helper function.}
 \usage{
-census_helper(key, voter.file, states = "all", geo = "tract",
-  demo = FALSE, census.data = NA)
+census_helper(key, voter.file, states = "all", geo = "tract", age = FALSE,
+  sex = FALSE, census.data = NA)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
@@ -25,16 +25,23 @@ Census data for all states contained in user-input data.}
 Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 Warning: extracting block-level data takes very long.}
 
-\item{demo}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
-Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
-Pr(Geolocation | Race). Default is \code{FALSE}.}
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
+If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
+
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
+If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{census.data}{A optional census object of class \code{list} containing 
 pre-saved Census geographic data. Can be created using \code{get_census_data} function.
-If \code{\var{census.data}} is provided, its \code{\var{demo}} element must have the 
-same value as the \code{\var{demo}} option specified in this function.
-If missing, function will retrive the census data via Census API.}
+If \code{\var{census.data}} is provided, the \code{\var{age}} element must have the same value
+as the \code{\var{age}} option specified in this function (i.e., \code{TRUE} in both or 
+\code{FALSE} in both). Similarly, the \code{\var{sex}} element in the object provided in 
+\code{\var{census.data}} must have the same value as the \code{\var{sex}} option here.
+If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
@@ -53,7 +60,7 @@ calculated are Pr(Geolocation | Race) where geolocation is county, tract, or blo
 \examples{
 \dontshow{data(voters)}
 \dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", demo = TRUE)}
+\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", age = TRUE, sex = TRUE)}
 
 }
 

@@ -2,9 +2,9 @@
 % Please edit documentation in R/get_census_data.R
 \name{get_census_data}
 \alias{get_census_data}
-\title{Multilevel Census Data download function.}
+\title{Multilevel Census data download function.}
 \usage{
-get_census_data(key, states, demo = FALSE)
+get_census_data(key, states, age = FALSE, sex = FALSE)
 }
 \arguments{
 \item{key}{A required character object containing a valid Census API key, 
@@ -12,22 +12,27 @@ which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
 
 \item{states}{which states to extract Census data for, e.g., \code{c("NJ", "NY")}.}
 
-\item{demo}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
-Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function will return 
-Pr(Geolocation | Race). Default is \code{FALSE}.}
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
+If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
+
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
+If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 }
 \value{
 Output will be an object of class \code{list} indexed by state. 
-Output will contain the following elements: \code{state}, \code{demo}, 
+Output will contain the following elements: \code{state}, \code{age}, \code{sex}, 
 \code{county}, \code{tract} and \code{block}.
 }
 \description{
-\code{get_census_data} returns a Census data object for specified state(s).
-Using this function to download Census data in advance can save considerable 
-time when running \code{predict_race} and \code{census_helper} functions.
+\code{get_census_data} returns county-, tract-, and block-level Census data 
+for specified state(s). Using this function to download Census data in advance 
+can save considerable time when running \code{predict_race} and \code{census_helper}.
 }
 \examples{
-\dontrun{get_census_data(key = "...", states = c("NJ", "NY"), demo = TRUE)}
+\dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 }
 

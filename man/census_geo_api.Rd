@@ -4,22 +4,28 @@
 \alias{census_geo_api}
 \title{Census Data download function.}
 \usage{
-census_geo_api(key, state, geo = "tract", demo = FALSE)
+census_geo_api(key, state, geo = "tract", age = FALSE, sex = FALSE)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
 key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
 
-\item{state}{to extract Census data for, e.g. \code{"NJ"}.}
+\item{state}{A required character object specifying which state to extract Census data for, 
+e.g., \code{"NJ"}.}
 
 \item{geo}{A character object specifying what aggregation level to use. 
 Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
 Warning: extracting block-level data takes very long.}
 
-\item{demo}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-demographics (i.e., age and sex) or not. If \code{TRUE}, function will return 
-Pr(Geolocation, Age, Sex | Race). If \code{FALSE}, function wil return 
-Pr(Geolocation | Race). Default is \code{FALSE}.}
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
+If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
+
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
+If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 }
 \value{
 Output will be an object of class \code{list}, indexed by state names. It will 
@@ -35,7 +41,7 @@ at either the county, tract, or block level, for a particular state.
 \examples{
 \dontshow{data(voters)}
 \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
-\dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", demo = TRUE)}
+\dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
 
 }
 \references{
