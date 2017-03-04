@@ -60,9 +60,11 @@ merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, i
   
   ## Census Surname List
   if (surname.year == 2000) {
+    surnames2000$surname <- as.character(surnames2000$surname)
     surnames <- surnames2000
+  } else {
+    surnames$surname <- as.character(surnames$surname)
   }
-  surnames$surname <- as.character(surnames$surname)
   
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
   
