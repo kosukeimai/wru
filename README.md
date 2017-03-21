@@ -79,11 +79,11 @@ censusObj2  = list()
 
 county.dc <- census_geo_api(key = "", state = "DC", geo = "county")
 tract.dc <- census_geo_api(key = "", state = "DC", geo = "tract")
-censusObj2[["DC"]] <- list(state = "DC", demo = TRUE, county = county.dc, tract = tract.dc)
+censusObj2[["DC"]] <- list(state = "DC", county = county.dc, tract = tract.dc)
 
 tract.nj <- census_geo_api(key = "", state = "NJ", geo = "tract")
 county.nj <- census_geo_api(key = "", state = "NJ", geo = "county")
-censusObj2[["NJ"]] <- list(state = "NJ", demo = TRUE, county = county.nj, tract = tract.nj)
+censusObj2[["NJ"]] <- list(state = "NJ", county = county.nj, tract = tract.nj)
 ```
 
 After saving the data in censusObj2 above, we can condition race/ethnicity predictions on different combinations of input variables, without having to re-download the relevant Census data.
