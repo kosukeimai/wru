@@ -1,6 +1,6 @@
 #' Census API function.
 #'
-#' \code{getCensusApi} obtains U.S. Census data via the public API.
+#' \code{get_census_api} obtains U.S. Census data via the public API.
 #' 
 #' This function obtains U.S. Census data via the public API. User 
 #' can specify the variables and region(s) for which to obtain data.
@@ -20,7 +20,7 @@
 #'  If unsuccessful, function prints the URL query that caused the error.
 #'
 #' @examples
-#' \dontrun{getCensusApi(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+#' \dontrun{get_census_api(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
 #' vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 #'
 #' @references
@@ -28,15 +28,15 @@
 #' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-getCensusApi <- function(data_url, key, vars, region) {
+get_census_api <- function(data_url, key, vars, region) {
   if(length(vars) > 50){
-    vars <- vecToChunk(vars) # Split variables into a list
+    vars <- vec_to_chunk(vars) # Split variables into a list
     get <- lapply(vars, function(x) paste(x, sep='', collapse=","))
-    data <- lapply(vars, function(x) getCensusApi2(data_url,key, x, region))
+    data <- lapply(vars, function(x) get_census_api_2(data_url,key, x, region))
     }
   else {
       get <- paste(vars, sep='', collapse=',')
-      data <- list(getCensusApi2(data_url, key, get, region))
+      data <- list(get_census_api_2(data_url, key, get, region))
       }
   
   ## Format output. If there were no errors, than paste the data together. If there is an error, just return the unformatted list.
@@ -52,7 +52,7 @@ getCensusApi <- function(data_url, key, vars, region) {
   }
   
   else{
-    print('Unable to create single data.frame in getCensusApi')
+    print('Unable to create single data.frame in get_census_api')
     return(data)
     }
 }
