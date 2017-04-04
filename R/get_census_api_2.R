@@ -35,7 +35,19 @@ get_census_api_2 <- function(data_url, key, get, region){
   }
   api_call <- paste(data_url, 'key=', key, '&get=', get, '&', region, sep='')
   dat_raw <- try(readLines(api_call, warn="F"))
+#
+#  The following will pause and retry the census website access. But we are not using it right now.
+#
+#  retry = 5
+#  while ((class(dat_raw) == 'try-error') && (retry > 0)) {
+#    print(paste("Try census server again:", data_url))
+#    Sys.sleep(1)
+#    retry <- retry - 1
+#    dat_raw <- try(readLines(api_call, warn="F"))
+#  }
+#
   if(class(dat_raw) == 'try-error') {
+    print("Data access failure at the census website, please try again by re-run the previous command")
     stop(print(api_call))
     return
   }

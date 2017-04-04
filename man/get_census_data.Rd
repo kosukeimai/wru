@@ -4,7 +4,8 @@
 \alias{get_census_data}
 \title{Multilevel Census data download function.}
 \usage{
-get_census_data(key, states, age = FALSE, sex = FALSE)
+get_census_data(key, states, age = FALSE, sex = FALSE,
+  census.geo = "block")
 }
 \arguments{
 \item{key}{A required character object containing a valid Census API key, 
@@ -21,6 +22,10 @@ If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Ag
 sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
 If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
+
+\item{census.geo}{An optional character vector specifying what level of 
+geography to use to merge in U.S. Census 2010 geographic data. Currently
+\code{"county"}, \code{"tract"}, or \code{"block"} are supported.}
 }
 \value{
 Output will be an object of class \code{list} indexed by state. 
