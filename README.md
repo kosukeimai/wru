@@ -73,7 +73,7 @@ Using pre-downloaded Census data may be useful for the following reasons:
 * The machines used to run predict_race() may not have internet access; 
 * You can obtain timely snapshots of Census geographic data that match your voter file.
 
-Downloading data using get_census_data() may take a long time, especially at the block level or in large states. If you are not predicting using block level census information, you could save a lot of time by only downloading census data at track level, or county level if you don't plan to only use tract information.
+Downloading data using get_census_data() may take a long time, especially at the block level or in large states. If block-level Census data is not required, downloading Census data at the tract level will save time. Similarly, if tract-level Census data is not required, county-level data may be specified in order to save time.
 
 ```r
 library(wru)
