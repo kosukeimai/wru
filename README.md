@@ -73,7 +73,21 @@ Using pre-downloaded Census data may be useful for the following reasons:
 * The machines used to run predict_race() may not have internet access; 
 * You can obtain timely snapshots of Census geographic data that match your voter file.
 
-Downloading data using get_census_data() may take a long time, especially at the block level or in large states. The example below uses the census_geo_api() function to download county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
+Downloading data using get_census_data() may take a long time, especially at the block level or in large states. If block-level Census data is not required, downloading Census data at the tract level will save time. Similarly, if tract-level Census data is not required, county-level data may be specified in order to save time.
+
+```r
+library(wru)
+data(voters)
+voters.dc.nj <- voters[c(-3, -7), ]  # remove two NY cases from dataset
+census.dc.nj2 <- get_census_data(key = "", state = c("DC", "NJ"), age = TRUE, sex = FALSE, census.geo = "tract")  
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj2, party = "PID", age = TRUE, sex = FALSE)
+predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = census.dc.nj2, age = TRUE, sex = FALSE)  # Pr(Race | Surname, County)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj2, age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract)
+predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = census.dc.nj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, County, Party)
+predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
+```
+
+Or you can also use the census_geo_api() to maually construct a census object. The example below creates a census object with county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
 ```r
 censusObj2  = list()
 
