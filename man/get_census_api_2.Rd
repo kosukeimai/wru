@@ -4,7 +4,7 @@
 \alias{get_census_api_2}
 \title{Census API URL assembler.}
 \usage{
-get_census_api_2(data_url, key, get, region)
+get_census_api_2(data_url, key, get, region, retry = 0)
 }
 \arguments{
 \item{data_url}{URL root of the API, including the question mark, 
@@ -21,6 +21,8 @@ split variables into separate queries.}
 \item{region}{Character object specifying which region to obtain data for.
 Must contain "for" and possibly "in", 
 e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.}
+
+\item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
 If successful, output will be an object of class \code{data.frame}. 

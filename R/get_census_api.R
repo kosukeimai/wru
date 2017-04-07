@@ -16,6 +16,7 @@
 #' @param region Character object specifying which region to obtain data for.
 #'  Must contain "for" and possibly "in", 
 #'  e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.
+#' @param retry The number of retries at the census website if network interruption occurs.
 #' @return If successful, output will be an object of class \code{data.frame}. 
 #'  If unsuccessful, function prints the URL query that caused the error.
 #'
@@ -28,15 +29,15 @@
 #' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-get_census_api <- function(data_url, key, vars, region) {
+get_census_api <- function(data_url, key, vars, region, retry = 0) {
   if(length(vars) > 50){
     vars <- vec_to_chunk(vars) # Split variables into a list
     get <- lapply(vars, function(x) paste(x, sep='', collapse=","))
-    data <- lapply(vars, function(x) get_census_api_2(data_url,key, x, region))
+    data <- lapply(vars, function(x) get_census_api_2(data_url,key, x, region, retry))
     }
   else {
       get <- paste(vars, sep='', collapse=',')
-      data <- list(get_census_api_2(data_url, key, get, region))
+      data <- list(get_census_api_2(data_url, key, get, region, retry))
       }
   
   ## Format output. If there were no errors, than paste the data together. If there is an error, just return the unformatted list.

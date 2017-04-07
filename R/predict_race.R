@@ -67,6 +67,7 @@
 #' on individual's party registration (in addition to geolocation). 
 #' Whatever the name of the party registration field in \code{\var{voter.file}}, 
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
+#' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns with 
 #'  predicted probabilities for each of the five major racial categories: 
@@ -91,7 +92,7 @@
 ## Race Prediction Function
 predict_race <- function(voter.file, 
                       census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                      census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party) {
+                      census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, retry = 0) {
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
@@ -181,7 +182,7 @@ predict_race <- function(voter.file,
                                 geo = "block", 
                                 age = age, 
                                 sex = sex, 
-                                census.data = census.data)
+                                census.data = census.data, retry = retry)
   }
 
   if (census.geo == "precinct") {
@@ -199,7 +200,7 @@ predict_race <- function(voter.file,
                                 geo = "tract", 
                                 age = age, 
                                 sex = sex, 
-                                census.data = census.data)
+                                census.data = census.data, retry = retry)
   }
   
   if (census.geo == "county") {
@@ -212,7 +213,7 @@ predict_race <- function(voter.file,
                                 geo = "county", 
                                 age = age, 
                                 sex = sex, 
-                                census.data = census.data)
+                                census.data = census.data, retry = retry)
   }
   
   ## Pr(Race | Surname, Geolocation)

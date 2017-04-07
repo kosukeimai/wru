@@ -5,7 +5,7 @@
 \title{Multilevel Census data download function.}
 \usage{
 get_census_data(key, states, age = FALSE, sex = FALSE,
-  census.geo = "block")
+  census.geo = "block", retry = 0)
 }
 \arguments{
 \item{key}{A required character object containing a valid Census API key, 
@@ -26,6 +26,8 @@ If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Ag
 \item{census.geo}{An optional character vector specifying what level of 
 geography to use to merge in U.S. Census 2010 geographic data. Currently
 \code{"county"}, \code{"tract"}, or \code{"block"} are supported.}
+
+\item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
 Output will be an object of class \code{list} indexed by state. 
