@@ -5,7 +5,7 @@
 \title{Census helper function.}
 \usage{
 census_helper(key, voter.file, states = "all", geo = "tract", age = FALSE,
-  sex = FALSE, census.data = NA)
+  sex = FALSE, census.data = NA, retry = 0)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
@@ -42,6 +42,8 @@ as the \code{\var{age}} option specified in this function (i.e., \code{TRUE} in 
 \code{FALSE} in both). Similarly, the \code{\var{sex}} element in the object provided in 
 \code{\var{census.data}} must have the same value as the \code{\var{sex}} option here.
 If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API.}
+
+\item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 

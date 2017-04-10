@@ -6,7 +6,7 @@
 \usage{
 predict_race(voter.file, census.surname = TRUE, surname.only = FALSE,
   surname.year = 2010, census.geo, census.key, census.data = NA,
-  age = FALSE, sex = FALSE, party)
+  age = FALSE, sex = FALSE, party, retry = 0)
 }
 \arguments{
 \item{voter.file}{An object of class \code{data.frame}. 
@@ -80,6 +80,8 @@ If specified, race/ethnicity predictions will be conditioned
 on individual's party registration (in addition to geolocation). 
 Whatever the name of the party registration field in \code{\var{voter.file}}, 
 it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
+
+\item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 

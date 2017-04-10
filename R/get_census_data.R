@@ -18,6 +18,7 @@
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
+#' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain the following elements: \code{state}, \code{age}, \code{sex}, 
 #' \code{county}, \code{tract} and \code{block}. 
@@ -25,7 +26,7 @@
 #' @export
 #'
 #' @examples \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
-get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block") {
+get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0) {
   
   if (missing(key)) {
     stop('Must enter valid Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
@@ -37,15 +38,15 @@ get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = 
   for (s in states) {
       CensusObj[[s]] <- list(state = s, age = age, sex = sex)
       if (census.geo == "block") {
-        block <- census_geo_api(key, s, geo = "block", age, sex)
+        block <- census_geo_api(key, s, geo = "block", age, sex, retry)
         CensusObj[[s]]$block <- block
       }
       if ((census.geo == "block") || (census.geo == "tract")) {
-        tract <- census_geo_api(key, s, geo = "tract", age, sex)
+        tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
         CensusObj[[s]]$tract <- tract
       }
       if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
-          county <- census_geo_api(key, s, geo = "county", age, sex)
+          county <- census_geo_api(key, s, geo = "county", age, sex, retry)
         CensusObj[[s]]$county <- county
       }
   }

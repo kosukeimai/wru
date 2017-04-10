@@ -17,6 +17,7 @@
 #' @param region Character object specifying which region to obtain data for.
 #'  Must contain "for" and possibly "in", 
 #'  e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.
+#' @param retry The number of retries at the census website if network interruption occurs.
 #' @return If successful, output will be an object of class \code{data.frame}. 
 #'  If unsuccessful, function prints the URL query that was constructed.
 #'
@@ -29,23 +30,20 @@
 #' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-get_census_api_2 <- function(data_url, key, get, region){
+get_census_api_2 <- function(data_url, key, get, region, retry = 0){
   if(length(get)>1) {
     get <- paste(get, collapse=',', sep='')
   }
   api_call <- paste(data_url, 'key=', key, '&get=', get, '&', region, sep='')
   dat_raw <- try(readLines(api_call, warn="F"))
-#
-#  The following will pause and retry the census website access. But we are not using it right now.
-#
-#  retry = 5
-#  while ((class(dat_raw) == 'try-error') && (retry > 0)) {
-#    print(paste("Try census server again:", data_url))
-#    Sys.sleep(1)
-#    retry <- retry - 1
-#    dat_raw <- try(readLines(api_call, warn="F"))
-#  }
-#
+
+  while ((class(dat_raw) == 'try-error') && (retry > 0)) {
+    print(paste("Try census server again:", data_url))
+    Sys.sleep(1)
+    retry <- retry - 1
+    dat_raw <- try(readLines(api_call, warn="F"))
+  }
+
   if(class(dat_raw) == 'try-error') {
     print("Data access failure at the census website, please try again by re-run the previous command")
     stop(print(api_call))
