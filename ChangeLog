@@ -3,3 +3,4 @@ Date        Version  Comment
 2016-03-04  0.0-2    Minor improvements
 2016-12-13  0.1-1    New function to pre-download Census data and other minor improvements
 2017-03-03  0.1-2    Updated surname handling, enhanced demographics option, and improved error handling and documentation
+2017-04-10  0.1-3    Allows Census data download at level user prefers (block, tract, or county)
