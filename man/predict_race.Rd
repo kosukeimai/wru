@@ -112,4 +112,3 @@ predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj,
 \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), age = TRUE, sex = TRUE); 
 predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", age = TRUE, sex = TRUE)}
 }
-

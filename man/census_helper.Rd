@@ -65,4 +65,3 @@ calculated are Pr(Geolocation | Race) where geolocation is county, tract, or blo
 \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", age = TRUE, sex = TRUE)}
 
 }
-
