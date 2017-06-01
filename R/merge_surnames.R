@@ -7,8 +7,7 @@
 #'  Census Surname List (from 2000 or 2010) and Spanish Surname List to obtain 
 #'  Pr(Race | Surname) for each of the five major racial groups.
 #'  
-#'  By default, the function matches surnames to the Census list as follows 
-#'  (each step only applies to surnames not matched in previous steps): 
+#'  By default, the function matches surnames to the Census list as follows: 
 #'  1) Search raw surnames in Census surname list; 
 #'  2) Remove any punctuation and search again; 
 #'  3) Remove any spaces and search again; 
@@ -17,6 +16,9 @@
 #'  6) Split double-barreled surnames into two parts and search second part of name; 
 #'  7) For any remaining names, impute probabilities using distribution 
 #'  for all names not appearing on Census list.
+#'  
+#'  Each step only applies to surnames not matched in a previous ste. 
+#'  Steps 2 through 7 are not applied if \code{clean.surname} is FALSE.
 #'  
 #'  Note: Any name appearing only on the Spanish Surname List is assigned a 
 #'  probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
@@ -27,11 +29,9 @@
 #'  Census Surname List is from. Accepted values are \code{2010} and \code{2000}. 
 #'  Default is \code{2010}.
 #' @param clean.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
-#' \code{clean.surname} function will be run to clean raw surnames in 
-#' \code{\var{voter.file}} before matching them with Census lists, 
-#' in order to increase the chance of finding a match. 
-#' See \code{clean.surname} documentation for details.
-#' Default is \code{TRUE}.
+#' any surnames in \code{\var{voter.file}} that cannot initially be matched 
+#' to surname lists will be cleaned, according to U.S. Census specifications, 
+#' in order to increase the chance of finding a match. Default is \code{TRUE}.
 #' @param impute.missing A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #' race/ethnicity probabilities will be imputed for unmatched names using  
 #' race/ethnicity distribution for all other names (i.e., not on Census List).
@@ -75,6 +75,11 @@ merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, i
 
   ## Merge Surnames with Census List (No Cleaning Yet)
   df <- merge(df[names(df) %in% p_eth == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)
+
+  if (nrow(df[df$surname.upper %in% surnames$surname == F, ]) == 0) {
+    return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
+  }
+
   df[df$surname.upper %in% surnames$surname == F, ]$surname.match <- ""
   
   df1 <- df[df$surname.upper %in% surnames$surname, ] #Matched surnames

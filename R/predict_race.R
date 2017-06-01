@@ -82,11 +82,13 @@
 #' predict_race(voters, surname.only = TRUE)
 #' predict_race(voter.file = voters, surname.only = TRUE)
 #' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = TRUE)}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", 
+#' party = "PID")}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
 #' \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), age = TRUE, sex = TRUE); 
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", age = TRUE, sex = TRUE)}
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", 
+#' age = TRUE, sex = TRUE)}
 #' @export
 
 ## Race Prediction Function

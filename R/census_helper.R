@@ -43,7 +43,8 @@
 #' @examples
 #' \dontshow{data(voters)}
 #' \dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-#' \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", age = TRUE, sex = TRUE)}
+#' \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", 
+#' age = TRUE, sex = TRUE)}
 #'
 #' @export
 census_helper <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, census.data = NA, retry = 0) {
