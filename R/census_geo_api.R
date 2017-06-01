@@ -6,7 +6,7 @@
 #' at either the county, tract, or block level, for a particular state. 
 #'
 #' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
+#'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param state A required character object specifying which state to extract Census data for, 
 #' e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
@@ -31,13 +31,13 @@
 #'
 #' @references
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
-#' available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+#' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
 census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0) {
 
   if (missing(key)) {
-    stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
+    stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
   
   state <- toupper(state)
@@ -82,7 +82,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (geo == "county") {
     geo.merge <- c("state", "county")
     region <- paste("for=county:*&in=state:", state.fips, sep = "")
-    census <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region, retry)
+    census <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region, retry)
   }
   
   if (geo == "tract") {
@@ -90,14 +90,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     
     census <- NULL
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
       region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      census.temp <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+      census.temp <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
       census <- rbind(census, census.temp)
     }
     rm(census.temp)
@@ -108,7 +108,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract", "block")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
 
     census <- NULL
@@ -118,14 +118,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       
       region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
       print(region_tract)
-      tract_df <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_tract, retry)
+      tract_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_tract, retry)
       tract_list <- tract_df$tract
 
       for (t in 1:length(tract_list)) {
         print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
         
         region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-        census.temp <- get_census_api("http://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_block, retry)
+        census.temp <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_block, retry)
         census <- rbind(census, census.temp)
       }
     }

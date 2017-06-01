@@ -9,7 +9,7 @@ census_helper(key, voter.file, states = "all", geo = "tract", age = FALSE,
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
+key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
 \item{voter.file}{An object of class \code{data.frame}. Must contain field(s) 
 named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 

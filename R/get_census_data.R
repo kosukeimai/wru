@@ -5,7 +5,7 @@
 #' can save considerable time when running \code{predict_race} and \code{census_helper}.
 #' 
 #' @param key A required character object containing a valid Census API key, 
-#' which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
+#' which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param states which states to extract Census data for, e.g., \code{c("NJ", "NY")}.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
@@ -29,7 +29,7 @@
 get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0) {
   
   if (missing(key)) {
-    stop('Must enter valid Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
+    stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
   
   states <- toupper(states)

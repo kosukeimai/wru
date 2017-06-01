@@ -9,7 +9,7 @@ get_census_data(key, states, age = FALSE, sex = FALSE,
 }
 \arguments{
 \item{key}{A required character object containing a valid Census API key, 
-which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
+which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
 \item{states}{which states to extract Census data for, e.g., \code{c("NJ", "NY")}.}
 

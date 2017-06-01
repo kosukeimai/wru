@@ -9,7 +9,7 @@ census_geo_api(key, state, geo = "tract", age = FALSE, sex = FALSE,
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.}
+key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
 \item{state}{A required character object specifying which state to extract Census data for, 
 e.g., \code{"NJ"}.}
@@ -49,5 +49,5 @@ at either the county, tract, or block level, for a particular state.
 }
 \references{
 Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
-available \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }

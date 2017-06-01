@@ -15,7 +15,7 @@
 #'
 #' @references
 #' Based on code authored by Nicholas Nagle, which is available 
-#' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+#' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
 vec_to_chunk <- function(x){
