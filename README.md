@@ -67,7 +67,7 @@ The last two lines above are equivalent to the following:
 ```r
 predict_race(voter.file = voters.dc.nj, census.geo = "block", census.key = "", age = TRUE, sex = FALSE, party = "PID")
 ```
-
+ 
 Using pre-downloaded Census data may be useful for the following reasons:
 * You can save a lot of time in future runs of predict_race() if the relevant Census data has already been saved; 
 * The machines used to run predict_race() may not have internet access; 
