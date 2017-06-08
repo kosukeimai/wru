@@ -7,9 +7,9 @@
 #' function directly.
 #'
 #' @param data_url URL root of the API, including the question mark, 
-#'  e.g., \code{"http://api.census.gov/data/2010/sf1?"}.
+#'  e.g., \code{"https://api.census.gov/data/2010/sf1?"}.
 #' @param key A required character object containing user's Census API key, 
-#'  which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
+#'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param get A character vector of variables to get, 
 #'  e.g., \code{c("P0050003","P0050004","P0050005", "P0050006")}.
 #'  If there are more than 50 variables, then function will automatically 
@@ -22,12 +22,12 @@
 #'  If unsuccessful, function prints the URL query that was constructed.
 #'
 #' @examples
-#' \dontrun{get_census_api_2(data_url = "http://api.census.gov/data/2010/sf1?", key = "...", 
+#' \dontrun{get_census_api_2(data_url = "https://api.census.gov/data/2010/sf1?", key = "...", 
 #' get = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&in=state:34")}
 #' 
 #' @references
 #' Based on code authored by Nicholas Nagle, which is available 
-#' \href{http://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+#' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
 get_census_api_2 <- function(data_url, key, get, region, retry = 0){

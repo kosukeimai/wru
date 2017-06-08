@@ -24,4 +24,3 @@ A table for probability of party by race.
 data(pid)
 }
 \keyword{datasets}
-

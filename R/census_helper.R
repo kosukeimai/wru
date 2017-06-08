@@ -8,7 +8,7 @@
 #' calculated are Pr(Geolocation | Race) where geolocation is county, tract, or block.
 #'
 #' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{http://api.census.gov/data/key_signup.html}{here}.
+#'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
 #'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
@@ -57,7 +57,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
   
   if (toDownload) {
     if (missing(key)) {
-      stop('Must enter U.S. Census API key, which can be requested at http://api.census.gov/data/key_signup.html.')
+      stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
     }
   } 
   

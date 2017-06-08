@@ -19,4 +19,3 @@ List of States and their FIPS.
 data(State.FIPS)
 }
 \keyword{datasets}
-

@@ -114,4 +114,3 @@ predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj,
 predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", 
 age = TRUE, sex = TRUE)}
 }
-
