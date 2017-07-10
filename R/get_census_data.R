@@ -36,19 +36,23 @@ get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = 
   
   CensusObj <- NULL
   for (s in states) {
-      CensusObj[[s]] <- list(state = s, age = age, sex = sex)
-      if (census.geo == "block") {
-        block <- census_geo_api(key, s, geo = "block", age, sex, retry)
-        CensusObj[[s]]$block <- block
-      }
-      if ((census.geo == "block") || (census.geo == "tract")) {
-        tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
-        CensusObj[[s]]$tract <- tract
-      }
-      if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
-          county <- census_geo_api(key, s, geo = "county", age, sex, retry)
-        CensusObj[[s]]$county <- county
-      }
+    CensusObj[[s]] <- list(state = s, age = age, sex = sex)
+    if (census.geo == "place") {
+      place <- census_geo_api(key, s, geo = "place", age, sex, retry)
+      CensusObj[[s]]$place <- place
+    }
+    if (census.geo == "block") {
+      block <- census_geo_api(key, s, geo = "block", age, sex, retry)
+      CensusObj[[s]]$block <- block
+    }
+    if ((census.geo == "block") || (census.geo == "tract")) {
+      tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
+      CensusObj[[s]]$tract <- tract
+    }
+    if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
+      county <- census_geo_api(key, s, geo = "county", age, sex, retry)
+      CensusObj[[s]]$county <- county
+    }
   }
   return(CensusObj)
 }

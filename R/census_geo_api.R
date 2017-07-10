@@ -3,14 +3,14 @@
 #' \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
 #'
 #' This function allows users to download U.S. Census 2010 geographic data, 
-#' at either the county, tract, or block level, for a particular state. 
+#' at either the place, county, tract, or block level, for a particular state. 
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param state A required character object specifying which state to extract Census data for, 
 #' e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
+#'  Use \code{"county"}, \code{"tract"}, \code{"place"}, or \code{"block"}. Default is \code{"tract"}. 
 #'  Warning: extracting block-level data takes very long.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
@@ -35,7 +35,7 @@
 #' 
 #' @export
 census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0) {
-
+  
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
@@ -46,7 +46,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   fips.codes <- get("State.FIPS")
   state.fips <- fips.codes[fips.codes$State == state, "FIPS"]
-
+  
   if (age == F & sex == F) {
     num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
     vars <- paste("P00500", num, sep = "")
@@ -60,7 +60,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
-
+  
   if (age == T & sex == F) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
@@ -69,7 +69,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
-
+  
   if (age == T & sex == T) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
@@ -78,7 +78,13 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
-
+  
+  if (geo == "place") {
+    geo.merge <- c("state", "place")
+    region <- paste("for=place:*&in=state:", state.fips, sep = "")
+    census <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region, retry)
+  }
+  
   if (geo == "county") {
     geo.merge <- c("state", "county")
     region <- paste("for=county:*&in=state:", state.fips, sep = "")
@@ -102,7 +108,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     }
     rm(census.temp)
   }
-    
+  
   if (geo == "block") {
     
     geo.merge <- c("state", "county", "tract", "block")
@@ -110,7 +116,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     county_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
-
+    
     census <- NULL
     
     for (c in 1:length(county_list)) {
@@ -120,7 +126,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       print(region_tract)
       tract_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_tract, retry)
       tract_list <- tract_df$tract
-
+      
       for (t in 1:length(tract_list)) {
         print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
         
@@ -131,9 +137,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     }
     
     rm(census.temp)
-      
+    
   }
-
+  
   census$state <- state
   
   if (age == F & sex == F) {
@@ -152,7 +158,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     ## Calculate Pr(Geolocation, Sex | Race)
     eth.cen <- c("whi", "bla", "his", "asi", "oth")
     eth.let <- c("I", "B", "H", "D", "F")
-
+    
     for (i in 1:length(eth.cen)) {
       if (i != 4 & i != 5) {
         census[paste("r_mal", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "002", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -170,7 +176,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       }
     }
   }
-
+  
   if (age == T & sex == F) {
     
     ## Calculate Pr(Geolocation, Age Category | Race)
@@ -195,9 +201,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       }
     }
   }
-
+  
   if (age == T & sex == T) {
-
+    
     ## Calculate Pr(Geolocation, Sex, Age Category | Race)
     eth.cen <- c("whi", "bla", "his", "asi", "oth")
     eth.let <- c("I", "B", "H", "D", "F")
@@ -226,6 +232,6 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       }
     }
   }
-
+  
   return(census)
 }
