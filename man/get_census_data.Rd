@@ -25,7 +25,7 @@ If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Ag
 
 \item{census.geo}{An optional character vector specifying what level of 
 geography to use to merge in U.S. Census 2010 geographic data. Currently
-\code{"county"}, \code{"tract"}, or \code{"block"} are supported.}
+\code{"place"}, \code{"county"}, \code{"tract"}, or \code{"block"} are supported.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 }
