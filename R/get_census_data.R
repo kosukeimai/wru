@@ -17,7 +17,7 @@
 #'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
-#' \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
+#' \code{"place"}, \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain the following elements: \code{state}, \code{age}, \code{sex}, 
