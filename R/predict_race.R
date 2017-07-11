@@ -34,7 +34,7 @@
 #' 2010 census will be used. Currently, the other available choice is \code{2000}.
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
-#' \clode{"place"}, \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
+#' \code{"place"}, \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object. 
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}} 
 #' must have column named \code{county}.
