@@ -29,3 +29,4 @@ An example dataset containing voter file information.
 data(voters)
 }
 \keyword{datasets}
+

@@ -5,12 +5,12 @@ Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
 Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre], Hubert Jin [ctb]
 Maintainer: Kabir Khanna <kkhanna@princeton.edu>
-Description: Predicts individual race/ethnicity using surname, geolocation, and other 
-    attributes, such as gender and age. The method utilizes the Bayes' Rule to compute
-    the posterior probability of each racial category for any given individual.
-    The package implements methods described in Imai and Khanna (2015) "Improving
-    Ecological Inference by Predicting Individual Ethnicity from Voter Registration
-    Records" <DOI:10.1093/pan/mpw001>.
+Description: Predicts individual race/ethnicity using surname, geolocation,
+    and other attributes, such as gender and age. The method utilizes the Bayes'
+    Rule to compute the posterior probability of each racial category for any given
+    individual. The package implements methods described in Imai and Khanna (2015)
+    "Improving Ecological Inference by Predicting Individual Ethnicity from Voter
+    Registration Records" <DOI:10.1093/pan/mpw001>.
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
@@ -18,8 +18,8 @@ Depends:
     utils
 Imports:
     devtools (>= 1.10.0)
-Suggests:
+Suggests:    
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 3)
-RoxygenNote: 6.0.1
+RoxygenNote: 5.0.1

@@ -29,3 +29,4 @@ vec_to_chunk(x = c(paste("P012F0", seq(10:49), sep = ""), paste("P012I0", seq(10
 Based on code authored by Nicholas Nagle, which is available 
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
+

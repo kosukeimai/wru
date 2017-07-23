@@ -23,3 +23,4 @@ Census Surname List from 2010 with race/ethnicity probabilities by surname.
 data(surnames)
 }
 \keyword{datasets}
+
