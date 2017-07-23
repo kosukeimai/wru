@@ -1,6 +1,6 @@
 Package: wru
-Version: 0.1-5
-Date: 2017-6-8
+Version: 0.1-6
+Date: 2017-7-23
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
 Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre], Hubert Jin [ctb]
