@@ -42,4 +42,3 @@ can save considerable time when running \code{predict_race} and \code{census_hel
 \examples{
 \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 }
-

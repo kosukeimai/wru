@@ -44,4 +44,3 @@ vars = c("P0050003","P0050004","P0050005", "P0050006"), region = "for=county:*&i
 Based on code authored by Nicholas Nagle, which is available 
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
-

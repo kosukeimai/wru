@@ -14,7 +14,7 @@
 #'
 #' @docType data
 #' @keywords datasets
-#' @name surnames
+#' @name surnames2010
 #' @examples
 #' data(surnames)
-"surnames"
+"surnames2010"
