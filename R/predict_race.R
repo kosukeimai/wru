@@ -178,7 +178,7 @@ predict_race <- function(voter.file,
   
   if (census.geo == "place") {
     if (!("place" %in% names(voter.file))) {
-      stop("voter.file object needs to have a column named county.")
+      stop("voter.file object needs to have a column named place.")
     }
     voter.file <- census_helper(key = census.key, 
                                 voter.file = voter.file, 
