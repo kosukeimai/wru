@@ -14,6 +14,7 @@
   \item{tract}{Census tract (six-digit code)}
   \item{block}{Census block (four-digit code)}
   \item{precinct}{Voting precinct}
+  \item{place}{Voting place}
   \item{age}{Age in years}
   \item{sex}{0=male, 1=female}
   \item{party}{Party registration (character)}
