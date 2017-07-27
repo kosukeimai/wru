@@ -109,3 +109,16 @@ predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = cens
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, County, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
+
+The WRU prediction now has the option of census.geo = "place" for using statistics based on Census Designated Places (CDP). To make such prediction at the "place" level, the input data (voter.file) needs to have a column named "place". Here is an example:
+```r
+data(voters)
+voters$place <- c("74000", "60900", "51000", "60900", "60900", "60900", "51000", "60900", "60900", "50000")
+voters$place <- as.factor(voters$place)
+predict_race(voter.file = voters, census.geo = "place", census.key = "", party = "PID")
+#
+# Or preload the census statistics to a census object
+#
+census.obj3 <- get_census_data(key = "", state = c("DC", "NJ", "NY"), age = TRUE, sex = FALSE, census.geo = "place")
+predict_race(voter.file = voters, census.geo = "place", census.data = census.obj3, party = "PID", age = TRUE, sex = FALSE)
+```
