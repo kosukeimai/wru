@@ -108,11 +108,13 @@ data(voters)
 predict_race(voters, surname.only = TRUE)
 predict_race(voter.file = voters, surname.only = TRUE)
 \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = TRUE)}
-\dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", 
-party = "PID")}
+\dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")}
+\dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", party = "PID", age = TRUE, sex = FALSE)}
 \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
 predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
 \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), age = TRUE, sex = TRUE); 
 predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", 
 age = TRUE, sex = TRUE)}
+\dontrun{census.obj3 <- get_census_data(key = "...", state = c("DC", "NJ", "NY"), age = TRUE, sex = FALSE, census.geo = "place");
+predict_race(voter.file = voters, census.geo = "place", census.data = census.obj3, party = "PID", age = TRUE, sex = FALSE)}
 }
