@@ -28,7 +28,7 @@ The above produces the following output, where the last five columns are probabi
 #      10      Morse    DC  0    001 001301  3005           29   1   Rep   2   0.9054 0.04310000 0.02060000 0.00720000  0.02370
 ```
 
-In order to predict race/ethnicity based on surnames AND geolocation, first request a U.S. Census API key [here](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, block, or place).
+In order to predict race/ethnicity based on surnames AND geolocation, a user needs to provide a valid U.S. Census API key to access the census statistics. You may request a U.S. Census API key [here](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, block, or place).
 
 The following example predicts the race/ethnicity of voters based on their surnames, Census tract of residence (census.geo = "tract"), and which party registration (party = "PID"). Note that a valid API key must be provided in the input parameter 'census.key' in order for the function to download the relevant tract-level data.
 ```r
