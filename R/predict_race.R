@@ -113,7 +113,7 @@ predict_race <- function(voter.file,
       stop("Voter data frame needs to have a column named surname")
     }
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block","place") == F) {
+    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == F) {
       stop("census.geo must be either 'place', 'county', 'tract', or 'block'")
     } else {
       print(paste("Proceeding with Census geographic data at", census.geo, "level..."))
