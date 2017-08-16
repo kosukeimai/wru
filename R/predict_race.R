@@ -13,10 +13,10 @@
 #' state of residence (e.g., \code{"nj"} for New Jersey). 
 #' If using Census geographic data in race/ethnicity predictions, 
 #' \code{\var{voter.file}} must also contain at least one of the following fields: 
-#' \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}}. 
+#' \code{\var{place}}, \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}}. 
 #' These fields should contain character strings matching U.S. Census categories. 
 #' County is three characters (e.g., \code{"031"} not \code{"31"}), 
-#' tract is six characters, and block is four characters. 
+#' tract is six characters, and block is four characters. Place is five characters. 
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
@@ -34,10 +34,12 @@
 #' 2010 census will be used. Currently, the other available choice is \code{2000}.
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
-#' \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
+#' \code{"place"}, \code{"county"}, \code{"tract"}, or \code{"block"} are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object. 
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}} 
 #' must have column named \code{county}.
+#' #' If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}} 
+#' must have column named \code{place}.
 #' If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}} 
 #' must have columns named \code{county} and \code{tract}.
 #' And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}} 
@@ -82,19 +84,21 @@
 #' predict_race(voters, surname.only = TRUE)
 #' predict_race(voter.file = voters, surname.only = TRUE)
 #' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = TRUE)}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", 
-#' party = "PID")}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", party = "PID", age = TRUE, sex = FALSE)}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
 #' \dontrun{CensusObj2 <- get_census_data("...", state = c("NY", "DC", "NJ"), age = TRUE, sex = TRUE); 
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, party = "PID", 
 #' age = TRUE, sex = TRUE)}
+#' \dontrun{census.obj3 <- get_census_data(key = "...", state = c("DC", "NJ", "NY"), age = TRUE, sex = FALSE, census.geo = "place");
+#' predict_race(voter.file = voters, census.geo = "place", census.data = census.obj3, party = "PID", age = TRUE, sex = FALSE)}
 #' @export
 
 ## Race Prediction Function
 predict_race <- function(voter.file, 
-                      census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                      census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, retry = 0) {
+                           census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
+                           census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, retry = 0) {
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
@@ -109,8 +113,8 @@ predict_race <- function(voter.file,
       stop("Voter data frame needs to have a column named surname")
     }
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block") == F) {
-      stop("census.geo must be either 'county', 'tract', or 'block'")
+    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block","place") == F) {
+      stop("census.geo must be either 'place', 'county', 'tract', or 'block'")
     } else {
       print(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
@@ -136,9 +140,9 @@ predict_race <- function(voter.file,
       }
     }
   }
-
+  
   eth <- c("whi", "bla", "his", "asi", "oth")
-
+  
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname) {
     if (surname.year == 2010) {
@@ -154,7 +158,7 @@ predict_race <- function(voter.file,
     # Check if voter.file has the nessary data
     for (k in 1:length(eth)) {
       if (paste("p", eth[k], sep = "_") %in% names(voter.file) == F) {
-      stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))
+        stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))
       }
     }
   }
@@ -167,11 +171,24 @@ predict_race <- function(voter.file,
     pred <- paste("pred", eth, sep = ".")
     return(voter.file[c(vars.orig, pred)])
   }
-
+  
   ## Merge in Pr(Party | Race) if necessary
   if (missing(party) == F) {
     voter.file$PID <- voter.file[, party]
     voter.file <- merge(voter.file, get("pid")[names(get("pid")) %in% "party" == F], by = "PID", all.x = T)  
+  }
+  
+  if (census.geo == "place") {
+    if (!("place" %in% names(voter.file))) {
+      stop("voter.file object needs to have a column named place.")
+    }
+    voter.file <- census_helper(key = census.key, 
+                                voter.file = voter.file, 
+                                states = "all", 
+                                geo = "place", 
+                                age = age, 
+                                sex = sex, 
+                                census.data = census.data, retry = retry)
   }
   
   if (census.geo == "block") {
@@ -186,12 +203,12 @@ predict_race <- function(voter.file,
                                 sex = sex, 
                                 census.data = census.data, retry = retry)
   }
-
+  
   if (census.geo == "precinct") {
     geo <- "precinct"
     stop('Error: census_helper function does not currently support precinct-level data.')
   }
-
+  
   if (census.geo == "tract") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
       stop("voter.file object needs to have columns named tract and county.")
@@ -239,7 +256,7 @@ predict_race <- function(voter.file,
       voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
     }
   }
-
+  
   for (k in 1:length(eth)) {
     voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("q", eth[k], sep = "_")]
   }

@@ -10,10 +10,10 @@
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param voter.file An object of class \code{data.frame}. Must contain field(s) 
-#'  named \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+#'  named \code{\var{place}}, \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
 #'  specifying geolocation. These should be character variables that match up with 
 #'  U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
-#'  tract should be six characters, and block should be four characters.
+#'  tract should be six characters, and block should be four characters. Place should be five characters.
 #' @param states A character vector specifying which states to extract 
 #'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
 #'  Census data for all states contained in user-input data.
@@ -73,6 +73,15 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     print(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
     
+    if (geo == "place") {
+      geo.merge <- c("state", "place")
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+        census <- census_geo_api(key, state, geo = "place", age, sex, retry)
+      } else {
+        census <- census.data[[state]]$place
+      }
+    }
+    
     if (geo == "county") {
       geo.merge <- c("state", "county")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
@@ -129,7 +138,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
       voter.file$agecat <- ifelse(voter.file$age >= 80 & voter.file$age <= 84, 22, voter.file$agecat)
       voter.file$agecat <- ifelse(voter.file$age >= 85, 23, voter.file$agecat)
     }    
-
+    
     if (age == F & sex == F) {
       
       ## Calculate Pr(Geolocation | Race)
@@ -145,73 +154,73 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     }
     
     if (age == F & sex == T) {
-    
-    ## Calculate Pr(Geolocation, Sex | Race)
-    eth.cen <- c("whi", "bla", "his", "asi", "oth")
-    eth.let <- c("I", "B", "H", "D", "F")
-
-    for (i in 1:length(eth.cen)) {
-      if (i != 4 & i != 5) {
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "002", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "026", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
-      }
-      if (i == 4) {
-        ## Combine Asian and Native Hawaiian/Pacific Islander
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012D002 + census$P012E002) / sum(census$P012D001 + census$P012E001)
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012D026 + census$P012E026) / sum(census$P012D001 + census$P012E001)
-      }
-      if (i == 5) {
-        ## Combine American India/Alaska Native and Other
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012C002 + census$P012F002) / sum(census$P012C001 + census$P012F001)
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012C026 + census$P012F026) / sum(census$P012C001 + census$P012F001)
-      }
-    }
-    
-    voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
-    for (i in 1:length(eth.cen)) {
-      voters.census[voters.census$sex == 0, paste("r", eth.cen[i], sep = "_")] <- 
-        voters.census[voters.census$sex == 0, paste("r_mal", eth.cen[i], sep = "_")]
-      voters.census[voters.census$sex == 1, paste("r", eth.cen[i], sep = "_")] <- 
-        voters.census[voters.census$sex == 1, paste("r_fem", eth.cen[i], sep = "_")]
-    }
-    
-  }
-
-  if (age == T & sex == F) {
-    
-    ## Calculate Pr(Geolocation, Age Category | Race)
-    eth.cen <- c("whi", "bla", "his", "asi", "oth")
-    eth.let <- c("I", "B", "H", "D", "F")
-    age.cat <- c(seq(1, 23), seq(1, 23))
-    age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    
-    for (i in 1:length(eth.cen)) {
-      for (j in 1:23) {
+      
+      ## Calculate Pr(Geolocation, Sex | Race)
+      eth.cen <- c("whi", "bla", "his", "asi", "oth")
+      eth.let <- c("I", "B", "H", "D", "F")
+      
+      for (i in 1:length(eth.cen)) {
         if (i != 4 & i != 5) {
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] + census[paste("P012", eth.let[i], "0", age.cen[j + 23], sep = "")]) / sum(census[paste("P012", eth.let[i], "001", sep = "")])
+          census[paste("r_mal", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "002", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
+          census[paste("r_fem", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "026", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
         }
         if (i == 4) {
           ## Combine Asian and Native Hawaiian/Pacific Islander
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012D0", age.cen[j], sep = "")] + census[paste("P012D0", age.cen[j + 23], sep = "")] + census[paste("P012E0", age.cen[j], sep = "")] + census[paste("P012E0", age.cen[j + 23], sep = "")]) / sum(census$P012D001 + census$P012E001)
+          census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012D002 + census$P012E002) / sum(census$P012D001 + census$P012E001)
+          census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012D026 + census$P012E026) / sum(census$P012D001 + census$P012E001)
         }
         if (i == 5) {
           ## Combine American India/Alaska Native and Other
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012C0", age.cen[j], sep = "")] + census[paste("P012C0", age.cen[j + 23], sep = "")] + census[paste("P012F0", age.cen[j], sep = "")] + census[paste("P012F0", age.cen[j + 23], sep = "")]) / sum(census$P012C001 + census$P012F001)
+          census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012C002 + census$P012F002) / sum(census$P012C001 + census$P012F001)
+          census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012C026 + census$P012F026) / sum(census$P012C001 + census$P012F001)
         }
       }
-    }
       
-    voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
-    for (i in 1:length(eth.cen)) {
-      for (j in 1:23) {
-        voters.census[voters.census$agecat == j, paste("r", eth.cen[i], sep = "_")] <- 
-          voters.census[voters.census$agecat == j, paste("r", j, eth.cen[i], sep = "_")]
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
+      for (i in 1:length(eth.cen)) {
+        voters.census[voters.census$sex == 0, paste("r", eth.cen[i], sep = "_")] <- 
+          voters.census[voters.census$sex == 0, paste("r_mal", eth.cen[i], sep = "_")]
+        voters.census[voters.census$sex == 1, paste("r", eth.cen[i], sep = "_")] <- 
+          voters.census[voters.census$sex == 1, paste("r_fem", eth.cen[i], sep = "_")]
       }
+      
     }
-  
-  }
-  
-  if (age == T & sex == T) {
+    
+    if (age == T & sex == F) {
+      
+      ## Calculate Pr(Geolocation, Age Category | Race)
+      eth.cen <- c("whi", "bla", "his", "asi", "oth")
+      eth.let <- c("I", "B", "H", "D", "F")
+      age.cat <- c(seq(1, 23), seq(1, 23))
+      age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
+      
+      for (i in 1:length(eth.cen)) {
+        for (j in 1:23) {
+          if (i != 4 & i != 5) {
+            census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] + census[paste("P012", eth.let[i], "0", age.cen[j + 23], sep = "")]) / sum(census[paste("P012", eth.let[i], "001", sep = "")])
+          }
+          if (i == 4) {
+            ## Combine Asian and Native Hawaiian/Pacific Islander
+            census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012D0", age.cen[j], sep = "")] + census[paste("P012D0", age.cen[j + 23], sep = "")] + census[paste("P012E0", age.cen[j], sep = "")] + census[paste("P012E0", age.cen[j + 23], sep = "")]) / sum(census$P012D001 + census$P012E001)
+          }
+          if (i == 5) {
+            ## Combine American India/Alaska Native and Other
+            census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012C0", age.cen[j], sep = "")] + census[paste("P012C0", age.cen[j + 23], sep = "")] + census[paste("P012F0", age.cen[j], sep = "")] + census[paste("P012F0", age.cen[j + 23], sep = "")]) / sum(census$P012C001 + census$P012F001)
+          }
+        }
+      }
+      
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
+      for (i in 1:length(eth.cen)) {
+        for (j in 1:23) {
+          voters.census[voters.census$agecat == j, paste("r", eth.cen[i], sep = "_")] <- 
+            voters.census[voters.census$agecat == j, paste("r", j, eth.cen[i], sep = "_")]
+        }
+      }
+      
+    }
+    
+    if (age == T & sex == T) {
       
       ## Calculate Pr(Tract, Sex, Age Category | Race)
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
