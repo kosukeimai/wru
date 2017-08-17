@@ -15,8 +15,8 @@ key, which can be requested \href{https://api.census.gov/data/key_signup.html}{h
 e.g., \code{"NJ"}.}
 
 \item{geo}{A character object specifying what aggregation level to use. 
-Use \code{"county"}, \code{"tract"}, \code{"place"}, or \code{"block"}. Default is \code{"tract"}. 
-Warning: extracting block-level data takes very long.}
+Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
+Default is \code{"tract"}. Warning: extracting block-level data takes very long.}
 
 \item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
@@ -39,7 +39,7 @@ Output will be an object of class \code{list}, indexed by state names. It will
 }
 \details{
 This function allows users to download U.S. Census 2010 geographic data, 
-at either the place, county, tract, or block level, for a particular state.
+at either the county, tract, block, or place level, for a particular state.
 }
 \examples{
 \dontshow{data(voters)}

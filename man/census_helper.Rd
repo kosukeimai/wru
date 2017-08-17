@@ -11,11 +11,12 @@ census_helper(key, voter.file, states = "all", geo = "tract", age = FALSE,
 \item{key}{A required character object. Must contain user's Census API
 key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
-\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) 
-named \code{\var{place}}, \code{\var{county}}, \code{\var{tract}}, and/or \code{\var{block}} 
+\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named 
+\code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}
 specifying geolocation. These should be character variables that match up with 
 U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
-tract should be six characters, and block should be four characters. Place should be five characters.}
+tract should be six characters, and block should be four characters. 
+Place should be five characters if it is included.}
 
 \item{states}{A character vector specifying which states to extract 
 Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 

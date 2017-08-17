@@ -6,4 +6,4 @@ Date        Version  Comment
 2017-04-10  0.1-3    Allows Census data download at level user prefers (block, tract, or county)
 2017-05-03  0.1-4    Fixed error in merge_surnames.R and updated relevant documentation
 2017-06-08  0.1-5    Updated http to https to access U.S. Census API
-2017-07-23  0.1-6    Removed extraneous documentation and renamed 2010 Surname List data frame
+2017-08-16  0.1-6    Removed extraneous documentation, renamed 2010 Surname List object, and added place as geography

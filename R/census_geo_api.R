@@ -3,15 +3,15 @@
 #' \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
 #'
 #' This function allows users to download U.S. Census 2010 geographic data, 
-#' at either the place, county, tract, or block level, for a particular state. 
+#' at either the county, tract, block, or place level, for a particular state. 
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param state A required character object specifying which state to extract Census data for, 
 #' e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use \code{"county"}, \code{"tract"}, \code{"place"}, or \code{"block"}. Default is \code{"tract"}. 
-#'  Warning: extracting block-level data takes very long.
+#'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
+#'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
 #'  If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
