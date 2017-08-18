@@ -18,7 +18,8 @@ Depends:
     utils
 Imports:
     devtools (>= 1.10.0)
-Suggests: 
+Suggests:
+    testthat
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 3)
