@@ -5,6 +5,7 @@ context("tests wru")
 
 # need a valid census key
 k <- NULL
+k = "1ba4c405df68c50152106e7a1fb3198c8f2477a1"
 
 
 # load the data
@@ -71,7 +72,7 @@ test_that("tests predictions using the census key", {
     expect_that(sum(x$surname == "Johnson"), is_equivalent_to(1))
     expect_that(round(x[x$surname == "Khanna", "pred.whi"], 4), is_equivalent_to(0.0819))
     expect_that(round(x[x$surname == "Morse", "pred.his"], 4), is_equivalent_to(0.0034))
-    
+
     x = predict_race(voter.file = voters, census.geo = "place", census.key = k, sex = T)
     expect_that(dim(x), is_equivalent_to(c(10,18)))
     expect_that(sum(is.na(x)), is_equivalent_to(0))
@@ -87,6 +88,20 @@ test_that("tests predictions using the census key", {
     expect_that(sum(is.na(x[x$surname != "Ratkovic",])), is_equivalent_to(0))
     expect_that(round(x[x$surname == "Khanna", "pred.whi"], 4), is_equivalent_to(0.2978))
     expect_that(round(x[x$surname == "Morse", "pred.his"], 4), is_equivalent_to(0.0123))
+  }
+}) 
+  
+test_that("tests predictions using census from a defferent year", {
+  # set random seed
+  set.seed(12345)
+  
+  if (!is.null(k)) {
+    x = predict_race(voter.file = voters, census.geo = "tract", census.key = k, party = "PID", surname.year = 2000)
+    expect_that(dim(x), is_equivalent_to(c(10,18)))
+    expect_that(sum(is.na(x)), is_equivalent_to(0))
+    expect_that(sum(x$surname == "Johnson"), is_equivalent_to(1))
+    expect_that(round(x[x$surname == "Khanna", "pred.whi"], 4), is_equivalent_to(0.0982))
+    expect_that(round(x[x$surname == "Morse", "pred.his"], 4), is_equivalent_to(0.0023))
   }
 })
 
