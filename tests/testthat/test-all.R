@@ -5,8 +5,6 @@ context("tests wru")
 
 # need a valid census key
 k <- NULL
-k = "1ba4c405df68c50152106e7a1fb3198c8f2477a1"
-
 
 # load the data
 data(voters)
