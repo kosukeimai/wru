@@ -7,3 +7,4 @@ Date        Version  Comment
 2017-05-03  0.1-4    Fixed error in merge_surnames.R and updated relevant documentation
 2017-06-08  0.1-5    Updated http to https to access U.S. Census API
 2017-08-16  0.1-6    Removed extraneous documentation, renamed 2010 Surname List object, and added place as geography
+2017-08-31  0.1-7    Added testthat functionality
