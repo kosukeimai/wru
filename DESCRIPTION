@@ -3,7 +3,10 @@ Version: 0.1-7
 Date: 2017-8-31
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
-Author: Kabir Khanna [aut, cre], Kosuke Imai [aut, cre], Hubert Jin [ctb]
+Authors@R: c(
+  person("Kabir", "Khanna", email = "kkhanna@princeton.edu", role = c("aut", "cre")),
+  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
+  )
 Maintainer: Kabir Khanna <kkhanna@princeton.edu>
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
