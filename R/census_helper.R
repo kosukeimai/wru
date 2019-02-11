@@ -143,11 +143,11 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     if (age == F & sex == F) {
       
       ## Calculate Pr(Geolocation | Race)
-      census$r_whi <- census$P0050003 / sum(census$P0050003) #Pr(Tract|White)
-      census$r_bla <- census$P0050004 / sum(census$P0050004) #Pr(Tract|Black)
+      census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
+      census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
       census$r_his <- census$P0050010 / sum(census$P0050010) #Pr(Tract|Latino)
-      census$r_asi <- (census$P0050006 + census$P0050007) / (sum(census$P0050006) + sum(census$P0050007)) #Pr(Tract | Asian or NH/PI)
-      census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
+      census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
+      census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
       drop <- grep("P005", names(census))
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)

@@ -82,13 +82,13 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (geo == "place") {
     geo.merge <- c("state", "place")
     region <- paste("for=place:*&in=state:", state.fips, sep = "")
-    census <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region, retry)
+    census <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region, retry)
   }
   
   if (geo == "county") {
     geo.merge <- c("state", "county")
     region <- paste("for=county:*&in=state:", state.fips, sep = "")
-    census <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region, retry)
+    census <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region, retry)
   }
   
   if (geo == "tract") {
@@ -96,14 +96,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     
     census <- NULL
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
       region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      census.temp <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+      census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
       census <- rbind(census, census.temp)
     }
     rm(census.temp)
@@ -114,7 +114,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract", "block")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     
     census <- NULL
@@ -124,14 +124,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       
       region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
       print(region_tract)
-      tract_df <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_tract, retry)
+      tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
       tract_list <- tract_df$tract
       
       for (t in 1:length(tract_list)) {
         print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
         
         region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-        census.temp <- get_census_api("https://api.census.gov/data/2010/sf1?", key = key, vars = vars, region = region_block, retry)
+        census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
         census <- rbind(census, census.temp)
       }
     }
@@ -145,11 +145,11 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (age == F & sex == F) {
     
     ## Calculate Pr(Geolocation | Race)
-    census$r_whi <- census$P0050003 / sum(census$P0050003) #Pr(Tract|White)
-    census$r_bla <- census$P0050004 / sum(census$P0050004) #Pr(Tract|Black)
+    census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
+    census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
     census$r_his <- census$P0050010 / sum(census$P0050010) #Pr(Tract|Latino)
-    census$r_asi <- (census$P0050006 + census$P0050007) / (sum(census$P0050006) + sum(census$P0050007)) #Pr(Tract | Asian or NH/PI)
-    census$r_oth <- (census$P0050005 + census$P0050008 + census$P0050009) / (sum(census$P0050005) + sum(census$P0050008) + sum(census$P0050009)) #Pr(Tract | AI/AN, Other, or Mixed)
+    census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
+    census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
     
   }
   
