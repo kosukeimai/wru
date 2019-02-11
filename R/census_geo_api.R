@@ -46,6 +46,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   fips.codes <- get("State.FIPS")
   state.fips <- fips.codes[fips.codes$State == state, "FIPS"]
+  state.fips <- ifelse(nchar(state.fips) == 1, paste0("0", state.fips), state.fips)
   
   if (age == F & sex == F) {
     num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")

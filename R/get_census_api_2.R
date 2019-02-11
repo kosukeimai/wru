@@ -31,7 +31,7 @@
 #'
 #' @export
 get_census_api_2 <- function(data_url, key, get, region, retry = 0){
-  if(length(get)>1) {
+  if(length(get) > 1) {
     get <- paste(get, collapse=',', sep='')
   }
   api_call <- paste(data_url, 'key=', key, '&get=', get, '&', region, sep='')
