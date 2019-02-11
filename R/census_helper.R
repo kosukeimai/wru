@@ -145,7 +145,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
       ## Calculate Pr(Geolocation | Race)
       census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
       census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
-      census$r_his <- census$P0050010 / sum(census$P0050010) #Pr(Tract|Latino)
+      census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
       census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
       census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
       

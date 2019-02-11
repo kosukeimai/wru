@@ -34,11 +34,10 @@ get_census_api <- function(data_url, key, vars, region, retry = 0) {
     vars <- vec_to_chunk(vars) # Split variables into a list
     get <- lapply(vars, function(x) paste(x, sep='', collapse=","))
     data <- lapply(vars, function(x) get_census_api_2(data_url,key, x, region, retry))
-    }
-  else {
+    } else {
       get <- paste(vars, sep='', collapse=',')
       data <- list(get_census_api_2(data_url, key, get, region, retry))
-      }
+    }
   
   ## Format output. If there were no errors, than paste the data together. If there is an error, just return the unformatted list.
   if(all(sapply(data, is.data.frame))){
