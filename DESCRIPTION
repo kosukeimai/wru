@@ -7,7 +7,6 @@ Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
   person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
   )
-Maintainer: Kabir Khanna <kabirkhanna@gmail.com>
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
     Rule to compute the posterior probability of each racial category for any given
