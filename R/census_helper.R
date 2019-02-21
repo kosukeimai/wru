@@ -75,38 +75,38 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     state <- toupper(states[s])
     
     if (geo == "place") {
-      geo.merge <- c("state", "place")
+      geo.merge <- c("place")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "place", age, sex, retry)
       } else {
-        census <- census.data[[state]]$place
+        census <- census.data[[toupper(state)]]$place
       }
     }
     
     if (geo == "county") {
-      geo.merge <- c("state", "county")
+      geo.merge <- c("county")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "county", age, sex, retry)
       } else {
-        census <- census.data[[state]]$county
+        census <- census.data[[toupper(state)]]$county
       }
     }
     
     if (geo == "tract") {
-      geo.merge <- c("state", "county", "tract")
+      geo.merge <- c("county", "tract")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "tract", age, sex, retry)
       } else {
-        census <- census.data[[state]]$tract
+        census <- census.data[[toupper(state)]]$tract
       }
     }
     
     if (geo == "block") {
-      geo.merge <- c("state", "county", "tract", "block")
+      geo.merge <- c("county", "tract", "block")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "block", age, sex, retry)
       } else {
-        census <- census.data[[state]]$block
+        census <- census.data[[toupper(state)]]$block
       }
     }
     
@@ -149,7 +149,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
       census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
       census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
       
-      drop <- grep("P005", names(census))
+      drop <- c(grep("state", names(census)), grep("P005", names(census)))
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
@@ -177,7 +177,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
         }
       }
       
-      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x  = T)
       for (i in 1:length(eth.cen)) {
         voters.census[voters.census$sex == 0, paste("r", eth.cen[i], sep = "_")] <- 
           voters.census[voters.census$sex == 0, paste("r_mal", eth.cen[i], sep = "_")]
@@ -211,7 +211,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
         }
       }
       
-      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x  = T)
       for (i in 1:length(eth.cen)) {
         for (j in 1:23) {
           voters.census[voters.census$agecat == j, paste("r", eth.cen[i], sep = "_")] <- 
@@ -251,7 +251,7 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
         }
       }
       
-      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census, by = geo.merge, all.x  = T)
+      voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x  = T)
       for (i in 1:length(eth.cen)) {
         for (j in 1:23) {
           voters.census[voters.census$sex == 0 & voters.census$agecat == j, 
