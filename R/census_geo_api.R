@@ -110,6 +110,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
       census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
       census <- rbind(census, census.temp)
+      if (!is.null(save_temp)) {
+        save(census, file = save_temp)
+      }
     }
     rm(census.temp)
   }
@@ -138,6 +141,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
         region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
         census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
         census <- rbind(census, census.temp)
+      }
+      if (!is.null(save_temp)) {
+        save(census, file = save_temp)
       }
     }
     
