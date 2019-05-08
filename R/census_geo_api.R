@@ -21,6 +21,9 @@
 #'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
 #'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param save_temp File indicating where to save the temporary outputs. 
+#' Defaults to NULL. If specified, the function will look for an .RData file
+#' with the same format as the expected output. 
 #' @return Output will be an object of class \code{list}, indexed by state names. It will 
 #'  consist of the original user-input data with additional columns of Census geographic data.
 #'
@@ -34,7 +37,7 @@
 #' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0) {
+census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0, save_temp = NULL) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
@@ -99,8 +102,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
-    
     census <- NULL
+    county_list <- check_temp_save(county_list, save_temp, census)
+    
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
       region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
@@ -117,8 +121,8 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
-    
     census <- NULL
+    county_list <- check_temp_save(county_list, save_temp, census)
     
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
@@ -235,4 +239,22 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   }
   
   return(census)
+}
+
+check_temp_save <- function(county_list, save_temp, census) {
+  if (!is.null(save_temp)) {
+    if (file.exists(save_temp)) {
+      message("Temporary save file will be used as requested.")
+      load(save_temp)
+      ## Expecting a dataframe named census with the same format
+      county_list <- setdiff(county_list, unique(census$county))
+      message(paste0(
+        length(unique(census$county)), " counties in the temporary file."
+      ))
+      message(paste0(length(county_list), " counties to be processed."))
+    } else {
+      message("Results will be saved in the specified temporary file.")
+    }
+  }
+  return(county_list)
 }
