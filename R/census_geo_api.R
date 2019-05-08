@@ -103,7 +103,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     census <- NULL
-    county_list <- check_temp_save(county_list, save_temp, census)
+    temp <- check_temp_save(county_list, save_temp, census)
+    county_list <- temp$county_list
+    census <- temp$census
     
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
@@ -125,7 +127,9 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     census <- NULL
-    county_list <- check_temp_save(county_list, save_temp, census)
+    temp <- check_temp_save(county_list, save_temp, census)
+    county_list <- temp$county_list
+    census <- temp$census
     
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
@@ -262,5 +266,5 @@ check_temp_save <- function(county_list, save_temp, census) {
       message("Results will be saved in the specified temporary file.")
     }
   }
-  return(county_list)
+  return(county_list, census)
 }
