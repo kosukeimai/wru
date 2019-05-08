@@ -266,5 +266,5 @@ check_temp_save <- function(county_list, save_temp, census) {
       message("Results will be saved in the specified temporary file.")
     }
   }
-  return(county_list, census)
+  return(list(county_list = county_list, census = census))
 }
