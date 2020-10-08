@@ -47,7 +47,7 @@ get_census_api_2 <- function(data_url, key, get, region, retry = 0){
   if(class(dat_raw) == 'try-error') {
     print("Data access failure at the census website, please try again by re-run the previous command")
     stop(print(api_call))
-    return
+    return()
   }
   if (class(dat_raw) != 'try-error' & "TRUE" %in% names(table(grepl("Invalid Key", dat_raw)))) {
     stop('Invalid Key: 
