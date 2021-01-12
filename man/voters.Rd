@@ -4,7 +4,8 @@
 \name{voters}
 \alias{voters}
 \title{Example voter file.}
-\format{A data frame with 10 rows and 12 variables:
+\format{
+A data frame with 10 rows and 12 variables:
 \describe{
   \item{VoterID}{Voter identifier (numeric)}
   \item{surname}{Surname}
@@ -19,7 +20,8 @@
   \item{sex}{0=male, 1=female}
   \item{party}{Party registration (character)}
   \item{PID}{Party registration (numeric)}
-  #' }}
+  #' }
+}
 \usage{
 voters
 }
