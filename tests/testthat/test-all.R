@@ -46,11 +46,11 @@ test_that("Tests predictions using the Census object", {
     
     # Build a Census object by parts; both county-level and tract-level statistics needed for tract-level predictions
     censusObj2  <- list()
-    county.dc <- census_geo_api(key = k, state = "DC", geo = "county", age = TRUE, sex = FALSE)
-    tract.dc <- census_geo_api(key = k, state = "DC", geo = "tract", age = TRUE, sex = FALSE)
+    county.dc <- census_geo_api(key = k, state = "DC", geo = "county", age = TRUE, sex = FALSE, save_temp = NULL)
+    tract.dc <- census_geo_api(key = k, state = "DC", geo = "tract", age = TRUE, sex = FALSE, save_temp = NULL)
     censusObj2[["DC"]] <- list(state = "DC", county = county.dc, tract = tract.dc, age = TRUE, sex = FALSE)
-    tract.nj <- census_geo_api(key = k, state = "NJ", geo = "tract", age = TRUE, sex = FALSE)
-    county.nj <- census_geo_api(key = k, state = "NJ", geo = "county", age = TRUE, sex = FALSE)
+    tract.nj <- census_geo_api(key = k, state = "NJ", geo = "tract", age = TRUE, sex = FALSE, save_temp = NULL)
+    county.nj <- census_geo_api(key = k, state = "NJ", geo = "county", age = TRUE, sex = FALSE, save_temp = NULL)
     censusObj2[["NJ"]] <- list(state = "NJ", county = county.nj, tract = tract.nj, age = TRUE, sex = FALSE)
     
     # Prediction using the Census object built in the previous step; county-level statistics used in prediction
