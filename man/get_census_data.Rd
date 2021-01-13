@@ -4,8 +4,14 @@
 \alias{get_census_data}
 \title{Multilevel Census data download function.}
 \usage{
-get_census_data(key, states, age = FALSE, sex = FALSE,
-  census.geo = "block", retry = 0)
+get_census_data(
+  key,
+  states,
+  age = FALSE,
+  sex = FALSE,
+  census.geo = "block",
+  retry = 0
+)
 }
 \arguments{
 \item{key}{A required character object containing a valid Census API key, 

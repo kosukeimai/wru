@@ -4,8 +4,16 @@
 \alias{census_helper}
 \title{Census helper function.}
 \usage{
-census_helper(key, voter.file, states = "all", geo = "tract", age = FALSE,
-  sex = FALSE, census.data = NA, retry = 0)
+census_helper(
+  key,
+  voter.file,
+  states = "all",
+  geo = "tract",
+  age = FALSE,
+  sex = FALSE,
+  census.data = NA,
+  retry = 0
+)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API

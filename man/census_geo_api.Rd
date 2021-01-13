@@ -4,8 +4,15 @@
 \alias{census_geo_api}
 \title{Census Data download function.}
 \usage{
-census_geo_api(key, state, geo = "tract", age = FALSE, sex = FALSE,
-  retry = 0)
+census_geo_api(
+  key,
+  state,
+  geo = "tract",
+  age = FALSE,
+  sex = FALSE,
+  retry = 0,
+  save_temp = NULL
+)
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
@@ -29,6 +36,10 @@ If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{save_temp}{File indicating where to save the temporary outputs. 
+Defaults to NULL. If specified, the function will look for an .RData file
+with the same format as the expected output.}
 }
 \value{
 Output will be an object of class \code{list}, indexed by state names. It will 

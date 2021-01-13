@@ -4,8 +4,12 @@
 \alias{merge_surnames}
 \title{Surname probability merging function.}
 \usage{
-merge_surnames(voter.file, surname.year = 2010, clean.surname = T,
-  impute.missing = T)
+merge_surnames(
+  voter.file,
+  surname.year = 2010,
+  clean.surname = T,
+  impute.missing = T
+)
 }
 \arguments{
 \item{voter.file}{An object of class \code{data.frame}. Must contain a field 

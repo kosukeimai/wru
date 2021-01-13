@@ -4,7 +4,8 @@
 \name{surnames2010}
 \alias{surnames2010}
 \title{Census Surname List (2010).}
-\format{A data frame with 167,613 rows and 6 variables:
+\format{
+A data frame with 167,613 rows and 6 variables:
 \describe{
   \item{surname}{Surname}
   \item{p_whi}{Pr(White | Surname)}
@@ -12,7 +13,8 @@
   \item{p_his}{Pr(Hispanic/Latino | Surname)}
   \item{p_asi}{Pr(Asian/Pacific Islander | Surname)}
   \item{p_oth}{Pr(Other | Surname)}
-  #' }}
+  #' }
+}
 \usage{
 surnames2010
 }

@@ -4,9 +4,19 @@
 \alias{predict_race}
 \title{Race prediction function.}
 \usage{
-predict_race(voter.file, census.surname = TRUE, surname.only = FALSE,
-  surname.year = 2010, census.geo, census.key, census.data = NA,
-  age = FALSE, sex = FALSE, party, retry = 0)
+predict_race(
+  voter.file,
+  census.surname = TRUE,
+  surname.only = FALSE,
+  surname.year = 2010,
+  census.geo,
+  census.key,
+  census.data = NA,
+  age = FALSE,
+  sex = FALSE,
+  party,
+  retry = 0
+)
 }
 \arguments{
 \item{voter.file}{An object of class \code{data.frame}. 
