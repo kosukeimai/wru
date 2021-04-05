@@ -2,7 +2,6 @@
 
 using namespace Eigen;
 using namespace Rcpp;
-using namespace std;
 
 keyWRU::keyWRU(const List data,
 	       const List ctrl) :
@@ -11,22 +10,41 @@ keyWRU::keyWRU(const List data,
   G_(as<int>(data["geo_n"])),
   max_iter(as<int>(ctrl["iter"])),
   thin(as<int>(ctrl["thin"])),
+  burnin(as<int>(ctrl["burnin"])),
   llk_per(as<int>(ctrl["log_post_interval"])),
   verbose(as<bool>(ctr["verbose"]))
   theta(as<MatrixXd>(data["geo_race_table"])),
-  geo_each_size(as<VectorXi>(data["voters_per_geo"]))
+  geo_each_size(as<VectorXi>(data["voters_per_geo"])),
+  R(as< std::vector<IntegerVector> >(data["race_inits"]))
 {
+
+   //Initialize suff. stat for race count
+  n_r.resize(R_);
+  n_r.setZero();
+  for (int ii = 0; ii < G_; ++ii) {
+     for (int jj = 0; jj < geo_each_size[ii]; ++jj) {
+       n_r[R[ii][jj]]++;
+     }
+  }
+
   //Construct list of name objects
   for(int m = 0; m < M_; ++m){
     const List& all_name_data = as<List>(data["name_data"]);
-    names.emplace_back(all_name_data[m]), ctrl);
+    names.emplace_back(all_name_data[m], ctrl, G_, R_, R);
   }
-
-  //Initialize vector of race for each record in a geo
+  name = names[0];
   
   // Initialize all placeholders
-
+  geo_id_ = 0; geo_size = 0; w = 0; r = 0;
+  c = 0; new_r = 0; voter_ = 0; N_ = 0;
+  numerator = 0.0; denominator = 1.0;
+  sum_r = 1.0; n_rc = 0.0;
+  r_prob_vec.resize(R_);
   
+
+  geo_indeces = shuffle_indeces(G_);
+  record_indeces = shuffle_indeces(geo_each_size[0]);
+
 }
 
 int keyWRU::sample_r(int voter,
@@ -111,11 +129,13 @@ void keyWRU::sample()
     
     // Store samples and measures of model fit
     int r_index = iter + 1;
+    if(r_index > burnin){
     if (r_index % llk_per == 0 || r_index == 1 || r_index == iter) {
       sampling_store();
     }
     if (r_index % thin == 0 || r_index == 1 || r_index == iter) {
       phihat_store();
+    }
     }
     
     // Progress bar

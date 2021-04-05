@@ -6,18 +6,47 @@ using namespace std;
 
 
 XName::XName(const List& data,
-	     const List& ctrl
+	     const List& ctrl,
+	     const int G_,
+	     const int R_,
+	     const std::vector<IntegerVector>& R
 	     ) :
+  W(as< ListOf<IntegerVector> >(data["record_name_id"])),
+  keywords(as< ListOf<IntegerVector> >(data["keynames"])),
   phi_tilde(as<MatrixXd>(data["census_table"])),
   gamma_prior(as<Vector2d>(ctrl["gamma_prior"])),
   beta_w(as<double>(ctrl["beta_prior"])),
-  name_n(as<int>(data["n_unique_names"])),
-  W(as< ListOf<IntegerVector> >(data["record_name_id"])),
-  keywords(as< ListOf<IntegerVector> >(data["keynames"]))
+  name_n(as<int>(data["n_unique_names"]))  
 {
-  //initialize C (0 for non-keyword names, bern(0.7) otherwise)
-  //Init n_rc matrix (?)
-  //Init n_wr matrix (?)
+  //Initialize containers
+  n_rc.resize(R_, 2);
+  n_rc.setZero();
+  n_wr.resize(name_n, R_);
+  n_wr.setZero();
+  int geo_size = 0, r = 0, w = 0;
+  for(int ii = 0; ii < G_ << ++i){
+    geo_size =  W[ii].size();
+    C.push_back(VectorXi(geo_size), 0);
+    for(int jj = 0; jj < geo_size; ++jj){
+      r_ = R[ii][jj]; w_ = W[ii][jj];
+      //initialize C (0 for non-keyword names, bern(0.7) otherwise)
+      if(found_in(r_, w_)){	
+	C[ii][jj] = R::rbinom(1, 1, 0.7);
+      }
+      //Init n_rc suff. stat  matrix
+      n_rc(r_, C[ii][jj])++;
+      //Init n_wr suff. stat matrix
+      if(!(C[ii][jj])){
+	n_wr(w_, r_)++;
+      }
+    }
+  }
+
+  //Initialize placeholders
+  c1_prob = 1.0; numerator = 0.0;
+  denominator = 1.0; c0_prob = 1.0;
+  sum_c = 1.0; c = 0; w = 0; new_c = 0; 
+  
 }
 
 void XName::sample_c(int r,
@@ -75,7 +104,7 @@ void XName::phihat_store(){
     for(int w = 0; w < N_; ++w){
       e_phi(w, r) += const_mean
 	* (pi_0 * phi_tilde(w, r)
-	   + pi_1 * ((n_rw(w, r) + beta_w)/denominator_phi));
+	   + pi_1 * ((n_rw(w, r) + beta_w) / denominator_phi));
     }
   }
 }

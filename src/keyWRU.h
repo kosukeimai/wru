@@ -37,17 +37,7 @@ public:
   List return_obj();  
   
 private:
-  // Methods
-  int sample_r(int voter,
-	       int geo_id);
-  void iteration_single(int it);
-  double loglik_total();
-  void mfit_store();
-  void phihat_store();
-
-  
-
-  //Data
+   //Data
 
   const int M_ // number of name types 
      , R_ // number of races
@@ -56,10 +46,21 @@ private:
     , thin // thinning interval
     , llk_per // log_posterior store interval
     ;
+ 
   const bool verbose;
   const MatrixXd theta;
   const VectorXi geo_each_size; //
-  
+  std::vector<IntegerVector> R;
+
+  //Suff. Stat, race count
+  VectorXd n_r;
+
+
+  //All name components
+  std::vector<XName> names;
+  //temporary name placeholder
+  XName& name;
+
   int geo_id_ // location id placeholder
     , geo_size // Nr. of voters in location placeholder
     , w // name placeholder
@@ -74,21 +75,28 @@ private:
   double numerator
     , denominator 
     , sum_r
-    , n_rc // race-component ss. placeholder 
+    , n_rc // race-component suff. stat. placeholder 
     ;
+  VectorXd r_prob_vec;
+
+  
   
   std::vector<int> geo_indeces // vector of shuffled locations
     , record_indeces // vector of shuffl
     ;
   
-  std::vector<VectorXi> R;
-  std::vector<XName> names;
   
+   // Methods
+  int sample_r(int voter,
+	       int geo_id);
+  void iteration_single(int it);
+  double loglik_total();
+  void mfit_store();
+  void phihat_store();
+
+ 
   
-  VectorXd z_prob_vec,
-    n_r;
-  
-  XName& name;
+ 
   
   
   
