@@ -19,19 +19,13 @@ public:
   MatrixXd getPhiHat();
 
 private:
-  //Methods
-  void sample_c(int r,
-		int voter,
-		int geo_id)
-
-  void phihat_store();
   //Data
+    const ListOf<IntegerVector> W, // List of vectors of unique name id for each voter, for each geo
+    keywords; //List of vectors of keyword name id.
   const MatrixXd phi_tilde; // census table, name by race
   const Vector2d gamma_prior;
   const double beta_w;
   const int name_n;
-  const ListOf<IntegerVector> W, // List of vectors of unique name id for each voter, for each geo
-    keywords; //List of vectors of keyword name id.
   
   
   std::vector<VectorXi> C; // Vector of vectors of mixture component for each record, in each geo
@@ -48,7 +42,12 @@ private:
     w,
     new_c
   ;
-    
+      //Methods
+  void sample_c(int r,
+		int voter,
+		int geo_id)
+
+  void phihat_store();
   
   
   
