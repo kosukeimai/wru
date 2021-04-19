@@ -4,86 +4,88 @@ using namespace Eigen;
 using namespace Rcpp;
 
 keyWRU::keyWRU(const List data,
-	       const List ctrl) :
-  M_(as<int>(data["name_type _n"])),
+               const List ctrl) :
+  M_(as<int>(data["name_type_n"])),
   R_(as<int>(data["race_n"])),
   G_(as<int>(data["geo_n"])),
   max_iter(as<int>(ctrl["iter"])),
   thin(as<int>(ctrl["thin"])),
   burnin(as<int>(ctrl["burnin"])),
   llk_per(as<int>(ctrl["log_post_interval"])),
-  verbose(as<bool>(ctr["verbose"]))
+  verbose(as<bool>(ctrl["verbose"])),
   theta(as<MatrixXd>(data["geo_race_table"])),
   geo_each_size(as<VectorXi>(data["voters_per_geo"])),
-  R(as< std::vector<IntegerVector> >(data["race_inits"]))
-{
-
-   //Initialize suff. stat for race count
-  n_r.resize(R_);
-  n_r.setZero();
-  for (int ii = 0; ii < G_; ++ii) {
-     for (int jj = 0; jj < geo_each_size[ii]; ++jj) {
-       n_r[R[ii][jj]]++;
-     }
-  }
-
-  //Construct list of name objects
-  for(int m = 0; m < M_; ++m){
+  Races(as< std::vector<IntegerVector> >(data["race_inits"]))
+  {
+    
+    //Initialize suff. stat for race count
+    n_r.resize(R_);
+    n_r.setZero();
+    for (int ii = 0; ii < G_; ++ii) { //iterate over geos
+      for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
+        n_r(Races[ii][jj])++;
+      }
+    }
+    
+    //Construct list of name objects
     const List& all_name_data = as<List>(data["name_data"]);
-    names.emplace_back(all_name_data[m], ctrl, G_, R_, R);
+    CharacterVector all_types = all_name_data.names();
+    for(int m = 0; m < M_; ++m){
+      names.emplace_back(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
+    }
+
+    // Initialize all placeholders
+    geo_id_ = 0; geo_size = 0; w = 0; r = 0;
+    c = 0; new_r = 0; voter_ = 0; N_ = 0;
+    numerator = 0.0; denominator = 1.0;
+    sum_r = 1.0; n_rc = 0.0;
+    r_prob_vec.resize(R_);
+    
+    
+    geo_indeces = shuffle_indeces(G_);
+    record_indeces = shuffle_indeces(geo_each_size[0]);
+    
   }
-  name = names[0];
-  
-  // Initialize all placeholders
-  geo_id_ = 0; geo_size = 0; w = 0; r = 0;
-  c = 0; new_r = 0; voter_ = 0; N_ = 0;
-  numerator = 0.0; denominator = 1.0;
-  sum_r = 1.0; n_rc = 0.0;
-  r_prob_vec.resize(R_);
-  
-
-  geo_indeces = shuffle_indeces(G_);
-  record_indeces = shuffle_indeces(geo_each_size[0]);
-
-}
 
 int keyWRU::sample_r(int voter,
                      int geo_id)
 {
   // Extract current race
-  r = R[geo_id][voter];
+  r = Races[geo_id][voter];
   
   //remove data
-  n_r(r)-- ;
+  n_r(r)--;
   for(int m = 0; m < M_; ++m){
-    names[m].n_rc(rnames[m].C[geo_id][voter])-- ;
-    names[m].n_rw(names[m].W[geo_id][voter], r)-- ;
+    names[m].n_rc(r, (names[m].C[geo_id])[voter])--;
+    names[m].n_wr((names[m].W[geo_id])[voter], r)--;
   }
+  
   numerator = 1.0;
   denominator = 1.0;
+
   for(int k = 0; k < R_; ++k){
     for(int m = 0; m < M_; ++m){
-      name = names[m];
-      w = name.W[geo_id][voter];
-      c = name.C[geo_id][voter];
+      const XName& name = names[m];
+      w = (name.W[geo_id])[voter];
+      c = (name.C[geo_id])[voter];
       n_rc = name.n_rc(k, c);
-      numerator * = (n_rc + name.gamma_prior[0]) 
+      numerator *= (n_rc + name.gamma_prior[0]) 
         * c ? name.phi_tilde(w, k) : (name.n_wr(w, k) + name.beta_w); 
       denominator *= (n_r(k) + name.gamma_prior.sum())
-        * c ? 1.0 : (n_rc + ((double)(name.name_n) * name.beta_w));
+        * c ? 1.0 : (n_rc + ((double)(name.N_) * name.beta_w));
     }
     r_prob_vec(k) = theta(geo_id, k) * numerator / denominator;
   }
   
   sum_r = r_prob_vec.sum();
-  new_r = sampler::rcat_without_normalize(r_prob_vec,
+  new_r = rcat_without_normalize(r_prob_vec,
                                           sum_r,
                                           R_); // Cat(r_prob_vec/sum_r)
   //Add counts back in
   n_r(new_r)++ ;
   for(int m = 0; m < M_; ++m){
-    names[m].n_rc(new_r, names[m].C[geo_id][voter])++ ;
-    names[m].n_wr(names[m].W[geo_id][voter], new_r)++ ;
+    names[m].n_rc(new_r, (names[m].C[geo_id])[voter])++ ;
+    names[m].n_wr((names[m].W[geo_id])[voter], new_r)++ ;
   }
   return new_r;
 }
@@ -98,9 +100,9 @@ void keyWRU::iteration_single(int it)
     // Iterate over each record in the geographic loc.
     for (int jj = 0; jj < geo_size; ++jj) {
       voter_ = record_indeces[jj];
-      R[geo_id_][voter_] = sample_r(voter_, geo_id_);
+      Races[geo_id_][voter_] = sample_r(voter_, geo_id_);
       for(int m = 0; m < M_; ++m){
-        names[m].sample_c(R[geo_id_][voter_], voter_, geo_id_);
+        names[m].sample_c(Races[geo_id_][voter_], voter_, geo_id_);
       }
     }
   }
@@ -113,7 +115,7 @@ List keyWRU::return_obj()
   MatrixXd phi_mat;
   for(int m = 0; m < M_; ++m){
     phi_mat = names[m].getPhiHat();
-    phi_hat.push_back(phi_mat, names[m].type)
+    phi_hat.push_back(phi_mat, names[m].type);
   }
   return phi_hat;
 }
@@ -130,12 +132,12 @@ void keyWRU::sample()
     // Store samples and measures of model fit
     int r_index = iter + 1;
     if(r_index > burnin){
-    if (r_index % llk_per == 0 || r_index == 1 || r_index == iter) {
-      sampling_store();
-    }
-    if (r_index % thin == 0 || r_index == 1 || r_index == iter) {
-      phihat_store();
-    }
+      if (r_index % llk_per == 0 || r_index == 1 || r_index == iter) {
+        mfit_store();
+      }
+      if (r_index % thin == 0 || r_index == 1 || r_index == iter) {
+        phihat_store();
+      }
     }
     
     // Progress bar
@@ -153,36 +155,36 @@ double keyWRU::loglik_total()
   for (int r = 0; r < R_; ++r) {
     for( int m = 0; m < M_; ++m){
       loglik += mylgamma(names[m].n_rc(r, 1) + names[m].gamma_prior[0])
-	+ mylgamma(names[m].n_rc(r, 0) + names[m].gamma_prior[1]);
+      + mylgamma(names[m].n_rc(r, 0) + names[m].gamma_prior[1]);
       loglik -= mylgamma(n_r[r] + names[m].gamma_prior.sum());
-      N_ = name[m].N_;
-      beta_w = name[m].beta_w;
+      N_ = names[m].N_;
+      beta_w = names[m].beta_w;
       // Possible omp pragma here
       for(int w = 0; w < N_; ++w){
-	loglik+=mylgamma(name[m].n_wr(w, r) + beta_w);
+        loglik+=mylgamma(names[m].n_wr(w, r) + beta_w);
       }
-      loglik -= mylgamma(name[m].n_rc(r, 0)
-			 + ((double)(name[m].N_) * beta_w));
+      loglik -= mylgamma(names[m].n_rc(r, 0)
+                           + ((double)(names[m].N_) * beta_w));
     }
   }
   return loglik;
 }  
 
-  
-  
+
+
 void keyWRU::mfit_store()
 {
   // Store likelihood during the sampling
   double loglik = loglik_total();
   model_fit.push_back(loglik);
-
+  
 }
 
 void keyWRU::phihat_store()
 {
   // Store expected distribution over races for given name 
   for(int m = 0; m < M_; ++m){
-    name[m].phihat_store();
+    names[m].phihat_store();
   }
 }
 

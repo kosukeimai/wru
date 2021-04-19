@@ -44,13 +44,15 @@ private:
     , G_ // number of locations
     , max_iter // number of MCMC iterations
     , thin // thinning interval
+    , burnin
     , llk_per // log_posterior store interval
     ;
  
   const bool verbose;
   const MatrixXd theta;
   const VectorXi geo_each_size; //
-  std::vector<IntegerVector> R;
+  std::vector<IntegerVector> Races;
+  Rcpp::NumericVector model_fit;
 
   //Suff. Stat, race count
   VectorXd n_r;
@@ -58,13 +60,11 @@ private:
 
   //All name components
   std::vector<XName> names;
-  //temporary name placeholder
-  XName& name;
 
   int geo_id_ // location id placeholder
     , geo_size // Nr. of voters in location placeholder
     , w // name placeholder
-    , r // race placeholder
+    , r //race placeholder
     , c // mixture component placeholder
     , new_r // new race placeholder
     , voter_ // voter id placeholder
@@ -93,13 +93,8 @@ private:
   double loglik_total();
   void mfit_store();
   void phihat_store();
-
- 
   
- 
-  
-  
-  
+};
   
   
 #endif

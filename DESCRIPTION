@@ -1,11 +1,12 @@
 Package: wru
 Version: 0.1-10
-Date: 2020-10-08
+Date: 2021-04-16
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
 Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
-  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
+  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut")),
+  person("Santiago", "Olivella", email = "olivella@unc.edu", role = c("aut"))
   )
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
@@ -16,12 +17,16 @@ Description: Predicts individual race/ethnicity using surname, geolocation,
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
-    R (>= 3.5.0),
+    R (>= 4.0.3),
     utils
 Imports:
     devtools (>= 1.10.0)
 Suggests:
     testthat
+LinkingTo: 
+    Rcpp,
+    RcppEigen,
+    RcppProgress
 LazyLoad: yes
 LazyData: yes
 License: GPL (>= 3)

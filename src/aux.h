@@ -2,8 +2,9 @@
 #define __aux__
 
 #include <RcppEigen.h>
+int rand_wrapper(const int n); 
 std::vector<int> shuffle_indeces(const int m);
-rcat_without_normalize(Eigen::VectorXd& prob,
+int rcat_without_normalize(Eigen::VectorXd& prob,
 		       const double total,
 		       const int size);
 

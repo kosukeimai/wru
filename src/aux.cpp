@@ -1,11 +1,16 @@
 #include "aux.h"
 
+int rand_wrapper(const int n) 
+  {
+  return floor(R::unif_rand() * n); 
+  }
+
 std::vector<int> shuffle_indeces(const int m)
   {
     // Returns a vector of shuffled indeces for sampling
     std::vector<int> v(m);
     std::iota(v.begin(), v.end(), 0);
-    std::random_shuffle(v.begin(), v.end(), sampler::rand_wrapper);
+    std::random_shuffle(v.begin(), v.end(), rand_wrapper);
     return v;
   }
 
