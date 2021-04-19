@@ -17,7 +17,7 @@ Description: Predicts individual race/ethnicity using surname, geolocation,
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
-    R (>= 4.0.3),
+    R (>= 4.0.0),
     utils
 Imports:
     devtools (>= 1.10.0)
@@ -31,3 +31,4 @@ LazyLoad: yes
 LazyData: yes
 License: GPL (>= 3)
 RoxygenNote: 7.1.1
+Encoding: UTF-8

@@ -1,3 +1,12 @@
+#' Pre-process vector of names to match census style. Internal function
+#'
+#' @param voter_names Character vector to be pre-processed.
+#' @param target_names Character vector of census names to be matched.
+#'
+#' @return A character vector of pre-processed named
+#' @keywords internal
+#'
+
 .name_preproc <- function(voter_names, target_names){
   post_names <- as.character(voter_names)
   post_names <- toupper(post_names)
@@ -16,9 +25,9 @@
   for (i in 1:length(suffix)) {
     post_names[!match_tmp] <- ifelse(substr(post_names[!match_tmp],
                                        nchar(post_names[!match_tmp]) - (nchar(suffix)[i] - 1),
-                                       nchar(post_names[!match_tmp]) == suffix[i], 
+                                       nchar(post_names[!match_tmp])) == suffix[i], 
                                 substr(post_names[!match_tmp], 1, nchar(post_names[!match_tmp]) - nchar(suffix)[i]), 
-                                post_names[!match_tmp]))
+                                post_names[!match_tmp])
   }
   post_names[!match_tmp] <- ifelse(nchar(post_names[!match_tmp]) >= 7, 
                                    ifelse(substr(post_names[!match_tmp], 

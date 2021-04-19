@@ -1,4 +1,35 @@
-census_geo_api_joint <- function(key, state, geo = "tract", age = FALSE, sex = FALSE,  retry = 0) 
+#' Census data download function, returning joint frequencies
+#' 
+#' This function allows users to download U.S. Census 2010 geographic data,
+#' at either the county, tract, block, or place level, for a particular state.
+#' It differs from \code{census_geo_api} in that the this function returns a 
+#' full joint frequency distribution, whereas that function returns Pr(. | Race) 
+#' conditionals.
+#'
+#' @param key A required character object. Must contain user's Census API key, which can be requested here.
+#' @param state A required character object specifying which state to extract Census data for, e.g., "NJ".
+#' @param geo A character object specifying what aggregation level to use. Use "county", "tract", "block",
+#'           or "place". Default is "tract". Warning: extracting block-level data takes very long.
+#' @param age A TRUE/FALSE object indicating whether to condition on age or not. If FALSE (default), function
+#'            will return Pr(Geolocation, Race). If TRUE, function will return Pr(Geolocation, Age, Race). 
+#'            If sex is also TRUE, function will return Pr(Geolocation, Age, Sex, Race).
+#' @param sex A TRUE/FALSE object indicating whether to condition on sex or not. If FALSE (default), 
+#'            function will return Pr(Geolocation, Race). If TRUE, function will return 
+#'            Pr(Geolocation, Sex, Race). If age is also TRUE, function will return 
+#'            Pr(Geolocation, Age, Sex, Race).
+#' @param retry The number of retries at the census website if network interruption occurs. 
+#'
+#' @return Output will be an object of class list, indexed by state names. 
+#'         It will consist of the original user-input data with additional columns of Census geographic data, 
+#'         containing joint frequency distributions according to the census. 
+#' @export
+#'
+census_geo_api_joint <- function(key, 
+                                 state, 
+                                 geo = "tract",
+                                 age = FALSE, 
+                                 sex = FALSE,  
+                                 retry = 0) 
 {
   if (missing(key)) {
     stop("Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.")

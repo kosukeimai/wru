@@ -1,6 +1,6 @@
-#include "aux.h"
+#include "aux_funs.h"
 
-int rand_wrapper(const int n) 
+inline int rand_wrapper(const int n) 
   {
   return floor(R::unif_rand() * n); 
   }

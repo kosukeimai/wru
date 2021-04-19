@@ -1,9 +1,13 @@
-#' Title
+#' Name-Race Co-clustering Using Keynames
+#' 
+#' Estimate a Bayesian mixed-membership, keyword-assisted race classification model for geo-locations
+#' in a voterfile.  
 #'
 #' @param voter.file 	An object of class data.frame. Must contain a row for each individual being predicted, 
-#'                    as well as a field named surname containing each individual's surname. If using geolocation in predictions, 
-#'                    voter.file must contain a field named state, which contains the two-character abbreviation for each 
-#'                    individual's state of residence (e.g., "nj" for New Jersey). If using Census geographic data in race/ethnicity
+#'                    as well as fields named "surname", and/or"first", and/or "middle", containing each 
+#'                    individual's corresponding names. It must also contain a field named state, which 
+#'                    contains the two-character lower-case abbreviation for each individual's state of residence (e.g., "nj" for New Jersey).
+#'                    If using Census geographic data in race/ethnicity
 #'                    predictions, voter.file must also contain at least one of the following fields: county, tract, block,
 #'                    and/or place. These fields should contain character strings matching U.S. Census categories. County is three
 #'                    characters (e.g., "031" not "31"), tract is six characters, and block is four characters. Place is
@@ -26,26 +30,27 @@
 #'  \item{thin}{Thinning interval for MCMC. Defaults to 1.}
 #'  \item{log_posterior_interval}{Interval for storing the log_posterior. Defaults to 10.}
 #'  \item{beta_prior}{Parameter for symmetric Dirichlet prior over names for each race. Defaults to 5.}
-#'  \item{gamma_prior}{Parameter for Beta prior over keyname/non-keyname mixture components. Defaults to c(5, 5)},
+#'  \item{gamma_prior}{Parameter for Beta prior over keyname/non-keyname mixture components. Defaults to c(5, 5).}
 #'  \item{verbose}{Print progress information. Defaults to \code{TRUE}.}
 #'  \item{seed}{RNG seed. If \code{NULL}, a seed is generated and stored for reproducibility.}
 #' }
 #'
 #'
-#' @return
+#' @return A named list of predicted distributions over races for each
+#' name type. 
+#' 
 #' @export
 #'
-#' @examples
 co_cluster <- function(voter.file,
                        name_types = c("surname"),
                        name_race_tables = list(surname = wru::surnames2010),
-                       geo_race_table = NULL,
+                       census.data = NULL,
                        key_method = "mutual.inf",
                        ...,
                        control)
 {
   ##Data quality checks
-  stopifnot(all.equal(lapply(name_tables, ncol)),
+  stopifnot(all.equal(lapply(name_race_tables, ncol)),
             all(name_types %in% c("surname","first", "middle")),
             key_method %in% c("mutual.inf"),
             name_types %in% names(voter.file))
@@ -69,6 +74,7 @@ co_cluster <- function(voter.file,
   race_pred_args <- list(...)
   race_pred_args$voter.file <- voter.file
   race_pred <- do.call(predict_race, race_pred_args)
+  race.suff <- c("whi","bla","his", "asi", "oth")
   race_inits_int <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max - 1)
   
   ## level of geo aggregation
@@ -93,7 +99,7 @@ co_cluster <- function(voter.file,
                                   race_pred_args$sex,
                                   race_pred_args$retry)
   }
-  g_r_t <- do.call(rbind, lapply(g_r_l, 
+  g_r_t <- do.call(rbind, lapply(census.data, 
                                  function(x){
                                    all_names <- names(x[[race_pred_args$census.geo]])
                                    x[[race_pred_args$census.geo]][,c(geo_id_names, grep("r_", all_names))]
@@ -138,7 +144,7 @@ co_cluster <- function(voter.file,
   
   ## Create data for keyWRU
   data_list <- list(name_type_n = length(name_types),
-                    race_n = ncol(name_tables[[1]]),
+                    race_n = ncol(name_race_tables[[1]]),
                     geo_n = length(unique(geo_id)),
                     geo_race_table = geo_race_table,
                     voters_per_geo = length(split(voter.file, geo_id)), 

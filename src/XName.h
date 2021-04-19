@@ -3,7 +3,7 @@
 
 #include <RcppEigen.h>
 #include <vector>
-#include "aux.h"
+#include "aux_funs.h"
 
 using namespace Eigen;
 using namespace Rcpp;

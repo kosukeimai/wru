@@ -1,8 +1,8 @@
-#ifndef __aux__
-#define __aux__
+#ifndef __aux_funs__
+#define __aux_funs__
 
 #include <RcppEigen.h>
-int rand_wrapper(const int n); 
+inline int rand_wrapper(const int n); 
 std::vector<int> shuffle_indeces(const int m);
 int rcat_without_normalize(Eigen::VectorXd& prob,
 		       const double total,

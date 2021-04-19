@@ -6,7 +6,7 @@
 #include <progress.hpp>
 #include <progress_bar.hpp>
 #include "XName.h"
-#include "aux.h"
+#include "aux_funs.h"
 
 
 using namespace Eigen;
