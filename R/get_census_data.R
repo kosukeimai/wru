@@ -19,6 +19,7 @@
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param joint Boolean. Should joint frequency tables be returned? Defaults to \code{FALSE}.
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain a subset of the following elements: 
 #' \code{state}, \code{age}, \code{sex}, 
@@ -27,7 +28,7 @@
 #' @export
 #'
 #' @examples \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
-get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0) {
+get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0, joint = FALSE) {
   
   if (missing(key)) {
     stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
@@ -39,19 +40,35 @@ get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = 
   for (s in states) {
     CensusObj[[s]] <- list(state = s, age = age, sex = sex)
     if (census.geo == "place") {
-      place <- census_geo_api(key, s, geo = "place", age, sex, retry)
+      if(!joint){
+        place <- census_geo_api(key, s, geo = "place", age, sex, retry)
+      } else {
+        place <- census_geo_api_joint(key, s, geo = "place", age, sex, retry)
+      }
       CensusObj[[s]]$place <- place
     }
     if (census.geo == "block") {
-      block <- census_geo_api(key, s, geo = "block", age, sex, retry)
+      if(!joint){
+        block <- census_geo_api(key, s, geo = "block", age, sex, retry)
+      } else {
+        block <- census_geo_api_joint(key, s, geo = "block", age, sex, retry)
+      }
       CensusObj[[s]]$block <- block
     }
     if ((census.geo == "block") || (census.geo == "tract")) {
-      tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
+      if(!joint){
+        tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
+      } else {
+        tract <- census_geo_api_joint(key, s, geo = "tract", age, sex, retry)
+      }
       CensusObj[[s]]$tract <- tract
     }
     if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
-      county <- census_geo_api(key, s, geo = "county", age, sex, retry)
+      if(!joint){
+        county <- census_geo_api(key, s, geo = "county", age, sex, retry)
+      } else {
+        county <- census_geo_api_joint(key, s, geo = "county", age, sex, retry)
+      }
       CensusObj[[s]]$county <- county
     }
   }

@@ -4,21 +4,29 @@
 \alias{.find_keynames}
 \title{Obtain keynames from census table. Internal function}
 \usage{
-.find_keynames(names, freq_table, method = "mutual.inf", n_keynames = 100)
+.find_keynames(
+  names,
+  freq_table,
+  obs_names,
+  method = "mutual.inf",
+  max_keynames = 100
+)
 }
 \arguments{
 \item{names}{Character vector of potential keynames}
 
 \item{freq_table}{Matrix with overall name ferquency, by race (columns)}
 
+\item{obs_names}{Character vector of observed names}
+
 \item{method}{Character string. Which method should be used to select keynames?
 Currently, the only implemented method is \code{mutual.inf}, which
-selectes names with highest mutual information by race.}
+selects names with highest mutual information by race.}
 
-\item{n_keynames}{Number of keynames to select by race. Defaults to 100.}
+\item{max_keynames}{Maximum number of keynames to select by race. Defaults to 100.}
 }
 \value{
-A character matrix of top \code{n_keynames} by race.
+A list of character vectors top \code{n_keynames} by race.
 }
 \description{
 Obtain keynames from census table. Internal function

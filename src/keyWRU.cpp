@@ -26,12 +26,13 @@ keyWRU::keyWRU(const List data,
         n_r(Races[ii][jj])++;
       }
     }
-    
     //Construct list of name objects
     const List& all_name_data = as<List>(data["name_data"]);
     CharacterVector all_types = all_name_data.names();
+    //XName name;
     for(int m = 0; m < M_; ++m){
-      names.emplace_back(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
+      //name = XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
+      names.emplace_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
     }
 
     // Initialize all placeholders
@@ -41,10 +42,9 @@ keyWRU::keyWRU(const List data,
     sum_r = 1.0; n_rc = 0.0;
     r_prob_vec.resize(R_);
     
-    
     geo_indeces = shuffle_indeces(G_);
     record_indeces = shuffle_indeces(geo_each_size[0]);
-    
+
   }
 
 int keyWRU::sample_r(int voter,
@@ -132,10 +132,10 @@ void keyWRU::sample()
     // Store samples and measures of model fit
     int r_index = iter + 1;
     if(r_index > burnin){
-      if (r_index % llk_per == 0 || r_index == 1 || r_index == iter) {
+      if (r_index % llk_per == 0 || r_index == 1 || r_index == max_iter) {
         mfit_store();
       }
-      if (r_index % thin == 0 || r_index == 1 || r_index == iter) {
+      if (r_index % thin == 0 || r_index == 1 || r_index == max_iter) {
         phihat_store();
       }
     }

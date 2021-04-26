@@ -33,8 +33,7 @@ Pr(Geolocation, Age, Sex, Race).}
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
-Output will be an object of class list, indexed by state names. 
-        It will consist of the original user-input data with additional columns of Census geographic data, 
+Output will be data.frame of census geographic and race breakdown data, 
         containing joint frequency distributions according to the census.
 }
 \description{

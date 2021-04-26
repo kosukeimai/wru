@@ -26,6 +26,6 @@
 #'
 #' @keywords internal
 keyWRU_fit <- function(data, ctrl) {
-    .Call('_wru_keyWRU_fit', PACKAGE = 'wru', data, ctrl)
+    .Call(`_wru_keyWRU_fit`, data, ctrl)
 }
 

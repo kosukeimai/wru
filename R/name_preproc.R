@@ -56,5 +56,5 @@
                                                                                    "[", 2) 
   match_tmp_2 <- post_names_tmp %in% target_names
   post_names[(match_tmp_2 == TRUE) & (match_tmp == FALSE)] <- post_names_tmp[(match_tmp_2 == TRUE) & (match_tmp == FALSE)]
-  return(post_names)
+  return(unlist(post_names))
 }

@@ -11,11 +11,11 @@ XName::XName(const List& data,
              const int R_,
              const VectorXd& n_r,
              const std::vector<IntegerVector>& Races,
-              const String& type
+             const String type
                
 ) :
-  W(as< ListOf<IntegerVector> >(data["record_name_id"])),
-  keywords(as<IntegerMatrix>(data["keynames"])),
+  W(as< std::vector<IntegerVector> >(data["record_name_id"])),
+  keywords(as< std::vector<IntegerVector> >(data["keynames"])),
   phi_tilde(as<MatrixXd>(data["census_table"])),
   gamma_prior(as<VectorXd>(ctrl["gamma_prior"])),
   beta_w(as<double>(ctrl["beta_prior"])),
@@ -25,18 +25,22 @@ XName::XName(const List& data,
   type(type)
 {
   //Initialize containers
+
   n_rc.resize(R_, 2);
   n_rc.setZero();
   n_wr.resize(N_, R_);
   n_wr.setZero();
   int geo_size = 0, r_ = 0, w_ = 0;
+  
+
   for(int ii = 0; ii < G_ ; ++ii){ //iterate over geos
     geo_size =  W[ii].size();
-    C.push_back(VectorXi(geo_size, 0));
+    C.push_back(VectorXi(geo_size));
+    C[ii].setZero(geo_size);
     for(int jj = 0; jj < geo_size; ++jj){ //iterate over unique names
       r_ = Races[ii][jj]; w_ = W[ii][jj];
       //initialize C (0 for non-keyword names, bern(0.7) otherwise)
-      if(found_in(keywords.column(r_), w_)){	
+      if(found_in(keywords[r_], w_)){	
         C[ii][jj] = R::rbinom(1, 0.7);
       }
       //Init n_rc suff. stat  matrix
@@ -47,6 +51,8 @@ XName::XName(const List& data,
       }
     }
   }
+  
+
   e_phi.resize(N_, R_);
   e_phi.setZero();
   
@@ -54,7 +60,6 @@ XName::XName(const List& data,
   c1_prob = 1.0; numerator = 0.0;
   denominator = 1.0; c0_prob = 1.0;
   sum_c = 1.0; pi_0 = 1.0; pi_1 = 1.0;
-  const_mean = 1./(as<double>(ctrl["iter"]));
   c = 0; new_c = 0; r_ = 0; w_ = 0; 
   
 }
@@ -66,7 +71,7 @@ void XName::sample_c(int r,
   //Get unique names...
   w_ = W[geo_id][voter];
   //(Check if name is in keyword list, and skip update if not)
-  if(found_in(keywords.column(r), w_)){	
+  if(!found_in(keywords[r], w_)){	
     return;
   }
   
@@ -74,7 +79,9 @@ void XName::sample_c(int r,
   c = C[geo_id][voter];
   
   // remove data
-  n_wr(w_, r)--;
+  if(c == 0){
+    n_wr(w_, r)--;
+  }
   n_rc(r, c)--;
   
   // newprob_c0
@@ -112,8 +119,7 @@ void XName::phihat_store(){
     pi_0 = (n_rc(r, 1) + gamma_prior[0]) / denominator;
     pi_1 = (n_rc(r, 0) + gamma_prior[1]) / denominator;
     for(int w = 0; w < N_; ++w){
-      e_phi(w, r) += const_mean
-      * (pi_0 * phi_tilde(w, r)
+      e_phi(w, r) += (pi_0 * phi_tilde(w, r)
            + pi_1 * ((n_wr(w, r) + beta_w) / denominator_phi));
     }
   }

@@ -11,7 +11,7 @@ co_cluster(
   census.data = NULL,
   key_method = "mutual.inf",
   ...,
-  control
+  control = NULL
 )
 }
 \arguments{
@@ -28,8 +28,8 @@ five characters. See below for other optional fields.}
 \item{name_types}{Character vector. Must have elements in "surname", "first", and "middle". Defaults to "surname".}
 
 \item{name_race_tables}{Named list, with as many elements as there are names in \code{name_types}, and names matching
-elements in \code{name_types}. Each list element should be a matrix of unique names (rows) by race (cols),
-with conditional probabilities p(race|name) (i.e. each matrix should be row-stochastic.). Defaults to 
+elements in \code{name_types}. Each list element should be a data.frame of unique names (first column) by race (remaining columns),
+with conditional probabilities p(Race|Name). Defaults to 
 \code{list(surname = wru::surnames2010)}.}
 
 \item{census.data}{A list indexed by two-letter state abbreviations, which contains pre-saved Census geographic data. 
@@ -42,11 +42,11 @@ calls that function.}
 
 \item{control}{List of control arguments, including 
 \itemize{
- \item{n_keynames}{Number of names in census table to use as keynames. Defaults to 100.}
+ \item{max_keynames}{Maximum number of names in census table to use as keynames. Defaults to 100.}
  \item{iter}{Number of MCMC iterations. Defaults to 1000.}
  \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
  \item{thin}{Thinning interval for MCMC. Defaults to 1.}
- \item{log_posterior_interval}{Interval for storing the log_posterior. Defaults to 10.}
+ \item{log_post_interval}{Interval for storing the log_posterior. Defaults to 10.}
  \item{beta_prior}{Parameter for symmetric Dirichlet prior over names for each race. Defaults to 5.}
  \item{gamma_prior}{Parameter for Beta prior over keyname/non-keyname mixture components. Defaults to c(5, 5).}
  \item{verbose}{Print progress information. Defaults to \code{TRUE}.}

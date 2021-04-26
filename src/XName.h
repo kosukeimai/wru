@@ -18,7 +18,7 @@ public:
         const int R_,
         const VectorXd& n_r,
         const std::vector<IntegerVector>& Races,
-        const String& type
+        const String type
   );
   
   //getters
@@ -26,8 +26,8 @@ public:
   
 private:
   //Data
-  const ListOf<IntegerVector> W; // List of vectors of unique name id (row 0) and counts (row 1), for each geo
-  const IntegerMatrix keywords; //Matrix of vectors of keyword name id (rows) by race (columns).
+  const std::vector<IntegerVector> W; // List of vectors of unique name id (row 0) and counts (row 1), for each geo
+  const std::vector<IntegerVector> keywords; //List of vectors of keyword name id (rows) by race (columns).
   const MatrixXd phi_tilde; // census table, name by race
   const VectorXd gamma_prior;
   const double beta_w;
@@ -35,7 +35,7 @@ private:
   R_
   ;
   const VectorXd& n_r;
-  const String& type;
+  const String type;
   
   
   std::vector<VectorXi> C; // Vector of vectors of mixture component for each record, in each geo
@@ -50,8 +50,7 @@ private:
   denominator_phi,
   c0_prob,
   sum_c, 
-  pi_0, pi_1,
-  const_mean;
+  pi_0, pi_1;
   
   int c,
   new_c,
