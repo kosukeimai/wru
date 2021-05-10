@@ -15,7 +15,8 @@ keyWRU::keyWRU(const List data,
   verbose(as<bool>(ctrl["verbose"])),
   theta(as<MatrixXd>(data["geo_race_table"])),
   geo_each_size(as<VectorXi>(data["voters_per_geo"])),
-  Races(as< std::vector<IntegerVector> >(data["race_inits"]))
+  Races(as< std::vector<IntegerVector> >(data["race_inits"])),
+  check_in_sample(as<bool>(ctrl["fit_insample"]))
   {
     
     //Initialize suff. stat for race count
@@ -44,6 +45,20 @@ keyWRU::keyWRU(const List data,
     
     geo_indeces = shuffle_indeces(G_);
     record_indeces = shuffle_indeces(geo_each_size[0]);
+    
+    
+    //If testing in sample fit
+    
+    if(check_in_sample){
+      race_match.resize(G_);
+      for (int ii = 0; ii < G_; ++ii) { //iterate over geos
+        (race_match[ii]).resize(geo_each_size[ii]);
+        for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
+          race_match[ii][jj] = 0;
+        }
+      }
+      obs_race = as< std::vector<IntegerVector> >(data["race_obs"]);
+    }
 
   }
 
@@ -81,6 +96,8 @@ int keyWRU::sample_r(int voter,
   new_r = rcat_without_normalize(r_prob_vec,
                                           sum_r,
                                           R_); // Cat(r_prob_vec/sum_r)
+  
+  
   //Add counts back in
   n_r(new_r)++ ;
   for(int m = 0; m < M_; ++m){
@@ -117,7 +134,13 @@ List keyWRU::return_obj()
     phi_mat = names[m].getPhiHat();
     phi_hat.push_back(phi_mat, names[m].type);
   }
-  return phi_hat;
+  List res;
+  res["phi"] = phi_hat;
+  res["ll"] = model_fit;
+  if(check_in_sample){
+    res["r_insample"] = race_match;
+  }
+  return res;
 }
 
 void keyWRU::sample()
@@ -132,10 +155,13 @@ void keyWRU::sample()
     // Store samples and measures of model fit
     int r_index = iter + 1;
     if(r_index > burnin){
-      if (r_index % llk_per == 0 || r_index == 1 || r_index == max_iter) {
+      if ((r_index % llk_per) == 0 || r_index == 1 || r_index == max_iter) {
         mfit_store();
+        if(check_in_sample){
+          rfit_store();
+        }
       }
-      if (r_index % thin == 0 || r_index == 1 || r_index == max_iter) {
+      if ((r_index % thin) == 0 || r_index == 1 || r_index == max_iter) {
         phihat_store();
       }
     }
@@ -177,9 +203,17 @@ void keyWRU::mfit_store()
   // Store likelihood during the sampling
   double loglik = loglik_total();
   model_fit.push_back(loglik);
-  
 }
 
+void keyWRU::rfit_store()
+{
+  // Store likelihood during the sampling
+  for (int ii = 0; ii < G_; ++ii) {
+    for (int jj = 0; jj < geo_each_size[ii]; ++jj) {
+    race_match[ii][jj] += (Races[ii][jj] ==  obs_race[ii][jj]);
+  }
+  }
+}
 void keyWRU::phihat_store()
 {
   // Store expected distribution over races for given name 

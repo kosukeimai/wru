@@ -52,6 +52,9 @@ private:
   const MatrixXd theta;
   const VectorXi geo_each_size; //
   std::vector<IntegerVector> Races;
+  
+  bool check_in_sample;
+
   Rcpp::NumericVector model_fit;
 
   //Suff. Stat, race count
@@ -85,13 +88,15 @@ private:
     , record_indeces // vector of shuffl
     ;
   
-  
+  std::vector< VectorXi > race_match;
+  std::vector<IntegerVector> obs_race;
    // Methods
   int sample_r(int voter,
 	       int geo_id);
   void iteration_single(int it);
   double loglik_total();
   void mfit_store();
+  void rfit_store();
   void phihat_store();
   
 };

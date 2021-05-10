@@ -24,15 +24,21 @@
 #' @param ... Arguments passed to \code{predict_race}.
 #' @param control List of control arguments, including 
 #' \itemize{
-#'  \item{max_keynames}{Maximum number of names in census table to use as keynames. Defaults to 100.}
-#'  \item{iter}{Number of MCMC iterations. Defaults to 1000.}
-#'  \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
-#'  \item{thin}{Thinning interval for MCMC. Defaults to 1.}
-#'  \item{log_post_interval}{Interval for storing the log_posterior. Defaults to 10.}
-#'  \item{beta_prior}{Parameter for symmetric Dirichlet prior over names for each race. Defaults to 5.}
-#'  \item{gamma_prior}{Parameter for Beta prior over keyname/non-keyname mixture components. Defaults to c(5, 5).}
-#'  \item{verbose}{Print progress information. Defaults to \code{TRUE}.}
-#'  \item{seed}{RNG seed. If \code{NULL}, a seed is generated and stored for reproducibility.}
+#' \item{race_init}{ Initial race for each observation in voter.file. Must be an integer, with
+#'                  0=white, 1=black, 2=hispanic, 3=asian, and 4=other.}
+#'  \item{max_keynames}{ Maximum number of names in census table to use as keynames. Defaults to 100.}
+#'  \item{fit_insample}{ Boolean. Should model check in-sample fit of race prediction for each
+#'                      record? If \code{TRUE}, \code{race_obs} cannot be \code{NULL}. Defaults to \code{FALSE}.}
+#'  \item{race_obs}{ Observed race for each observation in voter.file. Must be an integer, with
+#'                  0=white, 1=black, 2=hispanic, 3=asian, and 4=other.}
+#'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
+#'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+#'  \item{thin}{ Thinning interval for MCMC. Defaults to 1.}
+#'  \item{log_post_interval}{ Interval for storing the log_posterior. Defaults to 10.}
+#'  \item{beta_prior}{ Parameter for symmetric Dirichlet prior over names for each race. Defaults to 5.}
+#'  \item{gamma_prior}{ Parameter for Beta prior over keyname/non-keyname mixture components. Defaults to c(5, 5).}
+#'  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
+#'  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and stored for reproducibility.}
 #' }
 #'
 #'
@@ -59,10 +65,13 @@ co_cluster <- function(voter.file,
   ## Form control list
   ctrl <- list(iter = 1000,
                thin = 1,
+               race_init = NULL,
                log_post_interval = 10,
                beta_prior = 5,
                gamma_prior = c(5, 5),
                verbose = TRUE, 
+               fit_insample = FALSE,
+               race_obs = NULL,
                max_keynames = 100,
                seed = sample(1:1000, 1))
   ctrl$burnin <- floor(ctrl$iter/2)
@@ -70,6 +79,10 @@ co_cluster <- function(voter.file,
   
   ## Set RNG seed
   set.seed(ctrl$seed)
+  
+  if(ctrl$fit_insample){
+    stopifnot(!is.null(ctrl$race_obs))
+  }
   
   ## Initial race 
   race_pred_args <- list(census.surname = TRUE,
@@ -82,10 +95,29 @@ co_cluster <- function(voter.file,
   race_pred_args[names(args_usr)] <- args_usr
   
   race_pred_args$voter.file <- voter.file
-  race_pred <- do.call(predict_race, race_pred_args)
+  if(!is.null(census.data)){
+    recurse <- function (L, f) {  
+      if (inherits(L, "data.frame")){
+        f(L) 
+      } else if (!is.list(L) && length(L) == 1) {
+        return(L)
+      } else {
+        lapply(L, recurse, f) 
+      }
+    } 
+    race_pred_args$census.data <- census.data
+    race_pred_args$census.data <- recurse(race_pred_args$census.data,
+                                         f = function(x){
+                                           ind <- grep("r_", names(x))
+                                           x[,ind] <- proportions(as.matrix(x[,ind]), 2)
+                                           return(x)
+                                         })
+  }
   race.suff <- c("whi","bla","his", "asi", "oth")
-  race_inits_int <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max) - 1 
-  
+  if(is.null(ctrl$race_init)){
+    race_pred <- do.call(predict_race, race_pred_args)
+    ctrl$race_init <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max) - 1 
+  }
   ## level of geo aggregation
   geo_id_names <- c("state", switch(race_pred_args$census.geo,
                                     "county" = c("county"),
@@ -164,9 +196,12 @@ co_cluster <- function(voter.file,
                     geo_n = length(unique(geo_id)),
                     geo_race_table = geo_race_table,
                     voters_per_geo = sapply(split(voter.file, geo_id), nrow), 
-                    race_inits = split(race_inits_int, geo_id),
+                    race_inits = split(ctrl$race_init, geo_id),
+                    race_obs = if(ctrl$fit_insample){split(ctrl$race_obs, geo_id)} else {list()},
                     name_data = name_data)
-  pred_list <- keyWRU_fit(data_list, ctrl)
+  
+  full_res <- keyWRU_fit(data_list, ctrl)
+  pred_list <- full_res$phi
   
   res <- lapply(pred_list, proportions, margin=2)
   res <- lapply(name_types, 
@@ -179,5 +214,11 @@ co_cluster <- function(voter.file,
                   return(res[[ntype]])
                 })
   names(res) <- names(pred_list)
-  return(res)
+  ret_obj <- list()
+  ret_obj$name_by_race <- res
+  ret_obj$loglik <- full_res$ll
+  if(ctrl$fit_insample){
+    ret_obj$fit_insample <- do.call(rbind,full_res$r_insample)/length(ret_obj$loglik)
+  }
+  return(ret_obj)
 }

@@ -42,6 +42,8 @@ calls that function.}
 
 \item{control}{List of control arguments, including 
 \itemize{
+\item{race_init}{Initial race for each observation in voter.file. Must be an integer, with
+                 0=white, 1=black, 2=hispanic, 3=asian, and 4=other.}
  \item{max_keynames}{Maximum number of names in census table to use as keynames. Defaults to 100.}
  \item{iter}{Number of MCMC iterations. Defaults to 1000.}
  \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
