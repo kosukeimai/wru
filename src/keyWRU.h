@@ -72,6 +72,7 @@ private:
     , new_r // new race placeholder
     , voter_ // voter id placeholder
     , N_ // number of unique names placeholder
+    , n_samp
     ;
 
   //Intermediate computation placeholders 

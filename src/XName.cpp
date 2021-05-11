@@ -113,8 +113,7 @@ void XName::sample_c(int r,
 void XName::phihat_store(){
   // keyword component
   for(int r = 0; r < R_; ++r){
-    denominator =  n_rc(r, 1) + n_rc(r, 0)
-    + gamma_prior.sum();
+    denominator =  n_rc(r, 1) + n_rc(r, 0) + gamma_prior.sum();
     denominator_phi = n_r(r) + ((double)N_ * beta_w);
     pi_0 = (n_rc(r, 1) + gamma_prior[0]) / denominator;
     pi_1 = (n_rc(r, 0) + gamma_prior[1]) / denominator;

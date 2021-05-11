@@ -56,7 +56,8 @@ co_cluster <- function(voter.file,
                        control = NULL)
 {
   ##Data quality checks
-  stopifnot(all(sapply(name_race_tables, ncol) == 6),
+  n_race <- 5
+  stopifnot(all(sapply(name_race_tables, ncol) == n_race+1),
             all(name_types %in% c("surname","first", "middle")),
             all(names(name_race_tables) %in% name_types),
             key_method %in% c("mutual.inf"),
@@ -72,7 +73,7 @@ co_cluster <- function(voter.file,
                verbose = TRUE, 
                fit_insample = FALSE,
                race_obs = NULL,
-               max_keynames = 100,
+               max_keynames = 1000,
                seed = sample(1:1000, 1))
   ctrl$burnin <- floor(ctrl$iter/2)
   ctrl[names(control)] <- control
@@ -168,6 +169,12 @@ co_cluster <- function(voter.file,
                                    u_obs_names,
                                    key_method,
                                    ctrl$max_keynames)
+    dist_keynames <- lapply(seq.int(n_race), 
+                            function(x){
+                              tmp <- name_race_tables[[ntype]][str_names %in% keynames_str[[x]],]
+                              tmp[,-1] <- proportions(as.matrix(tmp[,-1]), 2)
+                              return(tmp[,c(1,x+1)])
+                            })
     u_kw <- unique(unlist(keynames_str))
     n_u_kw <- length(u_kw)
     reord <- order(match(u_obs_names, u_kw))
@@ -177,10 +184,14 @@ co_cluster <- function(voter.file,
     keynames <- lapply(keynames_str, 
                        FUN=function(x){
                          match(x, table = u_kw) - 1
-    })
+                       })
     w_names_list <- split(w_names, geo_id)
-    phi_tilde_freq <- name_race_tables[[ntype]][order(match(str_names, u_kw)),][1:n_u_kw,]
-    phi_tilde <- proportions(as.matrix(phi_tilde_freq[,-1]), 2)
+    phi_tilde <- array(0.0, c(n_u_kw, n_race))
+    for(x in 1:n_race){
+      phi_tilde[match(dist_keynames[[x]][,1], table=u_kw),x] <- dist_keynames[[x]][,2] 
+    }
+    
+    colnames(phi_tilde) <- paste("p", race.suff, sep="_")
     name_data[[ntype]] <- list(n_unique_names = n_names,
                                record_name_id = w_names_list,
                                keynames = keynames,
@@ -202,23 +213,21 @@ co_cluster <- function(voter.file,
   
   full_res <- keyWRU_fit(data_list, ctrl)
   pred_list <- full_res$phi
-  
-  res <- lapply(pred_list, proportions, margin=2)
   res <- lapply(name_types, 
                 function(ntype){
-                  colnames(res[[ntype]]) <- paste0("pred.",race.suff)
-                  res[[ntype]] <- as.data.frame(res[[ntype]])
-                  res[[ntype]] <- cbind(name_data[[ntype]]$u_obs_names,
-                                        res[[ntype]])
-                  names(res[[ntype]])[1] <- ntype
-                  return(res[[ntype]])
+                  colnames(pred_list[[ntype]]) <- paste0("pred.",race.suff)
+                  pred_list[[ntype]] <- as.data.frame(pred_list[[ntype]])
+                  pred_list[[ntype]] <- cbind(name_data[[ntype]]$u_obs_names,
+                                              pred_list[[ntype]])
+                  names(pred_list[[ntype]])[1] <- ntype
+                  return(pred_list[[ntype]])
                 })
   names(res) <- names(pred_list)
   ret_obj <- list()
   ret_obj$name_by_race <- res
   ret_obj$loglik <- full_res$ll
   if(ctrl$fit_insample){
-    ret_obj$fit_insample <- do.call(rbind,full_res$r_insample)/length(ret_obj$loglik)
+    ret_obj$fit_insample <- do.call(c,full_res$r_insample)/length(ret_obj$loglik)
   }
   return(ret_obj)
 }

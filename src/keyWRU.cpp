@@ -38,7 +38,7 @@ keyWRU::keyWRU(const List data,
 
     // Initialize all placeholders
     geo_id_ = 0; geo_size = 0; w = 0; r = 0;
-    c = 0; new_r = 0; voter_ = 0; N_ = 0;
+    c = 0; new_r = 0; voter_ = 0; N_ = 0; n_samp = 0;
     numerator = 0.0; denominator = 1.0;
     sum_r = 1.0; n_rc = 0.0;
     r_prob_vec.resize(R_);
@@ -72,7 +72,9 @@ int keyWRU::sample_r(int voter,
   n_r(r)--;
   for(int m = 0; m < M_; ++m){
     names[m].n_rc(r, (names[m].C[geo_id])[voter])--;
+    if(!(names[m].C[geo_id][voter])){
     names[m].n_wr((names[m].W[geo_id])[voter], r)--;
+    }
   }
   
   numerator = 1.0;
@@ -102,7 +104,9 @@ int keyWRU::sample_r(int voter,
   n_r(new_r)++ ;
   for(int m = 0; m < M_; ++m){
     names[m].n_rc(new_r, (names[m].C[geo_id])[voter])++ ;
-    names[m].n_wr((names[m].W[geo_id])[voter], new_r)++ ;
+    if(!(names[m].C[geo_id][voter])){
+      names[m].n_wr((names[m].W[geo_id])[voter], new_r)++ ;
+    }
   }
   return new_r;
 }
@@ -132,6 +136,7 @@ List keyWRU::return_obj()
   MatrixXd phi_mat;
   for(int m = 0; m < M_; ++m){
     phi_mat = names[m].getPhiHat();
+    phi_mat /= n_samp;
     phi_hat.push_back(phi_mat, names[m].type);
   }
   List res;
@@ -163,6 +168,7 @@ void keyWRU::sample()
       }
       if ((r_index % thin) == 0 || r_index == 1 || r_index == max_iter) {
         phihat_store();
+        n_samp++;
       }
     }
     
