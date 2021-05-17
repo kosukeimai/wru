@@ -7,13 +7,12 @@ Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
   person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
   )
-Maintainer: Kabir Khanna <kabirkhanna@gmail.com>
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
     Rule to compute the posterior probability of each racial category for any given
     individual. The package implements methods described in Imai and Khanna (2016)
     "Improving Ecological Inference by Predicting Individual Ethnicity from Voter
-    Registration Records" Political Analsyis <DOI:10.1093/pan/mpw001>.
+    Registration Records" Political Analysis <DOI:10.1093/pan/mpw001>.
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
