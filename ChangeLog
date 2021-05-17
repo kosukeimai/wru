@@ -11,3 +11,5 @@ Date        Version  Comment
 2019-02-12  0.1-8    Updated to be compatible with U.S. Census API updates
 2019-02-20  0.1-9    Fixed census_helper.R so that state field can be lower case in user data
 2020-10-08  0.1-10   Fixed minor warning message
+2020-04-22  0.1-11   Minor fix requested by CRAN
+2020-05-17  0.1-12   Some Census API improvements (thanks to Silvia Kim)
