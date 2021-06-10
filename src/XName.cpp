@@ -15,7 +15,6 @@ XName::XName(const List& data,
                
 ) :
   W(as< std::vector<IntegerVector> >(data["record_name_id"])),
-  keywords(as< std::vector<IntegerVector> >(data["keynames"])),
   phi_tilde(as<MatrixXd>(data["census_table"])),
   gamma_prior(as<VectorXd>(ctrl["gamma_prior"])),
   beta_w(as<double>(ctrl["beta_prior"])),
@@ -25,34 +24,21 @@ XName::XName(const List& data,
   type(type)
 {
   //Initialize containers
-
+  max_kw = as<int>(data["largest_keyword"]);
   n_rc.resize(R_, 2);
   n_rc.setZero();
   n_wr.resize(N_, R_);
   n_wr.setZero();
   int geo_size = 0, r_ = 0, w_ = 0;
-  
 
+  
   for(int ii = 0; ii < G_ ; ++ii){ //iterate over geos
     geo_size =  W[ii].size();
     C.push_back(VectorXi(geo_size));
     C[ii].setZero(geo_size);
-    for(int jj = 0; jj < geo_size; ++jj){ //iterate over unique names
-      r_ = Races[ii][jj]; w_ = W[ii][jj];
-      //initialize C (0 for non-keyword names, bern(0.7) otherwise)
-      if(found_in(keywords[r_], w_)){	
-        C[ii][jj] = R::rbinom(1, 0.7);
-      }
-      //Init n_rc suff. stat  matrix
-      n_rc(r_, C[ii][jj])++;
-      //Init n_wr suff. stat matrix
-      if(!(C[ii][jj])){
-        n_wr(w_, r_)++;
-      }
-    }
   }
   
-
+  
   e_phi.resize(N_, R_);
   e_phi.setZero();
   
@@ -71,7 +57,8 @@ void XName::sample_c(int r,
   //Get unique names...
   w_ = W[geo_id][voter];
   //(Check if name is in keyword list, and skip update if not)
-  if(!found_in(keywords[r], w_)){	
+//if(!found_in(keywords[r], w_)){	
+  if(w_ > max_kw){	
     return;
   }
   
@@ -119,7 +106,7 @@ void XName::phihat_store(){
     pi_1 = (n_rc(r, 0) + gamma_prior[1]) / denominator;
     for(int w = 0; w < N_; ++w){
       e_phi(w, r) += (pi_0 * phi_tilde(w, r)
-           + pi_1 * ((n_wr(w, r) + beta_w) / denominator_phi));
+                        + pi_1 * ((n_wr(w, r) + beta_w) / denominator_phi));
     }
   }
 }
@@ -127,5 +114,6 @@ void XName::phihat_store(){
 MatrixXd XName::getPhiHat(){
   return e_phi;
 }
+
 
 

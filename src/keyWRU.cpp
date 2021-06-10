@@ -19,10 +19,13 @@ keyWRU::keyWRU(const List data,
   check_in_sample(as<bool>(ctrl["fit_insample"]))
   {
     
-    //Initialize suff. stat for race count
+    //Initialize suff. stat for race count and race sample storage
     n_r.resize(R_);
     n_r.setZero();
+    RaceSamples.resize(G_);
     for (int ii = 0; ii < G_; ++ii) { //iterate over geos
+      (RaceSamples[ii]).resize(geo_each_size[ii], R_);
+      (RaceSamples[ii]).setZero();
       for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
         n_r(Races[ii][jj])++;
       }
@@ -36,6 +39,34 @@ keyWRU::keyWRU(const List data,
       names.emplace_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
     }
 
+    int c_val = 0, r_, w_;
+    for (int ii = 0; ii < G_; ++ii) {
+      geo_id_ = ii;
+      geo_size = geo_each_size[geo_id_];
+      // Iterate over each record in the geographic loc.
+      for (int jj = 0; jj < geo_size; ++jj) {
+        Rcpp::checkUserInterrupt();
+        voter_ = jj;
+        //Init name-specific suff stats
+        for(int m = 0; m < M_; ++m){
+          r_ = Races[ii][jj]; w_ = names[m].W[ii][jj];
+          //initialize C (0 for non-keyword names, bern(0.7) otherwise)
+            if(w_ <= names[m].max_kw){
+              c_val =  R::rbinom(1, 0.7);
+              names[m].C[ii][jj] = c_val;
+            }
+              //Init n_rc suff. stat  matrix
+              names[m].n_rc(r_, c_val)++;
+              //Init n_wr suff. stat matrix
+              if(!c_val){
+                names[m].n_wr(w_, r_)++;
+              }
+        }
+      }
+    }
+    
+    
+
     // Initialize all placeholders
     geo_id_ = 0; geo_size = 0; w = 0; r = 0;
     c = 0; new_r = 0; voter_ = 0; N_ = 0; n_samp = 0;
@@ -48,7 +79,6 @@ keyWRU::keyWRU(const List data,
     
     
     //If testing in sample fit
-    
     if(check_in_sample){
       race_match.resize(G_);
       for (int ii = 0; ii < G_; ++ii) { //iterate over geos
@@ -59,7 +89,6 @@ keyWRU::keyWRU(const List data,
       }
       obs_race = as< std::vector<IntegerVector> >(data["race_obs"]);
     }
-
   }
 
 int keyWRU::sample_r(int voter,
@@ -108,20 +137,30 @@ int keyWRU::sample_r(int voter,
       names[m].n_wr((names[m].W[geo_id])[voter], new_r)++ ;
     }
   }
+  
+  
   return new_r;
 }
 
 void keyWRU::iteration_single(int it)
 { 
-  geo_indeces = shuffle_indeces(G_); // shuffle geo locs
+  //geo_indeces = shuffle_indeces(G_); // shuffle geo locs
   for (int ii = 0; ii < G_; ++ii) {
-    geo_id_ = geo_indeces[ii];
+    geo_id_ = ii;//geo_indeces[ii];
     geo_size = geo_each_size[geo_id_];
-    record_indeces = shuffle_indeces(geo_size); //shuffle records
+    //record_indeces = shuffle_indeces(geo_size); //shuffle records
     // Iterate over each record in the geographic loc.
     for (int jj = 0; jj < geo_size; ++jj) {
-      voter_ = record_indeces[jj];
+      Rcpp::checkUserInterrupt();
+      voter_ = jj;//record_indeces[jj];
+      //Sample race
       Races[geo_id_][voter_] = sample_r(voter_, geo_id_);
+      //Store sampled race
+      RaceSamples[geo_id_](voter_, Races[geo_id_][voter_])++;
+      if(check_in_sample){
+        race_match[geo_id_][voter_] += (Races[geo_id_][voter_] == obs_race[geo_id_][voter_]);
+      }
+      //Sample mixture component
       for(int m = 0; m < M_; ++m){
         names[m].sample_c(Races[geo_id_][voter_], voter_, geo_id_);
       }
@@ -145,6 +184,7 @@ List keyWRU::return_obj()
   if(check_in_sample){
     res["r_insample"] = race_match;
   }
+  res["predict_race"] = getRHat();
   return res;
 }
 
@@ -162,9 +202,9 @@ void keyWRU::sample()
     if(r_index > burnin){
       if ((r_index % llk_per) == 0 || r_index == 1 || r_index == max_iter) {
         mfit_store();
-        if(check_in_sample){
-          rfit_store();
-        }
+        // if(check_in_sample){
+        //   rfit_store();
+        // }
       }
       if ((r_index % thin) == 0 || r_index == 1 || r_index == max_iter) {
         phihat_store();
@@ -216,8 +256,8 @@ void keyWRU::rfit_store()
   // Store likelihood during the sampling
   for (int ii = 0; ii < G_; ++ii) {
     for (int jj = 0; jj < geo_each_size[ii]; ++jj) {
-    race_match[ii][jj] += (Races[ii][jj] ==  obs_race[ii][jj]);
-  }
+    race_match[ii][jj] += (Races[ii][jj] == obs_race[ii][jj]);
+   }
   }
 }
 void keyWRU::phihat_store()
@@ -226,6 +266,11 @@ void keyWRU::phihat_store()
   for(int m = 0; m < M_; ++m){
     names[m].phihat_store();
   }
+}
+
+List keyWRU::getRHat()
+{
+  return(wrap(RaceSamples));  
 }
 
 

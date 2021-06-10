@@ -11,25 +11,20 @@
 #'                    predictions, voter.file must also contain at least one of the following fields: county, tract, block,
 #'                    and/or place. These fields should contain character strings matching U.S. Census categories. County is three
 #'                    characters (e.g., "031" not "31"), tract is six characters, and block is four characters. Place is
-#'                    five characters. See below for other optional fields.
-#' @param name_types  Character vector. Must have elements in "surname", "first", and "middle". Defaults to "surname". 
+#'                    five characters. See \code{\link{predict_race}} for other optional fields.
+#' @param name_types  Character vector. Must have elements in "surname", "first", and "middle".
 #' @param name_race_tables Named list, with as many elements as there are names in \code{name_types}, and names matching
 #'                         elements in \code{name_types}. Each list element should be a data.frame of unique names (first column) by race (remaining columns),
-#'                         with conditional probabilities p(Race|Name). Defaults to 
-#'                         \code{list(surname = wru::surnames2010)}.    
-#' @param census.data A list indexed by two-letter state abbreviations, which contains pre-saved Census geographic data. 
-#'                       Can be generated using \code{census_geo_api_joint} function. Defaults to \code{NULL}, which 
-#'                       calls that function. 
-#' @param key_method  Method for extracting keynames from name race tables. Currently, only "mutual.inf" is implemented. 
-#' @param ... Arguments passed to \code{predict_race}.
+#'                         with conditional probabilities p(Name|Race). 
+#' @param census_geo Required character vector. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.                        
+#' @param ... Arguments passed to \code{\link{predict_race}}.
 #' @param control List of control arguments, including 
 #' \itemize{
 #' \item{race_init}{ Initial race for each observation in voter.file. Must be an integer, with
 #'                  0=white, 1=black, 2=hispanic, 3=asian, and 4=other.}
-#'  \item{max_keynames}{ Maximum number of names in census table to use as keynames. Defaults to 100.}
 #'  \item{fit_insample}{ Boolean. Should model check in-sample fit of race prediction for each
 #'                      record? If \code{TRUE}, \code{race_obs} cannot be \code{NULL}. Defaults to \code{FALSE}.}
-#'  \item{race_obs}{ Observed race for each observation in voter.file. Must be an integer, with
+#'  \item{race_obs}{ Observed race for each record in \code{voter.file}. Must be an integer, with
 #'                  0=white, 1=black, 2=hispanic, 3=asian, and 4=other.}
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
 #'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
@@ -42,26 +37,34 @@
 #' }
 #'
 #'
-#' @return A named list of predicted distributions over races for each
-#' name type. 
+#' @return A named list:
+#' \itemize{
+#' \item{name_by_race}{ Named list of predicted distributions of name by race for each name type.}
+#' \item{race_by_record}{ A (reordered) copy of \code{voter.file}, with additional columns of predicted
+#'                       race probabilities, names \code{pred.<race>}. }
+#' \item{loglik}{ Values of log likelihood, evaluated every \code{log_post_interval}.}
+#' \item{fit_insample}{ When \code{fit_insample=TRUE}, a probability of correct in_sample prediction 
+#'                      for each record in \code{vote.file}.} 
+#' } 
+#' 
 #' 
 #' @export
 #'
 co_cluster <- function(voter.file,
-                       name_types = c("surname"),
-                       name_race_tables = list(surname = wru::surnames2010),
-                       census.data = NULL,
-                       key_method = "mutual.inf",
+                       name_types,
+                       name_race_tables,
+                       census.geo,
                        ...,
                        control = NULL)
 {
   ##Data quality checks
-  n_race <- 5
+  n_race <- ncol(name_race_tables[[1]])-1
   stopifnot(all(sapply(name_race_tables, ncol) == n_race+1),
             all(name_types %in% c("surname","first", "middle")),
             all(names(name_race_tables) %in% name_types),
-            key_method %in% c("mutual.inf"),
-            name_types %in% names(voter.file))
+            name_types %in% names(voter.file),
+            census.geo %in% c("county","tract","block","place")
+            )
   
   ## Form control list
   ctrl <- list(iter = 1000,
@@ -89,33 +92,45 @@ co_cluster <- function(voter.file,
   race_pred_args <- list(census.surname = TRUE,
                          surname.only = FALSE,
                          surname.year = 2010,
+                         census.geo = census.geo,
                          age = FALSE,
                          sex = FALSE,
                          retry = 0)
   args_usr <- list(...)
   race_pred_args[names(args_usr)] <- args_usr
-  
-  race_pred_args$voter.file <- voter.file
-  if(!is.null(census.data)){
-    recurse <- function (L, f) {  
-      if (inherits(L, "data.frame")){
-        f(L) 
-      } else if (!is.list(L) && length(L) == 1) {
-        return(L)
-      } else {
-        lapply(L, recurse, f) 
-      }
-    } 
-    race_pred_args$census.data <- census.data
-    race_pred_args$census.data <- recurse(race_pred_args$census.data,
-                                         f = function(x){
-                                           ind <- grep("r_", names(x))
-                                           x[,ind] <- proportions(as.matrix(x[,ind]), 2)
-                                           return(x)
-                                         })
+  if(is.null(race_pred_args$census.data)){
+    if(is.null(race_pred_args$census.key)){
+      stop("Geographic data is required. When `census.data' is NULL, you must provide a census API Key using `census.key' so I can download the required data.")
+    }
+    all_states <- unique(voter.file$state)
+    race_pred_args$census.data <- get_census_data(race_pred_args$census.key, 
+                                   all_states, 
+                                   race_pred_args$age,
+                                   race_pred_args$sex, 
+                                   race_pred_args$census.geo, 
+                                   race_pred_args$retry)
   }
+  
+  # if(!is.null(census.data)){
+  #   recurse <- function (L, f) {  
+  #     if (inherits(L, "data.frame")){
+  #       f(L) 
+  #     } else if (!is.list(L) && length(L) == 1) {
+  #       return(L)
+  #     } else {
+  #       lapply(L, recurse, f) 
+  #     }
+  #   } 
+    # race_pred_args$census.data <- recurse(race_pred_args$census.data,
+    #                                      f = function(x){
+    #                                        ind <- grep("r_", names(x))
+    #                                        x[,ind] <- proportions(as.matrix(x[,ind]), 2)
+    #                                        return(x)
+    #                                      })
+  #}
   race.suff <- c("whi","bla","his", "asi", "oth")
   if(is.null(ctrl$race_init)){
+    race_pred_args$voter.file <- voter.file
     race_pred <- do.call(predict_race, race_pred_args)
     ctrl$race_init <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max) - 1 
   }
@@ -129,26 +144,20 @@ co_cluster <- function(voter.file,
   
   
   ## P(race | geo)
-  if(is.null(census.data)){
-    if(is.null(race_pred_args$census.key)){
-      stop("If no census.data is provided, you must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.")
-    }
-    states <- unique(voter.file[,"state"])
-    census.data <- get_census_data(race_pred_args$census.key,
-                                   states,
-                                   race_pred_args$age,
-                                   race_pred_args$sex,
-                                   race_pred_args$census.geo,
-                                   race_pred_args$retry,
-                                   joint = TRUE)
-  }
-  g_r_t <- do.call(rbind, lapply(census.data, 
+  g_r_t <- do.call(rbind, lapply(race_pred_args$census.data, 
                                  function(x){
                                    all_names <- names(x[[race_pred_args$census.geo]])
-                                   x[[race_pred_args$census.geo]][,c(geo_id_names, grep("r_", all_names, value=TRUE))]
+                                   tmp <- x[[race_pred_args$census.geo]][,c(geo_id_names, grep("P00", all_names, value=TRUE))]
+                                   tmp[,grep("P00", all_names, value=TRUE)] <- proportions(as.matrix(tmp[,grep("P00", all_names, value=TRUE)]), 1)
+                                   tmp$r_whi <- tmp$P005003  #Pr(White|Geo)
+                                   tmp$r_bla <- tmp$P005004  #Pr(Black|Geo)
+                                   tmp$r_his <- tmp$P005010  #Pr(Latino|Geo)
+                                   tmp$r_asi <- (tmp$P005006 + tmp$P005007) #Pr(Asian or NH/PI|Geo)
+                                   tmp$r_oth <- (tmp$P005005 + tmp$P005008 + tmp$P005009)#Pr(AI/AN, Other, or Mixed|Geo)
+                                   return(tmp)
                                  }))
   g_r_t_geo <- do.call(paste, g_r_t[,geo_id_names])
-  geo_race_table <- proportions(as.matrix(g_r_t[,grep("r_", names(g_r_t))]), 1)
+  geo_race_table <- as.matrix(g_r_t[,grep("r_", names(g_r_t))])
   
   
   ##Reorder voterfile data to match census
@@ -161,40 +170,44 @@ co_cluster <- function(voter.file,
   name_data <- vector("list", length(name_types))
   names(name_data) <- name_types 
   for(ntype in name_types){
-    str_names <- name_race_tables[[ntype]][,1]
+    str_names <- toupper(name_race_tables[[ntype]][,1])
     proc_names_str <- .name_preproc(voter.file[,ntype], c(str_names))
     u_obs_names <- unique(proc_names_str)
-    keynames_str <- .find_keynames(str_names,
-                                   as.matrix(name_race_tables[[ntype]][,-1]),
-                                   u_obs_names,
-                                   key_method,
-                                   ctrl$max_keynames)
-    dist_keynames <- lapply(seq.int(n_race), 
-                            function(x){
-                              tmp <- name_race_tables[[ntype]][str_names %in% keynames_str[[x]],]
-                              tmp[,-1] <- proportions(as.matrix(tmp[,-1]), 2)
-                              return(tmp[,c(1,x+1)])
-                            })
-    u_kw <- unique(unlist(keynames_str))
+    keynames_str_all <- str_names#.find_keynames(str_names,
+                              #     as.matrix(name_race_tables[[ntype]][,-1]),
+                               #    u_obs_names,
+                                #   key_method,
+                                 #  ctrl$max_keynames)
+    # dist_keynames <- lapply(seq.int(n_race), 
+    #                         function(x){
+    #                           tmp <- name_race_tables[[ntype]][str_names %in% keynames_str[[x]],]
+    #                           tmp[,-1] <- proportions(as.matrix(tmp[,-1]), 2)
+    #                           return(tmp[,c(1,x+1)])
+    #                         })
+    
+    kw_in_ind <- keynames_str_all %in% proc_names_str
+    keynames_str <- keynames_str_all[kw_in_ind]
+    u_kw <- unique(keynames_str)
     n_u_kw <- length(u_kw)
     reord <- order(match(u_obs_names, u_kw))
     u_obs_names <- u_obs_names[reord]
     n_names <- length(u_obs_names)
     w_names <- match(proc_names_str, u_obs_names) - 1
-    keynames <- lapply(keynames_str, 
-                       FUN=function(x){
-                         match(x, table = u_kw) - 1
-                       })
+    keynames <- match(keynames_str, table = u_kw) - 1 #lapply(keynames_str, 
+                       #FUN=function(x){
+                      #   match(x, table = u_kw) - 1
+                      # })
     w_names_list <- split(w_names, geo_id)
     phi_tilde <- array(0.0, c(n_u_kw, n_race))
     for(x in 1:n_race){
-      phi_tilde[match(dist_keynames[[x]][,1], table=u_kw),x] <- dist_keynames[[x]][,2] 
+      #phi_tilde[match(dist_keynames[[x]][,1], table=u_kw),x] <- dist_keynames[[x]][,2] 
+      phi_tilde[, x] <- proportions(name_race_tables[[ntype]][which(kw_in_ind),x+1]) 
     }
     
     colnames(phi_tilde) <- paste("p", race.suff, sep="_")
     name_data[[ntype]] <- list(n_unique_names = n_names,
                                record_name_id = w_names_list,
-                               keynames = keynames,
+                               largest_keyword = as.integer(max(keynames)),
                                census_table = phi_tilde,
                                beta_prior = ctrl$beta_prior,
                                gamma_prior = ctrl$gamma_prior,
@@ -222,12 +235,17 @@ co_cluster <- function(voter.file,
                   names(pred_list[[ntype]])[1] <- ntype
                   return(pred_list[[ntype]])
                 })
+  v.file.s <- split(voter.file, geo_id)
+  race_samp <- cbind(do.call(rbind, v.file.s),
+                     proportions(as.matrix(do.call(rbind, full_res$predict_race)), 1))
+  names(race_samp) <- c(names(voter.file), paste0("pred.",race.suff))
   names(res) <- names(pred_list)
   ret_obj <- list()
   ret_obj$name_by_race <- res
+  ret_obj$race_by_record <- race_samp
   ret_obj$loglik <- full_res$ll
   if(ctrl$fit_insample){
-    ret_obj$fit_insample <- do.call(c,full_res$r_insample)/length(ret_obj$loglik)
+    ret_obj$fit_insample <- do.call(c,full_res$r_insample)
   }
   return(ret_obj)
 }

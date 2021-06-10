@@ -37,6 +37,7 @@ private:
   const VectorXd& n_r;
   const String type;
   
+  int max_kw;
   
   std::vector<VectorXi> C; // Vector of vectors of mixture component for each record, in each geo
   MatrixXd n_rc, // Suff. stat, race by mixture component

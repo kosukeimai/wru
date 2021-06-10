@@ -70,6 +70,7 @@
 #' Whatever the name of the party registration field in \code{\var{voter.file}}, 
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param impute.missing See \code{\link[wru]{merge_surnames}}. 
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns with 
 #'  predicted probabilities for each of the five major racial categories: 
@@ -97,7 +98,7 @@
 ## Race Prediction Function
 predict_race <- function(voter.file, 
                            census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                           census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, retry = 0) {
+                           census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, impute.missing = TRUE, retry = 0) {
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
@@ -145,16 +146,17 @@ predict_race <- function(voter.file,
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname) {
     if (surname.year == 2010) {
-      voter.file <- merge_surnames(voter.file)
+      voter.file <- merge_surnames(voter.file, impute.missing = impute.missing)
     } else {
       if (surname.year == 2000) {
-        voter.file <- merge_surnames(voter.file, surname.year = surname.year)
+        voter.file <- merge_surnames(voter.file, surname.year = surname.year, 
+                                     impute.missing = impute.missing)
       } else {
         stop(paste(surname.year, "is not a valid surname.year. It should be either 2000 or 2010 (default)."))
       }
     }
   } else {
-    # Check if voter.file has the nessary data
+    # Check if voter.file has the necessary data
     for (k in 1:length(eth)) {
       if (paste("p", eth[k], sep = "_") %in% names(voter.file) == F) {
         stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))

@@ -52,6 +52,7 @@ private:
   const MatrixXd theta;
   const VectorXi geo_each_size; //
   std::vector<IntegerVector> Races;
+  std::vector<MatrixXi> RaceSamples;
   
   bool check_in_sample;
 
@@ -99,6 +100,7 @@ private:
   void mfit_store();
   void rfit_store();
   void phihat_store();
+  List getRHat();
   
 };
   
