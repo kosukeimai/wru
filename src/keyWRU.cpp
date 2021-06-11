@@ -51,7 +51,7 @@ keyWRU::keyWRU(const List data,
         for(int m = 0; m < M_; ++m){
           r_ = Races[ii][jj]; w_ = names[m].W[ii][jj];
           //initialize C (0 for non-keyword names, bern(0.7) otherwise)
-            if(w_ <= names[m].max_kw){
+            if(w_ < names[m].max_kw){
               c_val =  R::rbinom(1, 0.7);
               names[m].C[ii][jj] = c_val;
             }
@@ -155,10 +155,12 @@ void keyWRU::iteration_single(int it)
       voter_ = jj;//record_indeces[jj];
       //Sample race
       Races[geo_id_][voter_] = sample_r(voter_, geo_id_);
+      if((it+1) > burnin){
       //Store sampled race
       RaceSamples[geo_id_](voter_, Races[geo_id_][voter_])++;
       if(check_in_sample){
         race_match[geo_id_][voter_] += (Races[geo_id_][voter_] == obs_race[geo_id_][voter_]);
+      }
       }
       //Sample mixture component
       for(int m = 0; m < M_; ++m){
@@ -202,9 +204,6 @@ void keyWRU::sample()
     if(r_index > burnin){
       if ((r_index % llk_per) == 0 || r_index == 1 || r_index == max_iter) {
         mfit_store();
-        // if(check_in_sample){
-        //   rfit_store();
-        // }
       }
       if ((r_index % thin) == 0 || r_index == 1 || r_index == max_iter) {
         phihat_store();
@@ -251,15 +250,6 @@ void keyWRU::mfit_store()
   model_fit.push_back(loglik);
 }
 
-void keyWRU::rfit_store()
-{
-  // Store likelihood during the sampling
-  for (int ii = 0; ii < G_; ++ii) {
-    for (int jj = 0; jj < geo_each_size[ii]; ++jj) {
-    race_match[ii][jj] += (Races[ii][jj] == obs_race[ii][jj]);
-   }
-  }
-}
 void keyWRU::phihat_store()
 {
   // Store expected distribution over races for given name 

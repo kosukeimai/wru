@@ -98,7 +98,6 @@ private:
   void iteration_single(int it);
   double loglik_total();
   void mfit_store();
-  void rfit_store();
   void phihat_store();
   List getRHat();
   

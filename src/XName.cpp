@@ -58,7 +58,7 @@ void XName::sample_c(int r,
   w_ = W[geo_id][voter];
   //(Check if name is in keyword list, and skip update if not)
 //if(!found_in(keywords[r], w_)){	
-  if(w_ > max_kw){	
+  if(w_ >= max_kw){	
     return;
   }
   
@@ -105,8 +105,12 @@ void XName::phihat_store(){
     pi_0 = (n_rc(r, 1) + gamma_prior[0]) / denominator;
     pi_1 = (n_rc(r, 0) + gamma_prior[1]) / denominator;
     for(int w = 0; w < N_; ++w){
+      if(w < max_kw){
       e_phi(w, r) += (pi_0 * phi_tilde(w, r)
                         + pi_1 * ((n_wr(w, r) + beta_w) / denominator_phi));
+      } else {
+        e_phi(w, r) += ((n_wr(w, r) + beta_w) / denominator_phi);
+        }
     }
   }
 }
