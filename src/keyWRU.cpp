@@ -17,79 +17,76 @@ keyWRU::keyWRU(const List data,
   geo_each_size(as<VectorXi>(data["voters_per_geo"])),
   Races(as< std::vector<IntegerVector> >(data["race_inits"])),
   check_in_sample(as<bool>(ctrl["fit_insample"]))
-  {
-    
-    //Initialize suff. stat for race count and race sample storage
-    n_r.resize(R_);
-    n_r.setZero();
-    RaceSamples.resize(G_);
-    for (int ii = 0; ii < G_; ++ii) { //iterate over geos
-      (RaceSamples[ii]).resize(geo_each_size[ii], R_);
-      (RaceSamples[ii]).setZero();
-      for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
-        n_r(Races[ii][jj])++;
-      }
-    }
-    //Construct list of name objects
-    const List& all_name_data = as<List>(data["name_data"]);
-    CharacterVector all_types = all_name_data.names();
-    //XName name;
-    for(int m = 0; m < M_; ++m){
-      //name = XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
-      names.emplace_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
-    }
-
-    int c_val = 0, r_, w_;
-    for (int ii = 0; ii < G_; ++ii) {
-      geo_id_ = ii;
-      geo_size = geo_each_size[geo_id_];
-      // Iterate over each record in the geographic loc.
-      for (int jj = 0; jj < geo_size; ++jj) {
-        Rcpp::checkUserInterrupt();
-        voter_ = jj;
-        //Init name-specific suff stats
-        for(int m = 0; m < M_; ++m){
-          r_ = Races[ii][jj]; w_ = names[m].W[ii][jj];
-          //initialize C (0 for non-keyword names, bern(0.7) otherwise)
-            if(w_ < names[m].max_kw){
-              c_val =  R::rbinom(1, 0.7);
-              names[m].C[ii][jj] = c_val;
-            }
-              //Init n_rc suff. stat  matrix
-              names[m].n_rc(r_, c_val)++;
-              //Init n_wr suff. stat matrix
-              if(!c_val){
-                names[m].n_wr(w_, r_)++;
-              }
-        }
-      }
-    }
-    
-    
-
-    // Initialize all placeholders
-    geo_id_ = 0; geo_size = 0; w = 0; r = 0;
-    c = 0; new_r = 0; voter_ = 0; N_ = 0; n_samp = 0;
-    numerator = 0.0; denominator = 1.0;
-    sum_r = 1.0; n_rc = 0.0;
-    r_prob_vec.resize(R_);
-    
-    geo_indeces = shuffle_indeces(G_);
-    record_indeces = shuffle_indeces(geo_each_size[0]);
-    
-    
-    //If testing in sample fit
-    if(check_in_sample){
-      race_match.resize(G_);
-      for (int ii = 0; ii < G_; ++ii) { //iterate over geos
-        (race_match[ii]).resize(geo_each_size[ii]);
-        for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
-          race_match[ii][jj] = 0;
-        }
-      }
-      obs_race = as< std::vector<IntegerVector> >(data["race_obs"]);
+{
+  
+  //Initialize suff. stat for race count and race sample storage
+  n_r.resize(R_);
+  n_r.setZero();
+  RaceSamples.resize(G_);
+  for (int ii = 0; ii < G_; ++ii) { //iterate over geos
+    (RaceSamples[ii]).resize(geo_each_size[ii], R_);
+    (RaceSamples[ii]).setZero();
+    for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
+      n_r(Races[ii][jj])++;
     }
   }
+  //Construct list of name objects
+  const List& all_name_data = as<List>(data["name_data"]);
+  CharacterVector all_types = all_name_data.names();
+  //XName name;
+  for(int m = 0; m < M_; ++m){
+    //name = XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
+    names.emplace_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
+  }
+  
+  int c_val = 0, r_, w_;
+  for (int ii = 0; ii < G_; ++ii) {
+    geo_id_ = ii;
+    geo_size = geo_each_size[geo_id_];
+    // Iterate over each record in the geographic loc.
+    for (int jj = 0; jj < geo_size; ++jj) {
+      Rcpp::checkUserInterrupt();
+      voter_ = jj;
+      //Init name-specific suff stats
+      for(int m = 0; m < M_; ++m){
+        r_ = Races[ii][jj]; w_ = names[m].W[ii][jj];
+        //initialize C (0 for non-keyword names, bern(0.7) otherwise)
+        if(w_ < names[m].max_kw){
+          c_val =  R::rbinom(1, 0.7);
+          names[m].C[ii][jj] = c_val;
+        }
+        //Init n_rc suff. stat  matrix
+        names[m].n_rc(r_, c_val)++;
+        //Init n_wr suff. stat matrix
+        if(!c_val){
+          names[m].n_wr(w_, r_)++;
+        }
+      }
+    }
+  }
+  
+  
+  
+  // Initialize all placeholders
+  geo_id_ = 0; geo_size = 0; w = 0; r = 0;
+  c = 0; new_r = 0; voter_ = 0; N_ = 0; n_samp = 0;
+  numerator = 0.0; denominator = 1.0;
+  sum_r = 1.0; n_rc = 0.0;
+  r_prob_vec.resize(R_);
+  
+  
+  //If testing in sample fit
+  if(check_in_sample){
+    race_match.resize(G_);
+    for (int ii = 0; ii < G_; ++ii) { //iterate over geos
+      (race_match[ii]).resize(geo_each_size[ii]);
+      for (int jj = 0; jj < geo_each_size[ii]; ++jj) { //iterate over names
+        race_match[ii][jj] = 0;
+      }
+    }
+    obs_race = as< std::vector<IntegerVector> >(data["race_obs"]);
+  }
+}
 
 int keyWRU::sample_r(int voter,
                      int geo_id)
@@ -102,31 +99,29 @@ int keyWRU::sample_r(int voter,
   for(int m = 0; m < M_; ++m){
     names[m].n_rc(r, (names[m].C[geo_id])[voter])--;
     if(!(names[m].C[geo_id][voter])){
-    names[m].n_wr((names[m].W[geo_id])[voter], r)--;
+      names[m].n_wr((names[m].W[geo_id])[voter], r)--;
     }
   }
   
-  numerator = 1.0;
-  denominator = 1.0;
-
   for(int k = 0; k < R_; ++k){
+    numerator = 0.0;
+    denominator = 0.0;
     for(int m = 0; m < M_; ++m){
       const XName& name = names[m];
       w = (name.W[geo_id])[voter];
       c = (name.C[geo_id])[voter];
       n_rc = name.n_rc(k, c);
-      numerator *= (n_rc + name.gamma_prior[0]) 
-        * c ? name.phi_tilde(w, k) : (name.n_wr(w, k) + name.beta_w); 
-      denominator *= (n_r(k) + name.gamma_prior.sum())
-        * c ? 1.0 : (n_rc + ((double)(name.N_) * name.beta_w));
+      numerator += log(n_rc + name.gamma_prior[0]) 
+        + (c ? log(name.phi_tilde(w, k)) : log(name.n_wr(w, k) + name.beta_w)); 
+      denominator += log(n_r(k) + name.gamma_prior.sum())
+        + (c ? 0.0 : log(n_rc + ((double)(name.N_) * name.beta_w)));
     }
-    r_prob_vec(k) = theta(geo_id, k) * numerator / denominator;
+    r_prob_vec(k) = theta(geo_id, k) * exp(numerator - denominator);
   }
-  
   sum_r = r_prob_vec.sum();
   new_r = rcat_without_normalize(r_prob_vec,
-                                          sum_r,
-                                          R_); // Cat(r_prob_vec/sum_r)
+                                 sum_r,
+                                 R_); // Cat(r_prob_vec/sum_r)
   
   
   //Add counts back in
@@ -156,11 +151,11 @@ void keyWRU::iteration_single(int it)
       //Sample race
       Races[geo_id_][voter_] = sample_r(voter_, geo_id_);
       if((it+1) > burnin){
-      //Store sampled race
-      RaceSamples[geo_id_](voter_, Races[geo_id_][voter_])++;
-      if(check_in_sample){
-        race_match[geo_id_][voter_] += (Races[geo_id_][voter_] == obs_race[geo_id_][voter_]);
-      }
+        //Store sampled race
+        RaceSamples[geo_id_](voter_, Races[geo_id_][voter_])++;
+        if(check_in_sample){
+          race_match[geo_id_][voter_] += (Races[geo_id_][voter_] == obs_race[geo_id_][voter_]);
+        }
       }
       //Sample mixture component
       for(int m = 0; m < M_; ++m){

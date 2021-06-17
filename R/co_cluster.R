@@ -40,7 +40,7 @@
 #' @return A named list:
 #' \itemize{
 #' \item{name_by_race}{ Named list of predicted distributions of name by race for each name type.}
-#' \item{race_by_record}{ A (reordered) copy of \code{voter.file}, with additional columns of predicted
+#' \item{race_by_record}{ A copy of \code{voter.file}, with additional columns of predicted
 #'                       race probabilities, names \code{pred.<race>}. }
 #' \item{loglik}{ Values of log likelihood, evaluated every \code{log_post_interval}.}
 #' \item{fit_insample}{ When \code{fit_insample=TRUE}, a probability of correct in_sample prediction 
@@ -97,6 +97,14 @@ co_cluster <- function(voter.file,
                          sex = FALSE,
                          retry = 0)
   args_usr <- list(...)
+  ## level of geo aggregation
+  geo_id_names <- c("state", switch(race_pred_args$census.geo,
+                                    "county" = c("county"),
+                                    "tract" = c("county","tract"),
+                                    "block" = c("county","tract","block"),
+                                    "place" = c("place"),
+                                    "zip" = c("zip")))
+  
   race_pred_args[names(args_usr)] <- args_usr
   if(is.null(race_pred_args$census.data)){
     if(is.null(race_pred_args$census.key)){
@@ -111,36 +119,15 @@ co_cluster <- function(voter.file,
                                    race_pred_args$retry)
   }
   
-  # if(!is.null(census.data)){
-  #   recurse <- function (L, f) {  
-  #     if (inherits(L, "data.frame")){
-  #       f(L) 
-  #     } else if (!is.list(L) && length(L) == 1) {
-  #       return(L)
-  #     } else {
-  #       lapply(L, recurse, f) 
-  #     }
-  #   } 
-    # race_pred_args$census.data <- recurse(race_pred_args$census.data,
-    #                                      f = function(x){
-    #                                        ind <- grep("r_", names(x))
-    #                                        x[,ind] <- proportions(as.matrix(x[,ind]), 2)
-    #                                        return(x)
-    #                                      })
-  #}
-  race.suff <- c("whi","bla","his", "asi", "oth")
+  race.suff <- c("whi", "bla", "his", "asi", "oth")
   if(is.null(ctrl$race_init)){
     race_pred_args$voter.file <- voter.file
     race_pred <- do.call(predict_race, race_pred_args)
     ctrl$race_init <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max) - 1 
   }
-  ## level of geo aggregation
-  geo_id_names <- c("state", switch(race_pred_args$census.geo,
-                                    "county" = c("county"),
-                                    "tract" = c("county","tract"),
-                                    "block" = c("county","tract","block"),
-                                    "place" = c("place"),
-                                    "zip" = c("zip")))
+  geo_id <- do.call(paste, voter.file[,geo_id_names])
+  ctrl$race_init <- split(ctrl$race_init, geo_id)
+ 
   
   
   ## P(race | geo)
@@ -157,13 +144,11 @@ co_cluster <- function(voter.file,
                                    return(tmp)
                                  }))
   g_r_t_geo <- do.call(paste, g_r_t[,geo_id_names])
-  geo_race_table <- as.matrix(g_r_t[,grep("r_", names(g_r_t))])
-  
-  
-  ##Reorder voterfile data to match census
-  geo_id <- do.call(paste, voter.file[,geo_id_names])
-  voter.file.reord <- voter.file[order(match(geo_id, g_r_t_geo)),]
-  geo_id <- do.call(paste, voter.file.reord[,geo_id_names])
+  ##Subset to geo's in vf
+  g_r_t <- g_r_t[g_r_t_geo %in% geo_id, ]
+  g_r_t_geo_new <- do.call(paste, g_r_t[,geo_id_names])
+  geo_ord <- match(names(ctrl$race_init),g_r_t_geo_new)
+  geo_race_table <- as.matrix(g_r_t[geo_ord,grep("r_", names(g_r_t))])
   
   
   ##Name-specific data
@@ -173,18 +158,7 @@ co_cluster <- function(voter.file,
     str_names <- toupper(name_race_tables[[ntype]][,1])
     proc_names_str <- .name_preproc(voter.file[,ntype], c(str_names))
     u_obs_names <- unique(proc_names_str)
-    keynames_str_all <- str_names#.find_keynames(str_names,
-                              #     as.matrix(name_race_tables[[ntype]][,-1]),
-                               #    u_obs_names,
-                                #   key_method,
-                                 #  ctrl$max_keynames)
-    # dist_keynames <- lapply(seq.int(n_race), 
-    #                         function(x){
-    #                           tmp <- name_race_tables[[ntype]][str_names %in% keynames_str[[x]],]
-    #                           tmp[,-1] <- proportions(as.matrix(tmp[,-1]), 2)
-    #                           return(tmp[,c(1,x+1)])
-    #                         })
-    
+    keynames_str_all <- str_names
     kw_in_ind <- keynames_str_all %in% proc_names_str
     keynames_str <- keynames_str_all[kw_in_ind]
     u_kw <- unique(keynames_str)
@@ -193,14 +167,10 @@ co_cluster <- function(voter.file,
     u_obs_names <- u_obs_names[reord]
     n_names <- length(u_obs_names)
     w_names <- match(proc_names_str, u_obs_names) - 1
-    keynames <- match(keynames_str, table = u_kw) - 1 #lapply(keynames_str, 
-                       #FUN=function(x){
-                      #   match(x, table = u_kw) - 1
-                      # })
+    keynames <- match(keynames_str, table = u_kw) - 1 
     w_names_list <- split(w_names, geo_id)
     phi_tilde <- array(0.0, c(n_u_kw, n_race))
     for(x in 1:n_race){
-      #phi_tilde[match(dist_keynames[[x]][,1], table=u_kw),x] <- dist_keynames[[x]][,2] 
       phi_tilde[, x] <- proportions(name_race_tables[[ntype]][which(kw_in_ind),x+1]) 
     }
     
@@ -220,7 +190,7 @@ co_cluster <- function(voter.file,
                     geo_n = length(unique(geo_id)),
                     geo_race_table = geo_race_table,
                     voters_per_geo = sapply(split(voter.file, geo_id), nrow), 
-                    race_inits = split(ctrl$race_init, geo_id),
+                    race_inits = ctrl$race_init,
                     race_obs = if(ctrl$fit_insample){split(ctrl$race_obs, geo_id)} else {list()},
                     name_data = name_data)
   
@@ -245,7 +215,7 @@ co_cluster <- function(voter.file,
   ret_obj$race_by_record <- race_samp
   ret_obj$loglik <- full_res$ll
   if(ctrl$fit_insample){
-    ret_obj$fit_insample <- do.call(c,full_res$r_insample)
+    ret_obj$fit_insample <- do.call(c,full_res$r_insample)/(ctrl$iter - ctrl$burnin)
   }
   return(ret_obj)
 }

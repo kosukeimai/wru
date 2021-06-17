@@ -5,22 +5,13 @@ inline int rand_wrapper(const int n)
   return floor(R::unif_rand() * n); 
   }
 
-std::vector<int> shuffle_indeces(const int m)
-  {
-    // Returns a vector of shuffled indeces for sampling
-    std::vector<int> v(m);
-    std::iota(v.begin(), v.end(), 0);
-    std::random_shuffle(v.begin(), v.end(), rand_wrapper);
-    return v;
-  }
-
 
 int rcat_without_normalize(Eigen::VectorXd &prob,
 			   const double total,
 			   const int size)
   { 
-    // Draw from a categorial distribution
-    // This function does not requiare a normalized probability vector.
+    // Draw from a categorical distribution
+    // This function does not require a normalized probability vector.
     double u = R::unif_rand() * total;
     double temp = 0.0;
     int index = 0;
@@ -34,10 +25,6 @@ int rcat_without_normalize(Eigen::VectorXd &prob,
     return index;
   }
 
-bool found_in(Rcpp::IntegerVector x, int y)
-{
-  return std::find(x.begin(), x.end(), y) != x.end();
-}
 
 double mylgamma(const double x){
     // gammaln_val = 0.0;
