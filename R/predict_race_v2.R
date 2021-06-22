@@ -77,19 +77,19 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   # check the names 
   if(namesToUse == 'last') {
     print("Proceeding with last name-only predictions...")
-    if(!("surname" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname'.")
+    if(!("last" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'last'.")
     
   } else if(namesToUse == 'last, first') {
     print("Proceeding with first and last name-only predictions...")
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
+    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'last' and a column called 'first'.")
     
   } else if(namesToUse == 'last, first, middle') {
     print("Proceeding with first, last, and middle name predictions...")
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
+    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
        || !("middle" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
+      stop("Voter data frame needs to have a column named 'last', a column called 'first', and a column called 'middle'.")
   }
   
   # check the geographies 
@@ -123,7 +123,9 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   eth <- c("whi", "bla", "his", "asi", "oth")
   
   ## Merge in Pr(Name | Race) 
-  voter.file <- merge_surnames_new(voter.file, namesToUse)
+  voter.file <- merge_names(voter.file, namesToUse)
+  
+  browser()
 
   if (census.geo == "place") {
     if (!("place" %in% names(voter.file))) {
@@ -145,9 +147,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
     voter.file <- census_helper(key = census.key, 
                                 voter.file = voter.file, 
                                 states = "all", 
-                                geo = "block", 
-                                age = age, 
-                                sex = sex, 
+                                geo = "block",
                                 census.data = census.data, retry = retry)
   }
   
@@ -164,8 +164,6 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                 voter.file = voter.file, 
                                 states = "all", 
                                 geo = "tract", 
-                                age = age, 
-                                sex = sex, 
                                 census.data = census.data, retry = retry)
   }
   
@@ -177,8 +175,6 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                 voter.file = voter.file, 
                                 states = "all", 
                                 geo = "county", 
-                                age = age, 
-                                sex = sex, 
                                 census.data = census.data, retry = retry)
   }
   
@@ -186,17 +182,6 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   if (missing(party)) {
     for (k in 1:length(eth)) {
       voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
-  
-  ## Pr(Race | Surname, Geolocation, Party)
-  if (missing(party) == F) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")] * voter.file[paste("r_pid", eth[k], sep = "_")]
     }
     voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
     for (k in 1:length(eth)) {

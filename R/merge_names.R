@@ -3,7 +3,7 @@
 #' \code{merge_surnames} merges surnames in user-input dataset with corresponding 
 #'  race/ethnicity probabilities from U.S. Census Surname List and Spanish Surname List.
 #'
-#' This function allows users to match surnames in their dataset with the U.S. 
+#' This function allows users to match names in their dataset with the U.S. 
 #'  Census Surname List (from 2000 or 2010) and Spanish Surname List to obtain 
 #'  Pr(Race | Surname) for each of the five major racial groups.
 #'  
@@ -52,75 +52,70 @@
 #' merge_surnames(voters)
 #'
 #' @export
-merge_surnames_new <- function(voter.file, namesToUse, clean.surname = T, impute.missing = T) {
+merge_names <- function(voter.file, namesToUse, clean.names = F, impute.missing = T) {
   
   # check the names 
   if(namesToUse == 'last') {
     print("Proceeding with last name-only predictions...")
-    if(!("surname" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname'.")
+    if(!("last" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'last'.")
     
   } else if(namesToUse == 'last, first') {
     print("Proceeding with first and last name-only predictions...")
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
+    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'last' and a column called 'first'.")
     
   } else if(namesToUse == 'last, first, middle') {
     print("Proceeding with first, last, and middle name predictions...")
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
+    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
        || !("middle" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
+      stop("Voter data frame needs to have a column named 'last', a column called 'first', and a column called 'middle'.")
   }
   
   # read in the name files
   library(readr)
-  last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv')
-  last$last_name <- toupper(iconv(last$last_name, 'utf-8', 'utf-8'))
-  names(last)[grep("p", names(last))] <- paste(names(last)[grep("p", names(last))], "last", sep = "_")
-
-  first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv')
-  first$first_name <- toupper(iconv(first$first_name, 'utf-8', 'utf-8'))
-  names(first)[grep("p", names(first))] <- paste(names(first)[grep("p", names(first))], "first", sep = "_")
+  library(stringr)
+  last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv', na = "")
+  first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv', na = "")
+  mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv', na = "")
+  mid[is.na(mid$middle_name),]$middle_name = ''
   
-  mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv')
-  mid$middle_name <- toupper(iconv(mid$middle_name, 'utf-8', 'utf-8'))
-  names(mid)[grep("p", names(mid))] <- paste(names(mid)[grep("p", names(mid))], "middle", sep = "_")
-
   ## Convert names in voter file to upper case
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
   df <- voter.file
   df$caseid <- 1:nrow(df)
   
-  df$surname.match <- df$surname.upper <- toupper(as.character(df$surname)                                                )
+  df$lastname.match <- df$lastname.upper <- toupper(as.character(df$last))
   if(grepl('first', namesToUse))
     df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
-  if(grepl('middle', namesToUse))
+  if(grepl('middle', namesToUse)) {
     df$middlename.match <- df$middlename.upper <- toupper(as.character(df$middle))
-  
+    df$middlename.match[is.na(df$middlename.match)] <- ''
+  }
+    
   ## Merge Surnames with Census List (No Cleaning Yet)
-  df <- merge(df, last, by.x = "surname.match", by.y = "last_name", all.x = TRUE)
+  df <- merge(df, last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
   if(grepl('first', namesToUse))
     df <- merge(df, first, by.x = "firstname.match", by.y = "first_name", all.x = TRUE)
-  
-  browser()
-  if(grepl('middle', namesToUse))
+  if(grepl('middle', namesToUse)) {
     df <- merge(df, mid, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
-  
-  #df <- merge(df[names(df) %in% p_eth == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)
-
-  if (nrow(df[df$surname.upper %in% surnames$surname == F, ]) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
   }
-  
-  browser()
 
-  df[df$surname.upper %in% surnames$surname == F, ]$surname.match <- ""
-  
-  df1 <- df[df$surname.upper %in% surnames$surname, ] #Matched surnames
-  df2 <- df[df$surname.upper %in% surnames$surname == F, ] #Unmatched surnames
+  if(namesToUse == 'last' && sum(!(df$lastname.upper %in% last$last_name)) == 0)
+     return(df[order(df$caseid), c(names(voter.file), "lastname.match", p_eth)])
+  if(namesToUse == 'last, first' && sum(!(df$lastname.match %in% last$last_name)) == 0 &&
+      sum(!(df$firstname.upper %in% first$first_name)) == 0)
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", p_eth)])
+  if(namesToUse == 'last, first, middle' && sum(!(df$lastname.match %in% last$last_name)) == 0 &&
+      sum(!(df$firstname.upper %in% first$first_name)) == 0 && sum(!(df$middlename.upper %in% middle$middle_name)) == 0)
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", p_eth)])
+
+
+#  df1 <- df[df$surname.upper %in% surnames$surname, ] #Matched surnames
+#  df2 <- df[df$surname.upper %in% surnames$surname == F, ] #Unmatched surnames
   
   ## Clean Surnames (if Specified by User)
-  if (clean.surname) {
+  if (clean.names) {
     
     ## Remove All Punctuation and Try Merge Again
     df2$surname.match <- gsub("[^[:alnum:] ]", "", df2$surname.upper)
@@ -185,15 +180,28 @@ merge_surnames_new <- function(voter.file, namesToUse, clean.surname = T, impute
     }
   }
 
-  ## Impute priors for names not on Census lists
-  if (impute.missing) {
-    if (nrow(df2) > 0) {
-      df2$surname.match <- ""
-      df2$p_whi <- .6665; df2$p_bla <- .0853; df2$p_his <- .1367; df2$p_asi <- .0797; df2$p_oth <- .0318
-      warning(paste("Probabilities were imputed for", nrow(df2), ifelse(nrow(df2) == 1, "surname", "surnames"), "that could not be matched to Census list."))
-    }
-  } else warning(paste(nrow(df2), ifelse(nrow(df2) == 1, "surname was", "surnames were"), "not matched."))
+  ## For unmatched names, just fill with a 1 
+  library(dplyr)
+  warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) indivduals' last names were not matched.", sep = "")))
+  if(grepl('first', namesToUse)) {
+    warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) indivduals' first names were not matched.", sep = "")))
+  }
+  if(grepl('middle', namesToUse)) {
+    warning(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) indivduals' middle names were not matched.", sep = "")))
+  }
   
-  df <- rbind(df1, df2)
-  return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
+  for(i in grep("p_", names(df))) {
+    df[,i] <- coalesce(df[,i], 1)
+  }
+
+  # return the data
+  if(namesToUse == 'last')
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+  else if(namesToUse == 'last, first')
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", 
+                                  paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"))])
+  else if(namesToUse == 'last, first, middle')
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", 
+                                  paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_"))])
+  
 }
