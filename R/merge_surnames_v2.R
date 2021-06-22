@@ -52,29 +52,67 @@
 #' merge_surnames(voters)
 #'
 #' @export
-merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, impute.missing = T) {
-
-  if ("surname" %in% names(voter.file) == F) {
-    stop('Data does not contain surname field.')
+merge_surnames_new <- function(voter.file, namesToUse, clean.surname = T, impute.missing = T) {
+  
+  # check the names 
+  if(namesToUse == 'last') {
+    print("Proceeding with last name-only predictions...")
+    if(!("surname" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'surname'.")
+    
+  } else if(namesToUse == 'last, first') {
+    print("Proceeding with first and last name-only predictions...")
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
+    
+  } else if(namesToUse == 'last, first, middle') {
+    print("Proceeding with first, last, and middle name predictions...")
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
+       || !("middle" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
   }
   
-  ## Census Surname List
-  surnames2010$surname <- as.character(surnames2010$surname)
-  surnames <- surnames2010
+  # read in the name files
+  library(readr)
+  last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv')
+  last$last_name <- toupper(iconv(last$last_name, 'utf-8', 'utf-8'))
+  names(last)[grep("p", names(last))] <- paste(names(last)[grep("p", names(last))], "last", sep = "_")
 
-  p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
+  first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv')
+  first$first_name <- toupper(iconv(first$first_name, 'utf-8', 'utf-8'))
+  names(first)[grep("p", names(first))] <- paste(names(first)[grep("p", names(first))], "first", sep = "_")
   
-  ## Convert Surnames in Voter File to Upper Case 
+  mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv')
+  mid$middle_name <- toupper(iconv(mid$middle_name, 'utf-8', 'utf-8'))
+  names(mid)[grep("p", names(mid))] <- paste(names(mid)[grep("p", names(mid))], "middle", sep = "_")
+
+  ## Convert names in voter file to upper case
+  p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
   df <- voter.file
   df$caseid <- 1:nrow(df)
-  df$surname.match <- df$surname.upper <- toupper(as.character(df$surname))
-
+  
+  df$surname.match <- df$surname.upper <- toupper(as.character(df$surname)                                                )
+  if(grepl('first', namesToUse))
+    df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
+  if(grepl('middle', namesToUse))
+    df$middlename.match <- df$middlename.upper <- toupper(as.character(df$middle))
+  
   ## Merge Surnames with Census List (No Cleaning Yet)
-  df <- merge(df[names(df) %in% p_eth == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)
+  df <- merge(df, last, by.x = "surname.match", by.y = "last_name", all.x = TRUE)
+  if(grepl('first', namesToUse))
+    df <- merge(df, first, by.x = "firstname.match", by.y = "first_name", all.x = TRUE)
+  
+  browser()
+  if(grepl('middle', namesToUse))
+    df <- merge(df, mid, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
+  
+  #df <- merge(df[names(df) %in% p_eth == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)
 
   if (nrow(df[df$surname.upper %in% surnames$surname == F, ]) == 0) {
     return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
   }
+  
+  browser()
 
   df[df$surname.upper %in% surnames$surname == F, ]$surname.match <- ""
   

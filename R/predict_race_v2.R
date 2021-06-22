@@ -18,20 +18,6 @@
 #' County is three characters (e.g., \code{"031"} not \code{"31"}), 
 #' tract is six characters, and block is four characters. Place is five characters. 
 #' See below for other optional fields.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
-#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
-#'  from U.S. Census Surname List (2000 or 2010) and Spanish Surname List. 
-#'  If \code{FALSE}, \code{voter.file} object must contain additional fields specifying 
-#'  Pr(Race | Surname), named as follows: \code{\var{p_whi}} for Whites, 
-#'  \code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
-#'  \code{\var{p_asi}} for Asians, and/or \code{\var{p_oth}} for Other. 
-#'  Default is \code{TRUE}.
-#' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will 
-#'  only use surname data and calculate Pr(Race | Surnname). Default is \code{FALSE}.
-#' @param surname.year A number to specify the year of the census surname statistics. 
-#' These surname statistics is stored in the data, and will be automatically loaded.
-#' The default value is \code{2010}, which means the surname statistics from the 
-#' 2010 census will be used. Currently, the other available choice is \code{2000}.
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
@@ -52,23 +38,6 @@
 #' @param census.data A list indexed by two-letter state abbreviations, 
 #' which contains pre-saved Census geographic data. 
 #' Can be generated using \code{get_census_data} function.
-#' @param age An optional \code{TRUE}/\code{FALSE} object specifying whether to 
-#' condition race predictions on age (in addition to surname and geolocation). 
-#' Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
-#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
-#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
-#' @param sex optional \code{TRUE}/\code{FALSE} object specifying whether to 
-#' condition race predictions on sex (in addition to surname and geolocation).
-#' Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
-#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
-#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}}, 
-#' where \code{\var{sex}} is coded as 0 for males and 1 for females.
-#' @param party An optional character object specifying party registration field 
-#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}. 
-#' If specified, race/ethnicity predictions will be conditioned 
-#' on individual's party registration (in addition to geolocation). 
-#' Whatever the name of the party registration field in \code{\var{voter.file}}, 
-#' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns with 
@@ -95,8 +64,8 @@
 #' @export
 
 ## Race Prediction Function
-predict_race <- function(voter.file, namesToUse = 'last', census.geo, census.key, 
-                         census.data = NA, age = FALSE, sex = FALSE, party, retry = 0) {
+predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.key, 
+                         census.data = NA, retry = 0) {
   
   # check the geography 
   if (!missing(census.geo) && (census.geo == "precinct")) {
@@ -108,20 +77,19 @@ predict_race <- function(voter.file, namesToUse = 'last', census.geo, census.key
   # check the names 
   if(namesToUse == 'last') {
     print("Proceeding with last name-only predictions...")
-    if(!("last" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named surname")
+    if(!("surname" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'surname'.")
     
   } else if(namesToUse == 'last, first') {
     print("Proceeding with first and last name-only predictions...")
-    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named surname")
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
+      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
     
   } else if(namesToUse == 'last, first, middle') {
     print("Proceeding with first, last, and middle name predictions...")
-    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
        || !("middle" %in% names(voter.file))) 
-      stop("Voter data frame needs to have a column named surname")
-    
+      stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
   }
   
   # check the geographies 
@@ -151,45 +119,12 @@ predict_race <- function(voter.file, namesToUse = 'last', census.geo, census.key
         print("Using Census geographic data from provided census.data object...")
       }
     }
-  }
   
   eth <- c("whi", "bla", "his", "asi", "oth")
   
-  ## Merge in Pr(Race | Surname) if necessary
-  if (census.surname) {
-    if (surname.year == 2010) {
-      voter.file <- merge_surnames(voter.file)
-    } else {
-      if (surname.year == 2000) {
-        voter.file <- merge_surnames(voter.file, surname.year = surname.year)
-      } else {
-        stop(paste(surname.year, "is not a valid surname.year. It should be either 2000 or 2010 (default)."))
-      }
-    }
-  } else {
-    # Check if voter.file has the nessary data
-    for (k in 1:length(eth)) {
-      if (paste("p", eth[k], sep = "_") %in% names(voter.file) == F) {
-        stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))
-      }
-    }
-  }
-  
-  ## Surname-Only Predictions
-  if (surname.only) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("p", eth[k], sep = "_")] / apply(voter.file[paste("p", eth, sep = "_")], 1, sum)
-    }
-    pred <- paste("pred", eth, sep = ".")
-    return(voter.file[c(vars.orig, pred)])
-  }
-  
-  ## Merge in Pr(Party | Race) if necessary
-  if (missing(party) == F) {
-    voter.file$PID <- voter.file[, party]
-    voter.file <- merge(voter.file, get("pid")[names(get("pid")) %in% "party" == F], by = "PID", all.x = T)  
-  }
-  
+  ## Merge in Pr(Name | Race) 
+  voter.file <- merge_surnames_new(voter.file, namesToUse)
+
   if (census.geo == "place") {
     if (!("place" %in% names(voter.file))) {
       stop("voter.file object needs to have a column named place.")
