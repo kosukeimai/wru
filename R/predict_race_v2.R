@@ -125,30 +125,26 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   ## Merge in Pr(Name | Race) 
   voter.file <- merge_names(voter.file, namesToUse)
   
-  browser()
-
   if (census.geo == "place") {
     if (!("place" %in% names(voter.file))) {
       stop("voter.file object needs to have a column named place.")
     }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "place", 
-                                age = age, 
-                                sex = sex, 
-                                census.data = census.data, retry = retry)
+    voter.file <- census_helper_new(key = census.key, 
+                                    voter.file = voter.file,
+                                    states = "all", 
+                                    geo = "place", 
+                                    census.data = census.data, retry = retry)
   }
   
   if (census.geo == "block") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
       stop("voter.file object needs to have columns named block, tract, and county.")
     }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "block",
-                                census.data = census.data, retry = retry)
+    voter.file <- census_helper_new(key = census.key, 
+                                    voter.file = voter.file, 
+                                    states = "all", 
+                                    geo = "block",
+                                    census.data = census.data, retry = retry)
   }
   
   if (census.geo == "precinct") {
@@ -160,39 +156,32 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
       stop("voter.file object needs to have columns named tract and county.")
     }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "tract", 
-                                census.data = census.data, retry = retry)
+    voter.file <- census_helper_new(key = census.key, 
+                                    voter.file = voter.file, 
+                                    states = "all", 
+                                    geo = "tract", 
+                                    census.data = census.data, retry = retry)
   }
   
   if (census.geo == "county") {
     if (!("county" %in% names(voter.file))) {
       stop("voter.file object needs to have a column named county.")
     }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "county", 
-                                census.data = census.data, retry = retry)
+    voter.file <- census_helper_new(key = census.key, 
+                                    voter.file = voter.file, 
+                                    states = "all", 
+                                    geo = "county", 
+                                    census.data = census.data, retry = retry)
   }
   
-  ## Pr(Race | Surname, Geolocation)
-  if (missing(party)) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
+  # Pr(Race | Surname, Geolocation)
+  preds <- voter.file[,grep("_last", names(voter.file))]*voter.file[,grep("r_", names(voter.file))]
+  if(grepl('first', namesToUse))
+    preds <- preds*voter.file[,grep("_first", names(voter.file))]
+  if(grepl('middle', namesToUse))
+    preds <- preds*voter.file[,grep("_middle", names(voter.file))]
+  preds <- apply(preds, 2, FUN = function(x) {x/rowSums(preds)})
+  names(preds) <- paste("pred", eth, sep = "_")
   
-  for (k in 1:length(eth)) {
-    voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("q", eth[k], sep = "_")]
-  }
-  pred <- paste("pred", eth, sep = ".")
-  
-  return(voter.file[c(vars.orig, pred)])
+  return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
 }
