@@ -1,6 +1,6 @@
 #' Census helper function.
 #'
-#' \code{census_helper} links user-input dataset with Census geographic data.
+#' \code{census_helper_v2} links user-input dataset with Census geographic data.
 #'
 #' This function allows users to link their geocoded dataset (e.g., voter file) 
 #' with U.S. Census 2010 data. The function extracts Census Summary File data 

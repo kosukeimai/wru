@@ -1,6 +1,6 @@
 #' Surname probability merging function.
 #'
-#' \code{merge_surnames} merges surnames in user-input dataset with corresponding 
+#' \code{merge_names} merges surnames in user-input dataset with corresponding 
 #'  race/ethnicity probabilities from U.S. Census Surname List and Spanish Surname List.
 #'
 #' This function allows users to match names in their dataset with the U.S. 
@@ -56,28 +56,24 @@ merge_names <- function(voter.file, namesToUse, clean.names = F, impute.missing 
   
   # check the names 
   if(namesToUse == 'last') {
-    print("Proceeding with last name-only predictions...")
     if(!("last" %in% names(voter.file))) 
       stop("Voter data frame needs to have a column named 'last'.")
     
   } else if(namesToUse == 'last, first') {
-    print("Proceeding with first and last name-only predictions...")
     if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))) 
       stop("Voter data frame needs to have a column named 'last' and a column called 'first'.")
     
   } else if(namesToUse == 'last, first, middle') {
-    print("Proceeding with first, last, and middle name predictions...")
     if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)) 
        || !("middle" %in% names(voter.file))) 
       stop("Voter data frame needs to have a column named 'last', a column called 'first', and a column called 'middle'.")
   }
   
   # read in the name files
-  library(readr)
   library(stringr)
-  last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv', na = "")
-  first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv', na = "")
-  mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv', na = "")
+  #last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv', na = "")
+  #first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv', na = "")
+  #mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv', na = "")
   mid[is.na(mid$middle_name),]$middle_name = ''
   
   ## Convert names in voter file to upper case

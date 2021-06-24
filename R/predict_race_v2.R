@@ -1,6 +1,6 @@
 #' Race prediction function.
 #'
-#' \code{predict_race} makes probabilistic estimates of individual-level race/ethnicity.
+#' \code{predict_race_new} makes probabilistic estimates of individual-level race/ethnicity.
 #'
 #' This function implements the Bayesian race prediction methods outlined in 
 #' Imai and Khanna (2015). The function produces probabilistic estimates of 
@@ -181,7 +181,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   if(grepl('middle', namesToUse))
     preds <- preds*voter.file[,grep("_middle", names(voter.file))]
   preds <- apply(preds, 2, FUN = function(x) {x/rowSums(preds)})
-  names(preds) <- paste("pred", eth, sep = "_")
+  colnames(preds) <- paste("pred", eth, sep = "_")
   
   return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
 }
