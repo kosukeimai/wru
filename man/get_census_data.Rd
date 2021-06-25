@@ -10,7 +10,8 @@ get_census_data(
   age = FALSE,
   sex = FALSE,
   census.geo = "block",
-  retry = 0
+  retry = 0,
+  joint = FALSE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ geography to use to merge in U.S. Census 2010 geographic data. Currently
 \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{joint}{Boolean. Should joint frequency tables be returned? Defaults to \code{FALSE}.}
 }
 \value{
 Output will be an object of class \code{list} indexed by state. 
