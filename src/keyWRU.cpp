@@ -75,6 +75,8 @@ keyWRU::keyWRU(const List data,
   r_prob_vec.resize(R_);
   
   
+  
+  
   //If testing in sample fit
   if(check_in_sample){
     race_match.resize(G_);
@@ -86,6 +88,7 @@ keyWRU::keyWRU(const List data,
     }
     obs_race = as< std::vector<IntegerVector> >(data["race_obs"]);
   }
+
 }
 
 int keyWRU::sample_r(int voter,
@@ -111,7 +114,7 @@ int keyWRU::sample_r(int voter,
       w = (name.W[geo_id])[voter];
       c = (name.C[geo_id])[voter];
       n_rc = name.n_rc(k, c);
-      numerator += log(n_rc + name.gamma_prior[0]) 
+      numerator += log(n_rc + name.gamma_prior[c]) 
         + (c ? log(name.phi_tilde(w, k)) : log(name.n_wr(w, k) + name.beta_w)); 
       denominator += log(n_r(k) + name.gamma_prior.sum())
         + (c ? 0.0 : log(n_rc + ((double)(name.N_) * name.beta_w)));

@@ -66,13 +66,16 @@ co_cluster <- function(voter.file,
             census.geo %in% c("county","tract","block","place")
             )
   
+  
+  voter.file$state <- toupper(voter.file$state)
+  
   ## Form control list
   ctrl <- list(iter = 1000,
                thin = 1,
                race_init = NULL,
                log_post_interval = 10,
-               beta_prior = 5,
-               gamma_prior = c(5, 5),
+               beta_prior = 0.01,
+               gamma_prior = c(1, 1),
                verbose = TRUE, 
                fit_insample = FALSE,
                race_obs = NULL,
@@ -85,7 +88,9 @@ co_cluster <- function(voter.file,
   set.seed(ctrl$seed)
   
   if(ctrl$fit_insample){
-    stopifnot(!is.null(ctrl$race_obs))
+    if(is.null(ctrl$race_obs) | any(is.na(ctrl$race_obs))){
+      stop("If `fit_insample' is TRUE, `race_obs' must be a complete vector of observed races for each record in the voter.file.")
+    }
   }
   
   ## Initial race 
@@ -118,12 +123,15 @@ co_cluster <- function(voter.file,
                                    race_pred_args$census.geo, 
                                    race_pred_args$retry)
   }
-  
   race.suff <- c("whi", "bla", "his", "asi", "oth")
   if(is.null(ctrl$race_init)){
     race_pred_args$voter.file <- voter.file
     race_pred <- do.call(predict_race, race_pred_args)
-    ctrl$race_init <- apply(race_pred[,paste0("pred.",race.suff)], 1, which.max) - 1 
+    tmp <- base::merge(voter.file, race_pred, sort=FALSE)
+    ctrl$race_init <- apply(tmp[,paste0("pred.",race.suff)], 1, which.max) - 1 
+  }
+  if(any(is.na(ctrl$race_init))){
+    stop("Some initial race values are NA. If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.")
   }
   geo_id <- do.call(paste, voter.file[,geo_id_names])
   ctrl$race_init <- split(ctrl$race_init, geo_id)
@@ -146,6 +154,9 @@ co_cluster <- function(voter.file,
   g_r_t_geo <- do.call(paste, g_r_t[,geo_id_names])
   ##Subset to geo's in vf
   g_r_t <- g_r_t[g_r_t_geo %in% geo_id, ]
+  if(nrow(g_r_t) != length(unique(geo_id))){
+    stop("Some records in voter.file have unique geographic locations that I wasn't able to find in the census.data. Some records in voter.file may have mis-matched geographic units that do not exist in the census.")
+  }
   g_r_t_geo_new <- do.call(paste, g_r_t[,geo_id_names])
   geo_ord <- match(names(ctrl$race_init),g_r_t_geo_new)
   geo_race_table <- as.matrix(g_r_t[geo_ord,grep("r_", names(g_r_t))])
