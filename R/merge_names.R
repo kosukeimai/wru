@@ -71,10 +71,8 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
   
   # read in the name files
   library(stringr)
-  #last <- read_csv('~/Documents/GitHub/wru-data/dict_last_merged.csv', na = "")
-  #first <- read_csv('~/Documents/GitHub/wru-data/dict_first.csv', na = "")
-  #mid <- read_csv('~/Documents/GitHub/wru-data/dict_middle.csv', na = "")
-  mid[is.na(mid$middle_name),]$middle_name = ''
+  mid[is.na(mid$middle_name),]$middle_name <- ''
+  nameDict <- list('first' = first, 'middle' = mid, 'last' = last)
   
   ## Convert names in voter file to upper case
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
@@ -110,14 +108,15 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
   if(clean.names) {
     
     for(nameType in str_split(namesToUse, ', ')[[1]]) {
+
       df1 <- df[!is.na(df[,paste('p_whi_', nameType, sep = '')]), ] #Matched names
       df2 <- df[is.na(df[,paste('p_whi_', nameType, sep = '')]), ] #Unmatched names
       
-      print(c(nrow(df1), nrow(df2)))
-      
       ## Remove All Punctuation and Try Merge Again
       df2[,paste(nameType, "name.match", sep = "")] <- gsub("[^[:alnum:] ]", "", df2[,paste(nameType, "name.upper", sep = "")])
-      df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+      
+      df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE, 
+                   by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
       df2 <- df2[,names(df1)] # reorder the columns
       
       if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
@@ -126,11 +125,10 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
         #if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
       }
       
-      print(c(nrow(df1), nrow(df2)))
-      
       ## Remove All Spaces and Try Merge Again
       df2[,paste(nameType, "name.match", sep = "")] <- gsub(" ", "", df2[,paste(nameType, "name.match", sep = "")])
-      df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+      df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE,
+                   by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
       df2 <- df2[,names(df1)] # reorder the columns
 
       if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
@@ -139,11 +137,10 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
         #if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
       }
       
-      print(c(nrow(df1), nrow(df2)))
-      
-      ## Remove Jr/Sr/III Suffixes for last names
+      # Edits specicic to common issues with last names
       if(nameType == 'last') {
         
+        ## Remove Jr/Sr/III Suffixes for last names
         suffix <- c("JUNIOR", "SENIOR", "THIRD", "III", "JR", " II", " J R", " S R", " IV")
         for (i in 1:length(suffix)) {
           df2$lastname.match <- ifelse(substr(df2$lastname.match, nchar(df2$lastname.match) - (nchar(suffix)[i] - 1), nchar(df2$lastname.match)) == suffix[i], 
@@ -155,8 +152,7 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
                                            substr(df2$lastname.match, 1, nchar(df2$lastname.match) - 2), 
                                            df2$lastname.match), 
                                     df2$lastname.match) #Remove "SR" only if name has at least 7 characters
-        browser()
-        
+
         df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
         df2 <- df2[,names(df1)] # reorder the columns
         
@@ -165,40 +161,43 @@ merge_names <- function(voter.file, namesToUse, clean.names = T, impute.missing 
           df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
           #if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
         }
+      
+        ## Names with Hyphens or Spaces, e.g. Double-Barreled Names
+        df2$last2 <- df2$last1 <- NA
+        df2$last1[grep("-", df2$lastname.upper)] <- sapply(strsplit(grep("-", df2$lastname.upper, value = T), "-"), "[", 1)
+        df2$last2[grep("-", df2$lastname.upper)] <- sapply(strsplit(grep("-", df2$lastname.upper, value = T), "-"), "[", 2)  
+        df2$last1[grep(" ", df2$lastname.upper)] <- sapply(strsplit(grep(" ", df2$lastname.upper, value = T), " "), "[", 1)
+        df2$last2[grep(" ", df2$lastname.upper)] <- sapply(strsplit(grep(" ", df2$lastname.upper, value = T), " "), "[", 2)
+        
+        ## Use first half of name to merge in priors
+        df2$lastname.match <- as.character(df2$last1)
+        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+        df2 <- df2[,c(names(df1), "last1", "last2")] # reorder the columns
+        
+        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = '')]), !(names(df2) %in% c("last1", "last2"))])
+          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+          #if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
+        }
+        
+        ## Use second half of name to merge in priors for rest
+        df2$lastname.match <- as.character(df2$last2)
+        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], last, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+        
+        df2 <- df2[,c(names(df1), "last1", "last2")] # reorder the columns
+        
+        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = '')]), !(names(df2) %in% c("last1", "last2"))])
+          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+          #if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
+        }
+        
+        df <- rbind(df1, df2[, !(names(df2) %in% c("last1", "last2"))])
+        df <- df[order(df$caseid),]
       }
-      
-      print(c(nrow(df1), nrow(df2)))
-      browser()
-      
-      
-    }
-  
-
-    ## Names with Hyphens or Spaces, e.g. Double-Barreled Names
-    df2$surname2 <- df2$surname1 <- NA
-    df2$surname1[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 1)
-    df2$surname2[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 2)  
-    df2$surname1[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 1)
-    df2$surname2[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 2)
-    
-    ## Use first half of name to merge in priors
-    df2$surname.match <- as.character(df2$surname1)
-    df2 <- merge(df2[names(df2) %in% c(p_eth) == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2)]
-    if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
-      df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
-      df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
-      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
-    }
-    
-    ## Use second half of name to merge in priors for rest
-    df2$surname.match <- as.character(df2$surname2)
-    df2 <- merge(df2[names(df2) %in% c(p_eth, "surname1", "surname2") == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2) %in% c("surname1", "surname2") == F]
-    if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
-      df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
-      df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
-      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
     }
   }
+  
 
   ## For unmatched names, just fill with a 1 
   library(dplyr)
