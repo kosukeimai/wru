@@ -18,7 +18,7 @@ keyWRU::keyWRU(const List data,
   Races(as< std::vector<IntegerVector> >(data["race_inits"])),
   check_in_sample(as<bool>(ctrl["fit_insample"]))
 {
-  
+
   //Initialize suff. stat for race count and race sample storage
   n_r.resize(R_);
   n_r.setZero();
@@ -36,9 +36,9 @@ keyWRU::keyWRU(const List data,
   //XName name;
   for(int m = 0; m < M_; ++m){
     //name = XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]);
-    names.emplace_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
+    names.push_back(XName(all_name_data[m], ctrl, G_, R_, n_r, Races, all_types[m]));
   }
-  
+
   int c_val = 0, r_, w_;
   for (int ii = 0; ii < G_; ++ii) {
     geo_id_ = ii;
@@ -64,19 +64,19 @@ keyWRU::keyWRU(const List data,
       }
     }
   }
-  
-  
-  
+
+
+
   // Initialize all placeholders
   geo_id_ = 0; geo_size = 0; w = 0; r = 0;
   c = 0; new_r = 0; voter_ = 0; N_ = 0; n_samp = 0;
   numerator = 0.0; denominator = 1.0;
   sum_r = 1.0; n_rc = 0.0;
   r_prob_vec.resize(R_);
-  
-  
-  
-  
+
+
+
+
   //If testing in sample fit
   if(check_in_sample){
     race_match.resize(G_);
@@ -96,7 +96,7 @@ int keyWRU::sample_r(int voter,
 {
   // Extract current race
   r = Races[geo_id][voter];
-  
+
   //remove data
   n_r(r)--;
   for(int m = 0; m < M_; ++m){
@@ -105,7 +105,7 @@ int keyWRU::sample_r(int voter,
       names[m].n_wr((names[m].W[geo_id])[voter], r)--;
     }
   }
-  
+
   for(int k = 0; k < R_; ++k){
     numerator = 0.0;
     denominator = 0.0;
@@ -114,8 +114,8 @@ int keyWRU::sample_r(int voter,
       w = (name.W[geo_id])[voter];
       c = (name.C[geo_id])[voter];
       n_rc = name.n_rc(k, c);
-      numerator += log(n_rc + name.gamma_prior[c]) 
-        + (c ? log(name.phi_tilde(w, k)) : log(name.n_wr(w, k) + name.beta_w)); 
+      numerator += log(n_rc + name.gamma_prior[c])
+        + (c ? log(name.phi_tilde(w, k)) : log(name.n_wr(w, k) + name.beta_w));
       denominator += log(n_r(k) + name.gamma_prior.sum())
         + (c ? 0.0 : log(n_rc + ((double)(name.N_) * name.beta_w)));
     }
@@ -125,8 +125,8 @@ int keyWRU::sample_r(int voter,
   new_r = rcat_without_normalize(r_prob_vec,
                                  sum_r,
                                  R_); // Cat(r_prob_vec/sum_r)
-  
-  
+
+
   //Add counts back in
   n_r(new_r)++ ;
   for(int m = 0; m < M_; ++m){
@@ -135,13 +135,13 @@ int keyWRU::sample_r(int voter,
       names[m].n_wr((names[m].W[geo_id])[voter], new_r)++ ;
     }
   }
-  
-  
+
+
   return new_r;
 }
 
 void keyWRU::iteration_single(int it)
-{ 
+{
   //geo_indeces = shuffle_indeces(G_); // shuffle geo locs
   for (int ii = 0; ii < G_; ++ii) {
     geo_id_ = ii;//geo_indeces[ii];
@@ -192,11 +192,11 @@ void keyWRU::sample()
 {
   // Set progress bar up
   Progress progress_bar(max_iter, verbose);
-  
+
   for (int iter = 0; iter < max_iter; ++iter) {
     // Run iteration
-    iteration_single(iter); 
-    
+    iteration_single(iter);
+
     // Store samples and measures of model fit
     int r_index = iter + 1;
     if(r_index > burnin){
@@ -208,10 +208,10 @@ void keyWRU::sample()
         n_samp++;
       }
     }
-    
+
     // Progress bar
     progress_bar.increment();
-    
+
     // Check keybord interruption to cancel the iteration
     checkUserInterrupt();
   }
@@ -237,7 +237,7 @@ double keyWRU::loglik_total()
     }
   }
   return loglik;
-}  
+}
 
 
 
@@ -250,7 +250,7 @@ void keyWRU::mfit_store()
 
 void keyWRU::phihat_store()
 {
-  // Store expected distribution over races for given name 
+  // Store expected distribution over races for given name
   for(int m = 0; m < M_; ++m){
     names[m].phihat_store();
   }
@@ -258,7 +258,7 @@ void keyWRU::phihat_store()
 
 List keyWRU::getRHat()
 {
-  return(wrap(RaceSamples));  
+  return(wrap(RaceSamples));
 }
 
 
