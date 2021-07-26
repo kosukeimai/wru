@@ -1,10 +1,10 @@
-#' Multi-name race prediction function.
+#' Race prediction function.
 #'
 #' \code{predict_race_new} makes probabilistic estimates of individual-level race/ethnicity.
 #'
 #' This function implements the Bayesian race prediction methods outlined in
 #' Imai, Olivella, and Rosenman (2021). The function produces probabilistic estimates of
-#' individual-level race/ethnicity, based on one or more names and geolocation.
+#' individual-level race/ethnicity, based on name and geolocation.
 #' @param voter.file An object of class \code{data.frame}.
 #' Must contain a row for each individual being predicted,
 #' as well as a field named \code{\var{last}} containing each individual's surname.
@@ -21,12 +21,7 @@
 #' County is three characters (e.g., \code{"031"} not \code{"31"}),
 #' tract is six characters, and block is four characters. Place is five characters.
 #' See below for other optional fields.
-#' @param namesToUse A character vector identifying which names to use for the prediction.
-#' The default value is \code{"last"}, indicating that only the last name will be used.
-#' Other options are \code{"last, first"}, indicating that both last and first names will be
-#' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
-#' be used.
-#' @param census.geo A character vector specifying what level of
+#' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
@@ -58,13 +53,17 @@
 #'
 #' @examples
 #' data(voters)
-#' \dontrun{predict_race_new(voter.file = voters, namesToUse = 'last', census.geo = "tract", census.key = "...")}
-#' \dontrun{predict_race_new(voter.file = voters, namesToUse = 'last', census.geo = "tract", census.key = "...")}
-#' \dontrun{predict_race_new(voter.file = voters, namesToUse = 'last, first', census.geo = "place", census.key = "...")}
+#' predict_race(voters, surname.only = TRUE)
+#' predict_race(voter.file = voters, surname.only = TRUE)
+#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...")}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ"));
-#' predict_race_new(voter.file = voters, namesToUse = 'last, first', census.geo = "tract", census.data = CensusObj)}
-#' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
-#' predict_race_new(voter.file = voters, namesToUse = 'last, first', census.geo = "place", census.data = CensusObj3)}
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
+#' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T);
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)}
+#' \dontrun{CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
+#' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
 #' @export
 
 ## Race Prediction Function
