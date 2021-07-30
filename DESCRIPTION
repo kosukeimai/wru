@@ -5,7 +5,9 @@ Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
 Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
-  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
+  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut")),
+  person("Evan", "Rosenman", email = "etrrosenman@gmail.com", role = c("aut")),
+  person("Santiago", "Olivella", email = "olivella@unc.edu", role = c("aut"))
   )
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
