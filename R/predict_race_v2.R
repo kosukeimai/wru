@@ -176,7 +176,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     geo = "county",
                                     census.data = census.data, retry = retry)
   }
-
+  
   # Pr(Race | Surname, Geolocation)
   preds <- voter.file[,grep("_last", names(voter.file))]*voter.file[,grep("r_", names(voter.file))]
   if(grepl('first', namesToUse))
