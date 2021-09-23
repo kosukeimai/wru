@@ -21,7 +21,9 @@ Depends:
     R (>= 3.5.0),
     utils
 Imports:
-    devtools (>= 1.10.0)
+    devtools (>= 1.10.0),
+    PL94171,
+    stringr
 LinkingTo: 
     Rcpp,
     RcppEigen,
