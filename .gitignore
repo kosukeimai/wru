@@ -17,3 +17,5 @@ vignettes/*.pdf
 # the local check files
 ..Rcheck
 
+# other files
+.DS_Store
