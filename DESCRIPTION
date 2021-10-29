@@ -23,7 +23,8 @@ Depends:
 Imports:
     devtools (>= 1.10.0),
     PL94171,
-    stringr
+    stringr,
+    Rcpp
 LinkingTo: 
     Rcpp,
     RcppEigen,
