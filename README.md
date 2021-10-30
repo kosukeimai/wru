@@ -1,4 +1,5 @@
 # wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru) [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru) ![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
+[![R-CMD-check](https://github.com/kosukeimai/wru/workflows/R-CMD-check/badge.svg)](https://github.com/kosukeimai/wru/actions)
 
 This R package implements the methods proposed in Imai, K. and Khanna, K. (2016). "[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.](http://imai.princeton.edu/research/race.html)" Political Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
 

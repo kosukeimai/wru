@@ -4,7 +4,7 @@
 \alias{merge_names}
 \title{Surname probability merging function.}
 \usage{
-merge_names(voter.file, namesToUse, clean.names = T)
+merge_names(voter.file, namesToUse, clean.names = TRUE)
 }
 \arguments{
 \item{voter.file}{An object of class \code{data.frame}.  Must contain a row for each individual being predicted,
@@ -60,7 +60,8 @@ This function allows users to match names in their dataset with database entries
  probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
 }
 \examples{
+\donttest{
 data(voters)
-merge_names(voters)
-
+merge_names(voters, 'last, first')
+}
 }

@@ -16,7 +16,7 @@
 #' @param name_race_tables Named list, with as many elements as there are names in \code{name_types}, and names matching
 #'                         elements in \code{name_types}. Each list element should be a data.frame of unique names (first column) by race (remaining columns),
 #'                         with conditional probabilities p(Name|Race). 
-#' @param census_geo Required character vector. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.                        
+#' @param census.geo Required character vector. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.                        
 #' @param ... Arguments passed to \code{\link{predict_race}}.
 #' @param control List of control arguments, including 
 #' \itemize{

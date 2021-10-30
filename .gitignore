@@ -19,3 +19,8 @@ vignettes/*.pdf
 
 # other files
 .DS_Store
+
+# Rcpp files 
+*.o
+*.so
+*.dll

@@ -30,6 +30,8 @@ five characters. See \code{\link{predict_race}} for other optional fields.}
 elements in \code{name_types}. Each list element should be a data.frame of unique names (first column) by race (remaining columns),
 with conditional probabilities p(Name|Race).}
 
+\item{census.geo}{Required character vector. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.}
+
 \item{...}{Arguments passed to \code{\link{predict_race}}.}
 
 \item{control}{List of control arguments, including 
@@ -49,8 +51,6 @@ with conditional probabilities p(Name|Race).}
  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and stored for reproducibility.}
 }}
-
-\item{census_geo}{Required character vector. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.}
 }
 \value{
 A named list:

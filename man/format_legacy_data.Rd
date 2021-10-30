@@ -26,8 +26,10 @@ This function returns data structured analogously to data from the Census API, w
 available for the 2020 Census as of September 2021.
 }
 \examples{
-gaCensusData <- format_legacy_data('~/Desktop/ga2020.pl')
+\dontrun{
+gaCensusData <- format_legacy_data(PL94171::pl_url('GA', 2020))
 predict_race_new(ga.voter.file, namesToUse = 'last, first, mid', census.geo = 'block',
      census.data = gaCensusData)
+}
 
 }

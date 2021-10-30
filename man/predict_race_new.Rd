@@ -29,8 +29,9 @@ If using Census geographic data in race/ethnicity predictions,
 These fields should contain character strings matching U.S. Census categories.
 County is three characters (e.g., \code{"031"} not \code{"31"}),
 tract is six characters, and block is four characters. Place is five characters.
-See below for other optional fields.
-#' @param namesToUse A character vector identifying which names to use for the prediction.
+See below for other optional fields.}
+
+\item{namesToUse}{A character vector identifying which names to use for the prediction.
 The default value is \code{"last"}, indicating that only the last name will be used.
 Other options are \code{"last, first"}, indicating that both last and first names will be
 used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
