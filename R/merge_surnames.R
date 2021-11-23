@@ -52,7 +52,7 @@
 #' merge_surnames(voters)
 #'
 #' @export
-merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, impute.missing = T) {
+merge_surnames <- function(voter.file, surname.year = 2010, name.data, clean.surname = T, impute.missing = T) {
 
   if ("surname" %in% names(voter.file) == F) {
     stop('Data does not contain surname field.')
@@ -62,9 +62,13 @@ merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, i
   if (surname.year == 2000) {
     surnames2000$surname <- as.character(surnames2000$surname)
     surnames <- surnames2000
-  } else {
+  } else if (surname.year == 2010) {
     surnames2010$surname <- as.character(surnames2010$surname)
     surnames <- surnames2010
+  } else {
+    surnames <- name.data
+    colnames(surnames) <- colnames(surnames2010)
+    surnames$surname <- as.character(surnames$surname)
   }
   
   p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")

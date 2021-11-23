@@ -1,11 +1,12 @@
 Package: wru
-Version: 0.1-12
-Date: 2021-05-17
+Version: 0.1-13.9001
+Date: 2021-11-11
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
     Geolocation
 Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
   person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut")),
+  person("Evan", "Rosenman", email = "etrrosenman@gmail.com", role = c("aut")),
   person("Santiago", "Olivella", email = "olivella@unc.edu", role = c("aut"))
   )
 Description: Predicts individual race/ethnicity using surname, geolocation,
@@ -20,12 +21,14 @@ Depends:
     R (>= 4.0.0),
     utils
 Imports:
+    foreach (>= 1.5.1),
     devtools (>= 1.10.0)
 Suggests:
-    testthat
+    testthat,
+    wruData (>= 0.0.1),
 LinkingTo: 
     Rcpp,
-    RcppEigen,
+    RcppArmadillo,
     RcppProgress
 LazyLoad: yes
 LazyData: yes
@@ -33,3 +36,4 @@ LazyDataCompression: xz
 License: GPL (>= 3)
 RoxygenNote: 7.1.1
 Encoding: UTF-8
+Additional_repositories: https://solivella.github.io/wruData

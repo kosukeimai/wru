@@ -85,7 +85,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     
     if (geo == "county") {
       geo.merge <- c("county")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]]))) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "county", age, sex, retry)
       } else {
         census <- census.data[[toupper(state)]]$county
@@ -116,11 +116,11 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       
       ## Calculate Pr(Geolocation | Race)
       geoPopulations <- rowSums(census[,grepl("P00", names(census))])
-      census$r_whi <- census$P005003 / geoPopulations #Pr(White | Geo)
-      census$r_bla <- census$P005004 / geoPopulations #Pr(Black | Geo)
-      census$r_his <- census$P005010 / geoPopulations #Pr(Latino | Geo)
-      census$r_asi <- (census$P005006 + census$P005007) / geoPopulations #Pr(Asian or NH/PI | Geo)
-      census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / geoPopulations #Pr(AI/AN, Other, or Mixed | Geo)
+      census$r_whi <- (0.5 + census$P005003) / (geoPopulations + 2.5)#Pr(White | Geo)
+      census$r_bla <- (0.5 + census$P005004) / (geoPopulations + 2.5)#Pr(Black | Geo)
+      census$r_his <- (0.5 + census$P005010) / (geoPopulations + 2.5)#Pr(Latino | Geo)
+      census$r_asi <- (0.5 + census$P005006 + census$P005007) / (geoPopulations + 2.5) #Pr(Asian or NH/PI | Geo)
+      census$r_oth <- (0.5 + census$P005005 + census$P005008 + census$P005009) / (geoPopulations + 2.5) #Pr(AI/AN, Other, or Mixed | Geo)
       
       drop <- c(grep("state", names(census)), grep("P005", names(census)))
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
