@@ -54,7 +54,7 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse, use.census.surnames, census.surnames=NULL, clean.names = T) {
+merge_names <- function(voter.file, namesToUse='last', use.census.surnames=F, census.surnames=NULL, clean.names = T) {
   
   # check the names
   if(namesToUse == 'last') {
@@ -221,7 +221,7 @@ merge_names <- function(voter.file, namesToUse, use.census.surnames, census.surn
   
   
   ## For unmatched names, just fill with a NA
-  require(dplyr)
+  # require(dplyr)
   warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) indivduals' last names were not matched.", sep = "")))
   if(grepl('first', namesToUse)) {
     warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) indivduals' first names were not matched.", sep = "")))
