@@ -27,7 +27,7 @@
 #' @export
 #'
 #' @examples \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
-get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0) {
+get_census_data <- function(key, states, age = FALSE, sex = FALSE, year = "2010", census.geo = "block", retry = 0) {
   
   if (missing(key)) {
     stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
@@ -37,21 +37,21 @@ get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = 
   
   CensusObj <- NULL
   for (s in states) {
-    CensusObj[[s]] <- list(state = s, age = age, sex = sex)
+    CensusObj[[s]] <- list(state = s, age = age, sex = sex, year = year)
     if (census.geo == "place") {
-      place <- census_geo_api(key, s, geo = "place", age, sex, retry)
+      place <- census_geo_api(key, s, geo = "place", age, sex, year, retry)
       CensusObj[[s]]$place <- place
     }
     if (census.geo == "block") {
-      block <- census_geo_api(key, s, geo = "block", age, sex, retry)
+      block <- census_geo_api(key, s, geo = "block", age, sex, year, retry)
       CensusObj[[s]]$block <- block
     }
     if ((census.geo == "block") || (census.geo == "tract")) {
-      tract <- census_geo_api(key, s, geo = "tract", age, sex, retry)
+      tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry)
       CensusObj[[s]]$tract <- tract
     }
     if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
-      county <- census_geo_api(key, s, geo = "county", age, sex, retry)
+      county <- census_geo_api(key, s, geo = "county", age, sex, year, retry)
       CensusObj[[s]]$county <- county
     }
   }
