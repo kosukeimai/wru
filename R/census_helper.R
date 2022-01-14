@@ -48,7 +48,7 @@
 #' age = TRUE, sex = TRUE)}
 #'
 #' @export
-census_helper <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, census.data = NA, retry = 0) {
+census_helper <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 0) {
   
   if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
@@ -76,8 +76,8 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     
     if (geo == "place") {
       geo.merge <- c("place")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "place", age, sex, retry)
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex) || (census.data[[state]]$year != year)) {
+        census <- census_geo_api(key, state, geo = "place", age, sex, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$place
       }
@@ -85,8 +85,8 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     
     if (geo == "county") {
       geo.merge <- c("county")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "county", age, sex, retry)
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex) || (census.data[[state]]$year != year)) {
+        census <- census_geo_api(key, state, geo = "county", age, sex, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$county
       }
@@ -94,8 +94,8 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "tract", age, sex, retry)
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex) || (census.data[[state]]$year != year)) {
+        census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$tract
       }
@@ -103,8 +103,8 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
     
     if (geo == "block") {
       geo.merge <- c("county", "tract", "block")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "block", age, sex, retry)
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex) || (census.data[[state]]$year != year)) {
+        census <- census_geo_api(key, state, geo = "block", age, sex, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$block
       }
@@ -140,16 +140,50 @@ census_helper <- function(key, voter.file, states = "all", geo = "tract", age = 
       voter.file$agecat <- ifelse(voter.file$age >= 85, 23, voter.file$agecat)
     }    
     
+    # if (age == F & sex == F) {
+    #   
+    #   ## Calculate Pr(Geolocation | Race)
+    #   census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
+    #   census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
+    #   census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
+    #   census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
+    #   census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
+    #   
+    #   drop <- c(grep("state", names(census)), grep("P005", names(census)))
+    #   voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+    #   
+    # }
+    
     if (age == F & sex == F) {
-      
+    
       ## Calculate Pr(Geolocation | Race)
-      census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
-      census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
-      census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
-      census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
-      census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
+      if (year == "2010") {
+        geoPopulations <- rowSums(census[,grepl("P00", names(census))])
+        vars <- c(
+          pop_white = 'P005003', pop_black = 'P005004',
+          pop_aian = 'P005005', pop_asian = 'P005006',
+          pop_nhpi = 'P005007', pop_other = 'P005008', 
+          pop_two = 'P005009', pop_hisp = 'P005010'
+        )
+        drop <- c(grep("state", names(census)), grep("P005", names(census)))
+      }
+      else if (year == "2020") {
+        geoPopulations <- rowSums(census[,grepl("P2_", names(census))])
+        vars <- c(
+          pop_white = 'P2_005N', pop_black = 'P2_006N',
+          pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
+          pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
+          pop_two = 'P2_011N', pop_hisp = 'P2_002N'
+        )
+        drop <- c(grep("state", names(census)), grep("P2_", names(census)))
+      }
       
-      drop <- c(grep("state", names(census)), grep("P005", names(census)))
+      census$r_whi <- census[, vars["pop_white"]] / sum(census[, vars["pop_white"]]) #Pr(Geo | White)
+      census$r_bla <- census[, vars["pop_black"]] / sum(census[, vars["pop_black"]]) #Pr(Geo | Black)
+      census$r_his <- census[, vars["pop_hisp"]] / sum(census[, vars["pop_hisp"]]) #Pr(Geo | Latino)
+      census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (sum(census[, vars["pop_asian"]]) + sum(census[, vars["pop_nhpi"]])) #Pr(Geo | Asian or NH/PI)
+      census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (sum(census[, vars["pop_aian"]]) + sum(census[, vars["pop_other"]]) + sum(census[, vars["pop_two"]])) #Pr(Geo | AI/AN, Other, or Mixed)
+      
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       
     }
