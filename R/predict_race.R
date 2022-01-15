@@ -97,7 +97,13 @@
 ## Race Prediction Function
 predict_race <- function(voter.file, 
                          census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.data = NULL,
-                         census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, retry = 0, impute.missing = FALSE) {
+                         census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
+                         party, retry = 0, impute.missing = FALSE) {
+  
+  # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
+  if ((sex == TRUE || age == TRUE) && (year == "2020")) {
+    stop('Warning: only predictions with both age and sex equal to FALSE are supported when using 2020 census data.')
+  }
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"
@@ -144,7 +150,7 @@ predict_race <- function(voter.file,
   
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname) {
-    if (!(surname.year %in% c(2000,2010, 2021))) {
+    if (!(surname.year %in% c(2000,2010,2021))) {
       stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2021."))
     }
       voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = name.data, impute.missing = impute.missing)
@@ -182,6 +188,7 @@ predict_race <- function(voter.file,
                                 geo = "place", 
                                 age = age, 
                                 sex = sex, 
+                                year = year, 
                                 census.data = census.data, retry = retry)
   }
   
@@ -195,6 +202,7 @@ predict_race <- function(voter.file,
                                 geo = "block", 
                                 age = age, 
                                 sex = sex, 
+                                year = year,
                                 census.data = census.data, retry = retry)
   }
   
@@ -213,6 +221,7 @@ predict_race <- function(voter.file,
                                 geo = "tract", 
                                 age = age, 
                                 sex = sex, 
+                                year = year,
                                 census.data = census.data, retry = retry)
   }
   
@@ -226,6 +235,7 @@ predict_race <- function(voter.file,
                                 geo = "county", 
                                 age = age, 
                                 sex = sex, 
+                                year = year,
                                 census.data = census.data, retry = retry)
   }
   
