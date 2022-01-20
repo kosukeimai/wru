@@ -73,7 +73,7 @@
 
 ## Race Prediction Function
 predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.surnames = NULL, census.key,
-                             census.data = NA, retry = 0) {
+                             census.data = NA, year = "2010", retry = 0) {
   
   # check the geography
   if (!missing(census.geo) && (census.geo == "precinct")) {
@@ -147,6 +147,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "place",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -158,6 +159,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "block",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -174,6 +176,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "tract",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -185,6 +188,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "county",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
