@@ -1,11 +1,11 @@
 #' Census helper function.
 #'
-#' \code{census_helper_v2} links user-input dataset with Census geographic data.
+#' \code{census_helper_new} links user-input dataset with Census geographic data.
 #'
 #' This function allows users to link their geocoded dataset (e.g., voter file) 
-#' with U.S. Census 2010 data. The function extracts Census Summary File data 
-#' at the county, tract, or block level using the 'UScensus2010' package. Census data 
-#' calculated are Pr(Geolocation | Race) where geolocation is county, tract, or block.
+#' with U.S. Census data (2010 or 2020). The function extracts Census Summary File data 
+#' at the county, tract, block, or place level using the 'UScensus2010' package. Census data 
+#' calculated are Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
@@ -19,22 +19,17 @@
 #'  Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
 #'  Census data for all states contained in user-input data.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use \code{"county"}, \code{"tract"}, or \code{"block"}. Default is \code{"tract"}. 
-#'  Warning: extracting block-level data takes very long.
-#' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-#'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
-#'  If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
-#'  If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
-#' @param sex A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-#'  sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
-#'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
-#'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
+#'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
+#'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
+#' @param year A character object specifying the year of U.S. Census data to be downloaded.
+#'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
 #' @param census.data A optional census object of class \code{list} containing 
 #' pre-saved Census geographic data. Can be created using \code{get_census_data} function.
-#' If \code{\var{census.data}} is provided, the \code{\var{age}} element must have the same value
-#' as the \code{\var{age}} option specified in this function (i.e., \code{TRUE} in both or 
-#' \code{FALSE} in both). Similarly, the \code{\var{sex}} element in the object provided in 
-#' \code{\var{census.data}} must have the same value as the \code{\var{sex}} option here.
+#' If \code{\var{census.data}} is provided, the \code{\var{year}} element must 
+#' have the same value as the \code{\var{year}} option specified in this function 
+#' (i.e., \code{"2010"} in both or \code{"2020"} in both). 
+#' If \code{\var{census.data}} is provided, the \code{\var{age}} and the \code{\var{sex}} 
+#' elements must be \code{FALSE}. This corresponds to the defaults of \code{census_geo_api}.
 #' If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API. 
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{data.frame}. It will 
@@ -43,9 +38,9 @@
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-#' \dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", 
-#' age = TRUE, sex = TRUE)}
+#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "nj", geo = "block")}
+#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "tract")}
+#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place", year = "2020")}
 #'
 #' @export
 census_helper_new <- function(key, voter.file, states = "all", geo = "tract", year = "2010", census.data = NA, retry = 0) {
@@ -76,7 +71,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
     if (geo == "place") {
       geo.merge <- c("place")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "place", age = FALSE, sex = FALSE, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$place
@@ -85,7 +80,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
     if (geo == "county") {
       geo.merge <- c("county")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "county", age = FALSE, sex = FALSE, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$county
@@ -94,7 +89,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "tract", age = FALSE, sex = FALSE, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$tract
@@ -103,7 +98,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
     if (geo == "block") {
       geo.merge <- c("county", "tract", "block")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         census <- census_geo_api(key, state, geo = "block", age = FALSE, sex = FALSE, year, retry)
       } else {
         census <- census.data[[toupper(state)]]$block
