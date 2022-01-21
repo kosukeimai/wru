@@ -20,7 +20,7 @@
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
-#'  from U.S. Census Surname List (2000 or 2010) and Spanish Surname List. 
+#'  from U.S. Census Surname List (2000, 2010, or 2021) and Spanish Surname List. 
 #'  If \code{FALSE}, \code{voter.file} object must contain additional fields specifying 
 #'  Pr(Race | Surname), named as follows: \code{\var{p_whi}} for Whites, 
 #'  \code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
@@ -31,9 +31,9 @@
 #' @param surname.year A number to specify the year of the census surname statistics. 
 #' These surname statistics is stored in the data, and will be automatically loaded.
 #' The default value is \code{2010}, which means the surname statistics from the 
-#' 2010 census will be used. Currently, the other available choice is \code{2000}.
+#' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2021}.
 #' @param census.geo An optional character vector specifying what level of 
-#' geography to use to merge in U.S. Census 2010 geographic data. Currently
+#' geography to use to merge in U.S. Census geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object. 
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}} 
@@ -63,6 +63,8 @@
 #' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}}, 
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
+#' @param year An optional character vector specifying the year of U.S. Census geographic 
+#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
 #' @param party An optional character object specifying party registration field 
 #' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}. 
 #' If specified, race/ethnicity predictions will be conditioned 
@@ -86,6 +88,7 @@
 #' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...")}
 #' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)}
 #' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)}
+#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
 #' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T); 
