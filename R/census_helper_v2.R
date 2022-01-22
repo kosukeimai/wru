@@ -4,8 +4,8 @@
 #'
 #' This function allows users to link their geocoded dataset (e.g., voter file) 
 #' with U.S. Census data (2010 or 2020). The function extracts Census Summary File data 
-#' at the county, tract, block, or place level using the 'UScensus2010' package. Census data 
-#' calculated are Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
+#' at the county, tract, block, or place level. Census data calculated are 
+#' Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
