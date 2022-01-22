@@ -2,7 +2,7 @@
 #'
 #' \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
 #'
-#' This function allows users to download U.S. Census 2010 or 2020 geographic data, 
+#' This function allows users to download U.S. Census geographic data (2010 or 2020), 
 #' at either the county, tract, block, or place level, for a particular state. 
 #'
 #' @param key A required character object. Must contain user's Census API

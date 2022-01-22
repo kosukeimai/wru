@@ -20,7 +20,7 @@
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
-#'  from U.S. Census Surname List (2000, 2010, or 2021) and Spanish Surname List. 
+#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List. 
 #'  If \code{FALSE}, \code{voter.file} object must contain additional fields specifying 
 #'  Pr(Race | Surname), named as follows: \code{\var{p_whi}} for Whites, 
 #'  \code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
@@ -31,7 +31,7 @@
 #' @param surname.year A number to specify the year of the census surname statistics. 
 #' These surname statistics is stored in the data, and will be automatically loaded.
 #' The default value is \code{2010}, which means the surname statistics from the 
-#' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2021}.
+#' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
 #' @param census.geo An optional character vector specifying what level of 
 #' geography to use to merge in U.S. Census geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
@@ -153,8 +153,8 @@ predict_race <- function(voter.file,
   
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname) {
-    if (!(surname.year %in% c(2000,2010,2021))) {
-      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2021."))
+    if (!(surname.year %in% c(2000,2010,2020))) {
+      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2020."))
     }
       voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = name.data, impute.missing = impute.missing)
   } else {
