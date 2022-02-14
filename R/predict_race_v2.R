@@ -21,13 +21,13 @@
 #' County is three characters (e.g., \code{"031"} not \code{"31"}),
 #' tract is six characters, and block is four characters. Place is five characters.
 #' See below for other optional fields.
-#' #' @param namesToUse A character vector identifying which names to use for the prediction.
+#' @param namesToUse A character vector identifying which names to use for the prediction.
 #' The default value is \code{"last"}, indicating that only the last name will be used.
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
 #' @param census.geo An optional character vector specifying what level of
-#' geography to use to merge in U.S. Census 2010 geographic data. Currently
+#' geography to use to merge in U.S. Census geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
@@ -40,12 +40,21 @@
 #' must have column named \code{place}.
 #' Specifying \code{\var{census.geo}} will call \code{census_helper} function
 #' to merge Census geographic data at specified level of geography.
+#' @param census.surnames An object of class \code{data.frame} provided by the 
+#' users as an alternative surname dictionary. It will consist of a list of 
+#' U.S. surnames, along with the associated probabilities P(name | ethnicity) 
+#' for ethnicities: White, Black, Hispanic, Asian, and other. Default is \code{NULL}.
+#' (\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
+#' \code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
+#' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other). 
 #' @param census.key A character object specifying user's Census API
 #'  key. Required if \code{\var{census.geo}} is specified, because
 #'  a valid Census API key is required to download Census geographic data.
 #' @param census.data A list indexed by two-letter state abbreviations,
 #' which contains pre-saved Census geographic data.
 #' Can be generated using \code{get_census_data} function.
+#' @param year An optional character vector specifying the year of U.S. Census geographic 
+#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @return Output will be an object of class \code{data.frame}. It will
 #'  consist of the original user-input data with additional columns with
@@ -58,22 +67,21 @@
 #'
 #' @examples
 #' data(voters)
-#' predict_race(voters, surname.only = TRUE)
-#' predict_race(voter.file = voters, surname.only = TRUE)
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...")}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)}
+#' predict_race_new(voters, namesToUse = 'last')
+#' predict_race_new(voter.file = voters, namesToUse = 'last')
+#' \dontrun{predict_race_new(voter.file = voters, census.geo = "tract", census.key = "...")}
+#' \dontrun{predict_race_new(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")}
 #' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ"));
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
-#' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T);
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)}
+#' predict_race_new(voter.file = voters, census.geo = "tract", census.data = CensusObj)}
+#' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), year = "2020");
+#' predict_race_new(voter.file = voters, census.geo = "tract", census.data = CensusObj2, year = "2020")}
 #' \dontrun{CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
-#' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
+#' predict_race_new(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
 #' @export
 
 ## Race Prediction Function
 predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.surnames = NULL, census.key,
-                             census.data = NA, retry = 0) {
+                             census.data = NA, year = "2010", retry = 0) {
   
   # check the geography
   if (!missing(census.geo) && (census.geo == "precinct")) {
@@ -147,6 +155,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "place",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -158,6 +167,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "block",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -174,6 +184,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "tract",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   
@@ -185,6 +196,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
                                     voter.file = voter.file,
                                     states = "all",
                                     geo = "county",
+                                    year = year,
                                     census.data = census.data, retry = retry)
   }
   

@@ -33,6 +33,16 @@
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
+#' @param use.census.surnames A \code{TRUE}/\code{FALSE} object indicating whether 
+#' to use an alternative surname dictionary. If \code{TRUE}, the surname dictionary 
+#' should be passed to \code{\var{census.surnames}}. Default is \code{FALSE}.
+#' @param census.surnames An object of class \code{data.frame} provided by the 
+#' users as an alternative surname dictionary. It will consist of a list of 
+#' U.S. surnames, along with the associated probabilities P(name | ethnicity) 
+#' for ethnicities: white, Black, Hispanic, Asian, and other. Default is \code{NULL}.
+#' (\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
+#' \code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
+#' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).
 #' @param clean.names A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched
 #' to the database will be cleaned, according to U.S. Census specifications,
@@ -54,7 +64,7 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse, use.census.surnames, census.surnames=NULL, clean.names = T) {
+merge_names <- function(voter.file, namesToUse='last', use.census.surnames=F, census.surnames=NULL, clean.names = T) {
   
   # check the names
   if(namesToUse == 'last') {
@@ -221,7 +231,7 @@ merge_names <- function(voter.file, namesToUse, use.census.surnames, census.surn
   
   
   ## For unmatched names, just fill with a NA
-  require(dplyr)
+  # require(dplyr)
   warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) indivduals' last names were not matched.", sep = "")))
   if(grepl('first', namesToUse)) {
     warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) indivduals' first names were not matched.", sep = "")))

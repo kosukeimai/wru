@@ -2,13 +2,13 @@
 #'
 #' \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
 #'
-#' This function allows users to download U.S. Census 2010 geographic data, 
+#' This function allows users to download U.S. Census geographic data (2010 or 2020), 
 #' at either the county, tract, block, or place level, for a particular state. 
 #'
 #' @param key A required character object. Must contain user's Census API
 #'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param state A required character object specifying which state to extract Census data for, 
-#' e.g., \code{"NJ"}.
+#'  e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
 #'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
@@ -20,10 +20,14 @@
 #'  sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
 #'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
 #'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
+#' @param year A character object specifying the year of U.S. Census data to be downloaded.
+#'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+#'  Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and 
+#'  \code{\var{sex}} are both \code{FALSE}.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param save_temp File indicating where to save the temporary outputs. 
-#' Defaults to NULL. If specified, the function will look for an .RData file
-#' with the same format as the expected output. 
+#'  Defaults to NULL. If specified, the function will look for an .RData file
+#'  with the same format as the expected output. 
 #' @return Output will be an object of class \code{list}, indexed by state names. It will 
 #'  consist of the original user-input data with additional columns of Census geographic data.
 #'
@@ -31,13 +35,14 @@
 #' \dontshow{data(voters)}
 #' \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
 #' \dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
+#' \dontrun{census_geo_api(key = "...", states = "MA", geo = "place", age = FALSE, sex = FALSE, year = "2020")}
 #'
 #' @references
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
 #' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0, save_temp = NULL) {
+census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, year = "2010", retry = 0, save_temp = NULL) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
@@ -51,9 +56,32 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   state.fips <- fips.codes[fips.codes$State == state, "FIPS"]
   state.fips <- ifelse(nchar(state.fips) == 1, paste0("0", state.fips), state.fips)
   
+  # if (age == F & sex == F) {
+  #   num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
+  #   vars <- paste("P0050", num, sep = "")
+  # }
+  
+  # assign variable values based on the year of the census data
+  if (year == "2010"){
+    vars <- c(
+      pop_white = 'P005003', pop_black = 'P005004',
+      pop_aian = 'P005005', pop_asian = 'P005006',
+      pop_nhpi = 'P005007', pop_other = 'P005008', 
+      pop_two = 'P005009', pop_hisp = 'P005010'
+    )
+  }
+  else if (year == "2020") {
+    vars <- c(
+      pop_white = 'P2_005N', pop_black = 'P2_006N',
+      pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
+      pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
+      pop_two = 'P2_011N', pop_hisp = 'P2_002N'
+    )
+  }
+  
   if (age == F & sex == F) {
-    num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
-    vars <- paste("P0050", num, sep = "")
+    vars <- vars[c("pop_white", "pop_black", "pop_aian", "pop_asian", 
+                   "pop_nhpi", "pop_other", "pop_two", "pop_hisp")]
   }
   
   if (age == F & sex == T) {
@@ -83,16 +111,24 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     }
   }
   
+  # set the census data url links
+  if (year == "2010") {
+    census_data_url = "https://api.census.gov/data/2010/dec/sf1?"
+  }
+  else if (year == "2020") {
+    census_data_url = "https://api.census.gov/data/2020/dec/pl?"
+  }
+  
   if (geo == "place") {
     geo.merge <- c("state", "place")
     region <- paste("for=place:*&in=state:", state.fips, sep = "")
-    census <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
   }
   
   if (geo == "county") {
     geo.merge <- c("state", "county")
     region <- paste("for=county:*&in=state:", state.fips, sep = "")
-    census <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
   }
   
   if (geo == "tract") {
@@ -100,7 +136,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     census <- NULL
     temp <- check_temp_save(county_list, save_temp, census)
@@ -110,7 +146,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     for (c in 1:length(county_list)) {
       print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
       region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
+      census.temp <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
       census <- rbind(census, census.temp)
       if (!is.null(save_temp)) {
         save(census, file = save_temp)
@@ -124,7 +160,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     geo.merge <- c("state", "county", "tract", "block")
     
     region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
     county_list <- county_df$county
     census <- NULL
     temp <- check_temp_save(county_list, save_temp, census)
@@ -136,14 +172,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       
       region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
       print(region_tract)
-      tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
+      tract_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_tract, retry)
       tract_list <- tract_df$tract
       
       for (t in 1:length(tract_list)) {
         print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
         
         region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-        census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
+        census.temp <- get_census_api(census_data_url, key = key, vars = vars, region = region_block, retry)
         census <- rbind(census, census.temp)
       }
       if (!is.null(save_temp)) {
@@ -157,14 +193,25 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   census$state <- state
   
+  # if (age == F & sex == F) {
+  #   
+  #   ## Calculate Pr(Geolocation | Race)
+  #   census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
+  #   census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
+  #   census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
+  #   census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
+  #   census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
+  #   
+  # }
+  
   if (age == F & sex == F) {
     
     ## Calculate Pr(Geolocation | Race)
-    census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
-    census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
-    census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
-    census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
-    census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
+    census$r_whi <- census[, vars["pop_white"]] / sum(census[, vars["pop_white"]]) #Pr(Geo|White)
+    census$r_bla <- census[, vars["pop_black"]] / sum(census[, vars["pop_black"]]) #Pr(Geo|Black)
+    census$r_his <- census[, vars["pop_hisp"]] / sum(census[, vars["pop_hisp"]]) #Pr(Geo|Latino)
+    census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (sum(census[, vars["pop_asian"]]) + sum(census[, vars["pop_nhpi"]])) #Pr(Geo | Asian or NH/PI)
+    census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (sum(census[, vars["pop_aian"]]) + sum(census[, vars["pop_other"]]) + sum(census[, vars["pop_two"]])) #Pr(Geo | AI/AN, Other, or Mixed)
     
   }
   

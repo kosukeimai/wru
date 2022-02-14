@@ -22,11 +22,14 @@ Depends:
     utils
 Imports:
     foreach (>= 1.5.1),
-    devtools (>= 1.10.0)
+    devtools (>= 1.10.0),
+    stringr,
+    dplyr,
+    Rcpp
 Suggests:
     testthat,
     wruData (>= 0.0.1),
-LinkingTo: 
+LinkingTo:
     Rcpp,
     RcppArmadillo,
     RcppProgress
