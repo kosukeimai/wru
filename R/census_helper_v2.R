@@ -146,11 +146,17 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
       drop <- c(grep("state", names(census)), grep("P2_", names(census)))
     }
     
-    census$r_whi <- (0.5 + census[, vars["pop_white"]]) / (geoPopulations + 2.5) #Pr(White | Geo)
-    census$r_bla <- (0.5 + census[, vars["pop_black"]]) / (geoPopulations + 2.5) #Pr(Black | Geo)
-    census$r_his <- (0.5 + census[, vars["pop_hisp"]]) / (geoPopulations + 2.5) #Pr(Latino | Geo)
-    census$r_asi <- (0.5 + census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations + 2.5) #Pr(Asian or NH/PI | Geo)
-    census$r_oth <- (0.5 + census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations + 2.5) #Pr(AI/AN, Other, or Mixed | Geo)
+    # census$r_whi <- (0.5 + census[, vars["pop_white"]]) / (geoPopulations + 2.5) #Pr(White | Geo)
+    # census$r_bla <- (0.5 + census[, vars["pop_black"]]) / (geoPopulations + 2.5) #Pr(Black | Geo)
+    # census$r_his <- (0.5 + census[, vars["pop_hisp"]]) / (geoPopulations + 2.5) #Pr(Latino | Geo)
+    # census$r_asi <- (0.5 + census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations + 2.5) #Pr(Asian or NH/PI | Geo)
+    # census$r_oth <- (0.5 + census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations + 2.5) #Pr(AI/AN, Other, or Mixed | Geo)
+    # 
+    census$r_whi <- (census[, vars["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
+    census$r_bla <- (census[, vars["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
+    census$r_his <- (census[, vars["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
+    census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
+    census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
     voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
       

@@ -1,6 +1,6 @@
-#' Race prediction function, for hierarchical WRU model
+#' Race prediction function, for measurement error WRU model
 #' 
-#' Sample individual-level race/ethnicity from a hirarchical Bayesian Dirichlet-multinomial model.
+#' Sample individual-level race/ethnicity from a measurement-error Bayesian Dirichlet-multinomial model.
 #'
 #' @param voter.file 	An object of class data.frame. Must contain a row for each individual being predicted, 
 #'                    as well as fields named "surname", and/or"first", and/or "middle", containing each 
@@ -11,10 +11,7 @@
 #'                    characters (e.g., "031" not "31"), tract is six characters, and block is four characters. Place is
 #'                    five characters. See \code{\link{predict_race}} for other optional fields.
 #' @param namesToUse  Character string Must be one of 'last', 'last, first', or 'last, first, middle'.
-#' @param census.geo Required string. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}.       
-#' @param geo.cluster Required string. Higher level of aggregation for hierarchical model. One of "county", "zipcode", or "tract". 
-#'                    Must be a higher level of aggregation than \code{census.geo}. Defaults to "county". See Details for more information.                     
-#' @param me.correct Boolean. Should the model use a hierarchical model for correcting measurement error?                    
+#' @param census.geo Required string. One of "county", "tract", "block" or "place". See \code{\link{predict_race}}. 
 #' @param race.init Initial race for each observation in voter.file. Must be an integer, with
 #'                  0=white, 1=black, 2=hispanic, 3=asian, and 4=other. Defaults to values obtained from \code{race_predict}.
 #' @param ... Other arguments passed to \code{\link{predict_race}}.
@@ -22,10 +19,11 @@
 #' \itemize{
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
 #'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+#'  \item{census.surnames}{ Data frame. Census-provided table of counts by race and last name.} 
 #'  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
-#'  \item{me.correct}{ Boolean. Should the model use a hierarchical model for correcting measurement error? Defaults to \code{TRUE}.}
-#'  \item{progress_bar}{ If \code{verbose=TRUE}, should a progress bar be used to track progress? If \code{TRUE}, must be handled by \code{progressr::handlers()},
-#'                       as per \code{progressr}'s design choice.}
+#'  \item{par.group}{ Required string. Higher level of aggregation for parallel sampling. One of "county", "zipcode", or "tract". 
+#'                    Must be a higher level of aggregation than \code{census.geo}. Defaults to "county". See Details for more information.}
+#'  \item{me.correct}{ String. Should the model correcting measurement error for \code{names}, \code{races}, \code{both}, \code{neither} (default)?}
 #'  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned for reproducibility.}
 #' }
 #'
@@ -39,16 +37,35 @@
 #' 
 #' @importFrom foreach foreach "%dopar%" getDoParWorkers
 #' @export
-#'
-predict_race_hwru <- function(voter.file,
-                              namesToUse,
-                              census.geo,
-                              census.names = NULL,
-                              geo.cluster = "county",
-                              race.init = NULL,
-                              ...,
-                              control = NULL)
+#' 
+predict_race_me <- function(voter.file,
+                            namesToUse,
+                            census.geo,
+                            race.init = NULL,
+                            ...,
+                            control = NULL)
 {
+  ## Form control list
+  ctrl <- list(iter = 1000,
+               thin = 1,
+               verbose = TRUE, 
+               parallel = TRUE,
+               par.group = "county",
+               me.correct = "neither",
+               me.name = FALSE,
+               me.race = FALSE,
+               race.marginal = c(.6665, .0853, .1367, .0797, .0318),
+               census.surnames = NULL,
+               seed = sample(1:1000, 1))
+  ctrl$burnin <- floor(ctrl$iter/2)
+  ctrl[names(control)] <- control
+  if(ctrl$me.correct %in% c("names","both")){
+    ctrl$me.name <- TRUE
+  }
+  if(ctrl$me.correct %in% c("races","both")){
+    ctrl$me.race <- TRUE
+  }
+  
   ##Preliminary Data quality checks
   .hasData()
   n_race <- 5
@@ -62,10 +79,13 @@ predict_race_hwru <- function(voter.file,
   ## Other quick checks...
   stopifnot(census.geo %in% c("county","tract","block","place"),
             all(!is.na(voter.file$last)))
-  stopifnot(geo.cluster %in% c("county","tract","zipcode"),
+  stopifnot(ctrl$par.group %in% c("county","tract","zipcode"),
             all(!is.na(voter.file$last)))
-  if(!(geo.cluster %in% colnames(voter.file))){
-    stop(sprintf("For the hierarchical estimation, I need information on each record's %s", geo.cluster))
+  if(!(ctrl$par.group %in% colnames(voter.file))){
+    stop(sprintf("For the parallel estimation, I need information on each record's %s", ctrl$par.group))
+  }
+  if(!(ctrl$me.correct %in% c("names","races","both","neither"))){
+    stop(sprintf("me.correct must be one of 'names','races','both', or 'neither'"))
   }
   
   orig.names <- names(voter.file)
@@ -73,18 +93,6 @@ predict_race_hwru <- function(voter.file,
   voter.file$state <- toupper(voter.file$state)
   voter.file$rec_id_ <- 1:nrow(voter.file)
   
-  ## Form control list
-  ctrl <- list(iter = 1000,
-               thin = 1,
-               verbose = TRUE, 
-               lambda = c(0.638, 0.121, 0.164, 0.048, 0.029),
-               parallel = TRUE,
-               me.correct = TRUE,
-               census.dict = FALSE,
-               seed = sample(1:1000, 1),
-               threads=2)
-  ctrl$burnin <- floor(ctrl$iter/2)
-  ctrl[names(control)] <- control
   
   ## Set RNG seed
   set.seed(ctrl$seed)
@@ -95,7 +103,7 @@ predict_race_hwru <- function(voter.file,
                          census.key = NULL,
                          namesToUse = namesToUse,
                          retry = 0
-                         )
+  )
   args_usr <- list(...)
   ## level of geo estimation
   geo_id_names <- c("state", switch(race_pred_args$census.geo,
@@ -151,63 +159,53 @@ predict_race_hwru <- function(voter.file,
                        tmp$ccc <- 1:nrow(tmp)
                        all_names <- names(tmp)
                        ## Totals
-                       n_rc <- simplify2array(by(tmp[,grep("r_", names(tmp))], tmp[,geo.cluster], colSums))
-                       colnames(n_rc) <- paste0(tmp$state[1], colnames(n_rc))
-                       ## Probabilities
-                       tmp_l <- tmp[,c("ccc",grep("r_", all_names, value=TRUE))]
                        tmp_la <- tmp[,c(geo_id_names,grep("r_", all_names, value=TRUE))]
-                       tmp_l[,grep("r_", all_names, value=TRUE)] <- proportions(as.matrix(tmp[,grep("r_", all_names, value=TRUE)]), 2)
-                       tmp_l <- tmp_l[order(tmp_l[,1]),]
-                       tmp[,grep("r_", all_names, value=TRUE)] <- tmp_l[,-1]
-                       return(list(n_rc = t(n_rc),
-                                   probs = tmp[,-ncol(tmp)],
-                                   tots = tmp_la))
+                       return(list(tots = tmp_la))
                      })
-  n_rc <- do.call(rbind, lapply(tmp_tabs, function(x)x$n_rc))
-  
-  r_g_t <- do.call(rbind, lapply(tmp_tabs, function(x)x$probs))
   N_rg <- do.call(rbind, lapply(tmp_tabs, function(x)x$tots))
-  theta <- proportions(as.matrix(N_rg[, grep("r_", names(N_rg), value=TRUE)]), 2)
-  N_c <- sum(as.matrix(n_rc))#rowSums(as.matrix(n_rc))
-  alpha <- prop.table(n_rc, 1)
-  lambda <- proportions(colSums(as.matrix(N_rg[, grep("r_", names(N_rg), value=TRUE)])))
+  zero_ind <- rowSums(N_rg[, grep("r_", names(N_rg), value=TRUE)]) < 1
+  n_zero <- sum(zero_ind)
+  N_rg[zero_ind, grep("r_", names(N_rg), value=TRUE)] <- t(rmultinom(n_zero, 1, ctrl$race.marginal))
   rm(race_pred_args)
   ##Subset to geo's in vf
-  r_g_t_geo <- do.call(paste, r_g_t[,geo_id_names])
   N_rg_geo <- do.call(paste, N_rg[,geo_id_names])
   N_rg <- N_rg[N_rg_geo %in% geo_id, ] 
-  theta <- theta[N_rg_geo %in% geo_id,] 
-  r_g_t <- r_g_t[r_g_t_geo %in% geo_id, ]
-  if(nrow(r_g_t) != length(unique(geo_id))){
-    stop("Some records in voter.file have unique geographic locations that I wasn't able to find in the census.data.\n
+  if(ctrl$me.race){
+    alpha_ <- t(apply(as.matrix(N_rg[, grep("r_", names(N_rg), value=TRUE)]), 1,
+                    function(x){
+                      oprop <- x/sum(x)
+                      zero_ind <- x==0
+                      x[zero_ind] <- 0.5/(sum(x) + 5/2)
+                      zeta_n <- sum(x[zero_ind])
+                      x[!zero_ind] <- oprop[!zero_ind] * (1.0 - zeta_n)
+                      return(x)
+                    }))
+  } else {
+    alpha_ <- proportions(as.matrix(N_rg[, grep("r_", names(N_rg), value=TRUE)]), 1)
+  }
+  if(nrow(N_rg) != length(unique(geo_id))){
+    stop("Some records in voter.file have geographic locations that I wasn't able to find in the census.data.\n
           Records may have mis-matched geographic units that do not exist in the census.")
   }
-
-
+  
+  
   ##Split data by geographic cluster
-  voter.file$state_cluster <- with(voter.file, paste0(state, voter.file[,geo.cluster]))
-  N_rg$state_cluster <- with(N_rg, paste0(state, N_rg[,geo.cluster]))
-  theta <- split(as.data.frame(theta), N_rg$state_cluster)
+  voter.file$state_cluster <- with(voter.file, paste0(state, voter.file[,ctrl$par.group]))
+  N_rg$state_cluster <- with(N_rg, paste0(state, N_rg[,ctrl$par.group]))
+  alpha_ <- split(as.data.frame(alpha_), N_rg$state_cluster)
   N_rg <- split(N_rg, N_rg$state_cluster)
-  #N_c <- N_c[names(N_c) %in% names(N_rg)]
-  alpha <- alpha[rownames(alpha) %in% names(N_rg),]
-  #n_rc <- split(n_rc, rownames(n_rc))
-  r_g_t$state_cluster <- with(r_g_t, paste0(state, r_g_t[,geo.cluster]))
-  r_g_t <- split(r_g_t, r_g_t$state_cluster)
   geo_id <- split(geo_id, voter.file$state_cluster)
   r_g_t <- mapply(function(tab_, tot_, gid_, g_n_){
-                    r_g_t_geo_new <- do.call(paste, tab_[,g_n_])
-                    Nrg_geo_new <- do.call(paste, tot_[,g_n_])
-                    geo_ <- match(gid_, r_g_t_geo_new)
-                    Nrg_ord <- match(r_g_t_geo_new, Nrg_geo_new)
-                    tot_ <- t(tot_[Nrg_ord,grep("r_", colnames(tot_))]) ## Races in rows
-                    tab_ <- t(tab_[,grep("r_", colnames(tab_))]) ## ditto
-                    return(list(geo_ = geo_,
-                           tab_ = tab_,
-                           tot_ = tot_))
-                  }, r_g_t, N_rg, geo_id,
-                  MoreArgs = list(g_n_ = geo_id_names),
-                  SIMPLIFY = FALSE)
+    Nrg_geo_new <- do.call(paste, tot_[,g_n_])
+    geo_ <- match(gid_, Nrg_geo_new)
+    tot_ <- t(tot_[,grep("r_", colnames(tot_))]) ## Races in rows
+    tab_ <- t(tab_[,grep("r_", colnames(tab_))]) ## ditto
+    return(list(geo_ = geo_,
+                alpha_ = tab_,
+                N_rg_ = tot_))
+  }, alpha_, N_rg, geo_id,
+  MoreArgs = list(g_n_ = geo_id_names),
+  SIMPLIFY = FALSE)
   
   orig_ord <- split(voter.file$rec_id_, voter.file$state_cluster)
   n_groups <- length(orig_ord)
@@ -217,16 +215,16 @@ predict_race_hwru <- function(voter.file,
   if(ctrl$verbose){
     cat("Pre-processing names...\n")
   }
-  if(ctrl$census.dict){
-  last_name_orig <- census.names
-  names(last_name_orig) <- names(wruData::last)
+  if(!is.null(ctrl$census.surnames)){
+    last_name_orig <- ctrl$census.surnames
+    names(last_name_orig) <- names(wruData::last_c)
   }
   for(ntype in c("last","first","middle")){
     if(ntype %in% name_types){
       ntab <- switch(ntype, 
-                     last=as.data.frame(if(ctrl$census.dict){last_name_orig}else{wruData::last}),
-                     middle=as.data.frame(wruData::mid),
-                     first=as.data.frame(wruData::first))
+                     last=as.data.frame(if(!is.null(ctrl$census.surnames)){last_name_orig}else{wruData::last_c}),
+                     middle=as.data.frame(wruData::mid_c),
+                     first=as.data.frame(wruData::first_c))
       str_names <- toupper(ntab[,1])
       proc_names_str <- .name_preproc(voter.file[,ntype], c(str_names))
       u_obs_names <- unique(proc_names_str)
@@ -238,54 +236,77 @@ predict_race_hwru <- function(voter.file,
       u_obs_names <- u_obs_names[reord]
       w_names <- match(proc_names_str, u_obs_names)
       w_names <- split(w_names, voter.file$state_cluster)
-      pi_tilde <- as.matrix(ntab[which(kw_in_ind),-1])#proportions(as.matrix(ntab[which(kw_in_ind),-1]), 2) 
+      M_ <- as.matrix(ntab[which(kw_in_ind),-1])
+      if(ctrl$me.name){
+        beta_ <- apply(M_, 2, 
+                       function(x){
+                         oprop <- x/sum(x)
+                         zero_ind <- x==0
+                         x[zero_ind] <- 0.5/(sum(x) + 5/2)
+                         zeta_n <- sum(x[zero_ind])
+                         x[!zero_ind] <- oprop[!zero_ind] * (1.0 - zeta_n)
+                         return(x)
+                       }
+        )
+      } else {
+        beta_ <- proportions(M_,2)
+      }
       name_data[[ntype]] <- list(record_name_id = w_names,
-                                 census_table = t(pi_tilde))
+                                 M_ = t(M_),
+                                 beta_ = t(beta_))
     } else {
       name_data[[ntype]] <- list(record_name_id = replicate(n_groups, vector("integer"), simplify=FALSE),
-                                 census_table = matrix(NA, 0,0) )
+                                 M_ = matrix(NA, 0,0),
+                                 beta_ = matrix(NA, 0,0) )
     }
   }
-  
-  ## Get average number of records per race
-  
-  ## ... and split inits by county
-  race.init <- split(race.init, voter.file$state_cluster)
 
+  ## Split inits by cluster
+  race.init <- split(race.init, voter.file$state_cluster)
+  
   
   ## Name selector
-  which_names <- switch(namesToUse,
+  which.names <- switch(namesToUse,
                         'last' = 0L,
                         'last, first' = 1L,
                         'last, first, middle' = 2L,
-                        )
+  )
   
   ## Run Gibbs sampler
   if(ctrl$verbose){
     cat("Sampling races...\n")
+    pb <- txtProgressBar(min = 0, max = n_groups, style = 3)
   }
   race_samples <- lapply(seq.int(n_groups),
                          function(cluster){
-                           tmp <- hwru_sample(name_data[["last"]]$record_name_id[[cluster]] - 1L,
-                                              name_data[["first"]]$record_name_id[[cluster]] - 1L,
-                                              name_data[["middle"]]$record_name_id[[cluster]] - 1L,
-                                              r_g_t[[cluster]]$geo_ - 1L,
-                                              r_g_t[[cluster]]$tot_,
-                                              N_c*100,#[cluster],
-                                              alpha[cluster,],
-                                              name_data[["last"]]$census_table,
-                                              name_data[["first"]]$census_table,
-                                              name_data[["middle"]]$census_table,
-                                              t(theta[[cluster]]),
-                                              lambda,
-                                              which_names,
-                                              ctrl$iter,
-                                              ctrl$burnin,
-                                              ctrl$me.correct,
-                                              race.init[[cluster]] - 1L,
-                                              0)
+                           tmp <- sample_me(name_data[["last"]]$record_name_id[[cluster]] - 1L,
+                                            name_data[["first"]]$record_name_id[[cluster]] - 1L,
+                                            name_data[["middle"]]$record_name_id[[cluster]] - 1L,
+                                            r_g_t[[cluster]]$geo_ - 1L,
+                                            r_g_t[[cluster]]$N_rg_,
+                                            name_data[["last"]]$M_,
+                                            name_data[["first"]]$M_,
+                                            name_data[["middle"]]$M_,
+                                            r_g_t[[cluster]]$alpha_,
+                                            name_data[["last"]]$beta_,
+                                            name_data[["first"]]$beta_,
+                                            name_data[["middle"]]$beta_,
+                                            ctrl$race.marginal, 
+                                            which.names,
+                                            ctrl$iter,
+                                            ctrl$burnin,
+                                            ctrl$me.name,
+                                            ctrl$me.race,
+                                            race.init[[cluster]] - 1L,
+                                            0)
+                           if(ctrl$verbose){
+                             setTxtProgressBar(pb, cluster)
+                           }
                            return(cbind(orig_ord[[cluster]], tmp))
                          })
+  if(ctrl$verbose){
+    close(pb)
+  }
   if(ctrl$verbose){
     cat("Post-processing results and wrapping up.\n")
   }

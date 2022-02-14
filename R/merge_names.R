@@ -64,7 +64,7 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse='last', use.census.surnames=F, census.surnames=NULL, clean.names = T) {
+merge_names <- function(voter.file, namesToUse, use.census.surnames, census.surnames=NULL, clean.names = T) {
   
   # check the names
   if(namesToUse == 'last') {
@@ -119,13 +119,13 @@ merge_names <- function(voter.file, namesToUse='last', use.census.surnames=F, ce
   }
   
   if(namesToUse == 'last' && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0)
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth,"_last"))])
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
   if(namesToUse == 'last, first' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
      sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0)
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth,"_first"))])
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
   if(namesToUse == 'last, first, middle' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
      sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0)
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match",paste0(p_eth,"_middle"))])
+    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
   
   ## Clean names (if specified by user)
   if(clean.names) {
@@ -230,19 +230,22 @@ merge_names <- function(voter.file, namesToUse='last', use.census.surnames=F, ce
   }
   
   
-  ## For unmatched names, just fill with a NA
-  # require(dplyr)
-  warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) indivduals' last names were not matched.", sep = "")))
+  ## For unmatched names, just fill with an 1
+  require(dplyr)
+  warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
   if(grepl('first', namesToUse)) {
-    warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) indivduals' first names were not matched.", sep = "")))
+    warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
   }
   if(grepl('middle', namesToUse)) {
-    warning(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) indivduals' middle names were not matched.", sep = "")))
+    warning(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
   }
   
-  # for(i in grep("p_", names(df))) {
-  #   df[,i] <- coalesce(df[,i], 1)
-  # }
+  inputer <- c(p_whi = .6665,p_bla = .0853, p_his = .1367, p_asi = .0797,p_oth = .0318)
+  
+  for(i in grep("p_", names(df), value=TRUE)) {
+    #df[,i] <- coalesce(df[,i], 1)
+    df[is.na(df[,i]),i] <- inputer[i]
+  }
   
   # return the data
   if(namesToUse == 'last')

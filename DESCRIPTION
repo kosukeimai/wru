@@ -31,12 +31,11 @@ Suggests:
     wruData (>= 0.0.1),
 LinkingTo:
     Rcpp,
-    RcppArmadillo,
-    RcppProgress
+    RcppArmadillo
 LazyLoad: yes
 LazyData: yes
 LazyDataCompression: xz
 License: GPL (>= 3)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8
 Additional_repositories: https://solivella.github.io/wruData

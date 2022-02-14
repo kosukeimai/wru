@@ -22,5 +22,5 @@ double mylgamma(const double x){
     return (lgamma(x));
   else
     return ((x-0.5)*log(x) - x + 0.91893853320467 + 1/(12*x));
-};
+}
 
