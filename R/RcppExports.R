@@ -3,12 +3,29 @@
 
 #' Collapsed Gibbs sampler for hWRU. Internal function
 #'
-#' @param last_name Integer vector of last name identifiers for each record.
+#' @param last_name Integer vector of last name identifiers for each record (zero indexed; as all that follow). Must match columns numbers in M_rs.  
 #' @param first_name See last_name
 #' @param middle_name See last_name
+#' @param geo Integer vector of geographic units for each record. Must match column number in N_rg
+#' @param N_rg Integer matrix of race | geography counts in census (geograpgies in columns).
+#' @param M_rs Integer matrix of race | surname counts in dictionary (surnames in columns).
+#' @param M_rf Same as `M_rs`, but for first names (can be empty matrix for surname only models).
+#' @param M_rm Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).
+#' @param alpha Numeric matrix of race | geography prior probabilities.
+#' @param beta_s Numeric matrix of race | surname prior probabilities.
+#' @param beta_f Same as `beta_s`, but for first names.
+#' @param beta_m Same as `beta_s`, but for middle names.
+#' @param pi_nr Vector of marginal probability distribution over race categories; non-keyword names default to this distribution.
+#' @param which_names Integer; 0=surname only. 1=surname + first name. 2= surname, first, and middle names.
+#' @param samples Integer number of samples to take after (in total)
+#' @param burnin Integer number of samples to discard as burn-in of Markov chain
+#' @param me_race Boolean; should measurement error in race | geography be corrected?
+#' @param me_name Boolean; should measurement error in race | names be corrected?
+#' @param race_init Integer vector of initial race assignments
+#' @param verbose Boolean; should informative messages be printed?
 #'
 #' @keywords internal
-hwru_sample <- function(last_name, first_name, mid_name, geo, N_rg, psi, alpha, pi_s, pi_f, pi_m, theta, lambda, which_names, samples, burnin, me_, race_init, verbose) {
-    .Call(`_wru_hwru_sample`, last_name, first_name, mid_name, geo, N_rg, psi, alpha, pi_s, pi_f, pi_m, theta, lambda, which_names, samples, burnin, me_, race_init, verbose)
+sample_me <- function(last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, beta_s, beta_f, beta_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose) {
+    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, beta_s, beta_f, beta_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose)
 }
 

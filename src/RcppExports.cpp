@@ -11,9 +11,9 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// hwru_sample
-arma::umat hwru_sample(const arma::uvec& last_name, const arma::uvec& first_name, const arma::uvec& mid_name, const arma::uvec& geo, const arma::umat& N_rg, const double& psi, const arma::vec& alpha, const arma::mat& pi_s, const arma::mat& pi_f, const arma::mat& pi_m, const arma::mat& theta, const arma::vec& lambda, const arma::uword which_names, const arma::uword samples, const arma::uword burnin, const bool me_, const arma::uvec& race_init, const bool verbose);
-RcppExport SEXP _wru_hwru_sample(SEXP last_nameSEXP, SEXP first_nameSEXP, SEXP mid_nameSEXP, SEXP geoSEXP, SEXP N_rgSEXP, SEXP psiSEXP, SEXP alphaSEXP, SEXP pi_sSEXP, SEXP pi_fSEXP, SEXP pi_mSEXP, SEXP thetaSEXP, SEXP lambdaSEXP, SEXP which_namesSEXP, SEXP samplesSEXP, SEXP burninSEXP, SEXP me_SEXP, SEXP race_initSEXP, SEXP verboseSEXP) {
+// sample_me
+arma::umat sample_me(const arma::uvec& last_name, const arma::uvec& first_name, const arma::uvec& mid_name, const arma::uvec& geo, const arma::umat& N_rg, const arma::umat& M_rs, const arma::umat& M_rf, const arma::umat& M_rm, const arma::mat& alpha, const arma::mat& beta_s, const arma::mat& beta_f, const arma::mat& beta_m, const arma::vec& pi_nr, const arma::uword which_names, const arma::uword samples, const arma::uword burnin, const bool me_name, const bool me_race, const arma::uvec& race_init, const bool verbose);
+RcppExport SEXP _wru_sample_me(SEXP last_nameSEXP, SEXP first_nameSEXP, SEXP mid_nameSEXP, SEXP geoSEXP, SEXP N_rgSEXP, SEXP M_rsSEXP, SEXP M_rfSEXP, SEXP M_rmSEXP, SEXP alphaSEXP, SEXP beta_sSEXP, SEXP beta_fSEXP, SEXP beta_mSEXP, SEXP pi_nrSEXP, SEXP which_namesSEXP, SEXP samplesSEXP, SEXP burninSEXP, SEXP me_nameSEXP, SEXP me_raceSEXP, SEXP race_initSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,26 +22,28 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::uvec& >::type mid_name(mid_nameSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type geo(geoSEXP);
     Rcpp::traits::input_parameter< const arma::umat& >::type N_rg(N_rgSEXP);
-    Rcpp::traits::input_parameter< const double& >::type psi(psiSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type alpha(alphaSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type pi_s(pi_sSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type pi_f(pi_fSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type pi_m(pi_mSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type theta(thetaSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type M_rs(M_rsSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type M_rf(M_rfSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type M_rm(M_rmSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type beta_s(beta_sSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type beta_f(beta_fSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type beta_m(beta_mSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type pi_nr(pi_nrSEXP);
     Rcpp::traits::input_parameter< const arma::uword >::type which_names(which_namesSEXP);
     Rcpp::traits::input_parameter< const arma::uword >::type samples(samplesSEXP);
     Rcpp::traits::input_parameter< const arma::uword >::type burnin(burninSEXP);
-    Rcpp::traits::input_parameter< const bool >::type me_(me_SEXP);
+    Rcpp::traits::input_parameter< const bool >::type me_name(me_nameSEXP);
+    Rcpp::traits::input_parameter< const bool >::type me_race(me_raceSEXP);
     Rcpp::traits::input_parameter< const arma::uvec& >::type race_init(race_initSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(hwru_sample(last_name, first_name, mid_name, geo, N_rg, psi, alpha, pi_s, pi_f, pi_m, theta, lambda, which_names, samples, burnin, me_, race_init, verbose));
+    rcpp_result_gen = Rcpp::wrap(sample_me(last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, beta_s, beta_f, beta_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_wru_hwru_sample", (DL_FUNC) &_wru_hwru_sample, 18},
+    {"_wru_sample_me", (DL_FUNC) &_wru_sample_me, 20},
     {NULL, NULL, 0}
 };
 
