@@ -24,7 +24,8 @@ Imports:
     devtools (>= 1.10.0),
     PL94171,
     stringr,
-    Rcpp
+    Rcpp,
+    dplyr (>= 1.0.0)
 LinkingTo: 
     Rcpp,
     RcppEigen,
@@ -35,4 +36,5 @@ LazyLoad: yes
 LazyData: yes
 LazyDataCompression: xz
 License: GPL (>= 3)
-RoxygenNote: 7.1.1.9001
+RoxygenNote: 7.1.2
+Encoding: UTF-8

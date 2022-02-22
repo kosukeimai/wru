@@ -50,11 +50,12 @@
 #' @import stringr
 #'
 #' @examples
+#' \donttest{
 #' data(voters)
-#' merge_names(voters)
-#'
+#' merge_names(voters, 'last, first')
+#'}
 #' @export
-merge_names <- function(voter.file, namesToUse, clean.names = T) {
+merge_names <- function(voter.file, namesToUse, clean.names = TRUE) {
 
   # check the names
   if(namesToUse == 'last') {
@@ -214,7 +215,6 @@ merge_names <- function(voter.file, namesToUse, clean.names = T) {
 
 
   ## For unmatched names, just fill with a 1
-  library(dplyr)
   warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) indivduals' last names were not matched.", sep = "")))
   if(grepl('first', namesToUse)) {
     warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) indivduals' first names were not matched.", sep = "")))
@@ -224,7 +224,7 @@ merge_names <- function(voter.file, namesToUse, clean.names = T) {
   }
 
   for(i in grep("p_", names(df))) {
-    df[,i] <- coalesce(df[,i], 1)
+    df[,i] <- dplyr::coalesce(df[,i], 1)
   }
 
   # return the data

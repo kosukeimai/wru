@@ -21,7 +21,7 @@
 #' County is three characters (e.g., \code{"031"} not \code{"31"}),
 #' tract is six characters, and block is four characters. Place is five characters.
 #' See below for other optional fields.
-#' #' @param namesToUse A character vector identifying which names to use for the prediction.
+#' @param namesToUse A character vector identifying which names to use for the prediction.
 #' The default value is \code{"last"}, indicating that only the last name will be used.
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
@@ -56,6 +56,8 @@
 #'  \code{\var{pred.asi}} for Asian/Pacific Islander, and
 #'  \code{\var{pred.oth}} for Other/Mixed.
 #'
+#' @export
+#'
 #' @examples
 #' data(voters)
 #' predict_race(voters, surname.only = TRUE)
@@ -69,9 +71,6 @@
 #' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)}
 #' \dontrun{CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
 #' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
-#' @export
-
-## Race Prediction Function
 predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.key,
                          census.data = NA, retry = 0) {
 

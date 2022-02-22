@@ -16,12 +16,14 @@
 #' filepath should end in ".RData". 
 #'
 #' @import PL94171
+#' @importFrom dplyr `%>%` .data
 #' 
 #' @examples
-#' gaCensusData <- format_legacy_data('~/Desktop/ga2020.pl')
+#' \dontrun{
+#' gaCensusData <- format_legacy_data(PL94171::pl_url('GA', 2020))
 #' predict_race_new(ga.voter.file, namesToUse = 'last, first, mid', census.geo = 'block',
 #'      census.data = gaCensusData)
-
+#' }
 #'
 #' @export
 format_legacy_data <- function(legacyFilePath, outFile = NULL) {
@@ -30,32 +32,36 @@ format_legacy_data <- function(legacyFilePath, outFile = NULL) {
   summaryLevels <- c('050', '140', '150', '750')
   
   # read in the data
-  pl <- pl_read(legacyFilePath)
-  pl <- pl_select_standard(pl) 
+  pl <- PL94171::pl_read(legacyFilePath)
+  pl <- PL94171::pl_select_standard(pl) 
   
   # iterate through the levels 
   censusData.2020 <- lapply(summaryLevels, FUN = function(level) {
-    levelData <- pl[pl$summary_level == level,]
+    levelData <- PL94171::pl_subset(pl, level)
     
     # construct the base data frame
-    df <- data.frame(state = toupper(state), 
-                     county = levelData$county,
-                     P005003 = levelData$pop_white, 
-                     P005004 = levelData$pop_black, 
-                     P005010 = levelData$pop_hisp,
-                     P005006 = levelData$pop_asian,
-                     P005007 = levelData$pop_nhpi,
-                     P005005 = levelData$pop_aian, 
-                     P005008 = levelData$pop_other, 
-                     P005009 = levelData$pop_two)
+    df <- levelData %>% 
+      dplyr::select(GEOID = .data$GEOID, 
+                    state = toupper(.data$state), 
+                    county = .data$county,
+                    P005003 = .data$pop_white, 
+                    P005004 = .data$pop_black, 
+                    P005010 = .data$pop_hisp,
+                    P005006 = .data$pop_asian,
+                    P005007 = .data$pop_nhpi,
+                    P005005 = .data$pop_aian, 
+                    P005008 = .data$pop_other, 
+                    P005009 = .data$pop_two
+      )
     
     # add geographic levels
     if(level != '050') {
-      df$tract <- substr(levelData$GEOID, nchar(levelData$GEOID) - 5, nchar(levelData$GEOID))
+      df <- df %>% dplyr::mutate(tract = substr(.data$GEOID, nchar(.data$GEOID) - 5, nchar(.data$GEOID)))
       if(level != '140') {
-        df$blockGroup <- substr(levelData$GEOID, nchar(levelData$GEOID), nchar(levelData$GEOID))
-        if(level != '150') 
-          df$block <- substr(levelData$GEOID, nchar(levelData$GEOID)-2, nchar(levelData$GEOID))
+        df <- df %>% dplyr::mutate(blockGroup = substr(.data$GEOID, nchar(.data$GEOID), nchar(.data$GEOID)))
+        if(level != '150') {
+          df <- df %>% dplyr::mutate(block = substr(.data$GEOID, nchar(.data$GEOID) - 2, nchar(.data$GEOID)))
+        }
       }
     }
     

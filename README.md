@@ -1,4 +1,5 @@
 # wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![Build Status](https://travis-ci.org/kosukeimai/wru.svg?branch=master)](https://travis-ci.org/kosukeimai/wru) [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru) ![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
+[![R-CMD-check](https://github.com/kosukeimai/wru/workflows/R-CMD-check/badge.svg)](https://github.com/kosukeimai/wru/actions)
 
 <img src="wru.png" align="right" height="256" style="margin-left: 4px;"/>
 
