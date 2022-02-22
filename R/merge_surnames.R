@@ -127,28 +127,30 @@ merge_surnames <- function(voter.file, surname.year = 2010, clean.surname = T, i
     }
 
     ## Names with Hyphens or Spaces, e.g. Double-Barreled Names
-    df2$surname2 <- df2$surname1 <- NA
-    df2$surname1[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 1)
-    df2$surname2[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 2)
-    df2$surname1[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 1)
-    df2$surname2[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 2)
-
-    ## Use first half of name to merge in priors
-    df2$surname.match <- as.character(df2$surname1)
-    df2 <- merge(df2[names(df2) %in% c(p_eth) == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2)]
-    if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
-      df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
-      df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
-      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
-    }
-
-    ## Use second half of name to merge in priors for rest
-    df2$surname.match <- as.character(df2$surname2)
-    df2 <- merge(df2[names(df2) %in% c(p_eth, "surname1", "surname2") == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2) %in% c("surname1", "surname2") == F]
-    if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
-      df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
-      df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
-      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
+    if (nrow(df2) > 0) {
+      df2$surname2 <- df2$surname1 <- NA
+      df2$surname1[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 1)
+      df2$surname2[grep("-", df2$surname.upper)] <- sapply(strsplit(grep("-", df2$surname.upper, value = T), "-"), "[", 2)
+      df2$surname1[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 1)
+      df2$surname2[grep(" ", df2$surname.upper)] <- sapply(strsplit(grep(" ", df2$surname.upper, value = T), " "), "[", 2)
+  
+      ## Use first half of name to merge in priors
+      df2$surname.match <- as.character(df2$surname1)
+      df2 <- merge(df2[names(df2) %in% c(p_eth) == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2)]
+      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
+        df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
+        df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
+        if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
+      }
+  
+      ## Use second half of name to merge in priors for rest
+      df2$surname.match <- as.character(df2$surname2)
+      df2 <- merge(df2[names(df2) %in% c(p_eth, "surname1", "surname2") == F], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)[names(df2) %in% c("surname1", "surname2") == F]
+      if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {
+        df1 <- rbind(df1, df2[df2$surname.match %in% surnames$surname, names(df2) %in% names(df1)])
+        df2 <- df2[df2$surname.match %in% surnames$surname == F, ]
+        if (nrow(df2[df2$surname.match %in% surnames$surname, ]) > 0) {df2$surname.match <- ""}
+      }
     }
   }
 
