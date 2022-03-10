@@ -40,13 +40,15 @@
 #' must have column named \code{place}.
 #' Specifying \code{\var{census.geo}} will call \code{census_helper} function
 #' to merge Census geographic data at specified level of geography.
-#' @param census.surnames An object of class \code{data.frame} provided by the 
+#' @param table.surnames An object of class \code{data.frame} provided by the 
 #' users as an alternative surname dictionary. It will consist of a list of 
 #' U.S. surnames, along with the associated probabilities P(name | ethnicity) 
 #' for ethnicities: White, Black, Hispanic, Asian, and other. Default is \code{NULL}.
 #' (\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
 #' \code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
 #' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other). 
+#' @param table.first See \code{\var{table.surnames}}.
+#' @param table.middle See \code{\var{table.surnames}}.
 #' @param census.key A character object specifying user's Census API
 #'  key. Required if \code{\var{census.geo}} is specified, because
 #'  a valid Census API key is required to download Census geographic data.
@@ -80,19 +82,14 @@
 #' @export
 
 ## Race Prediction Function
-predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.surnames = NULL, census.key,
+predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, table.surnames = NULL, table.first = NULL, table.middle = NULL, census.key,
                              census.data = NA, year = "2010", retry = 0) {
   
   # check the geography
   if (!missing(census.geo) && (census.geo == "precinct")) {
     stop('Error: census_helper function does not currently support merging precinct-level data.')
   }
-  
-  # check if using 2010 (non-l2-augmented dictionary) names
-  use.census.surnames <- FALSE
-  if(!is.null(census.surnames)){
-    use.census.surnames <- TRUE
-  }
+
   
   vars.orig <- names(voter.file)
   
@@ -145,7 +142,7 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   eth <- c("whi", "bla", "his", "asi", "oth")
   
   ## Merge in Pr(Name | Race)
-  voter.file <- merge_names(voter.file, namesToUse, use.census.surnames, census.surnames)
+  voter.file <- merge_names(voter.file, namesToUse, table.surnames, table.first, table.middle)
   
   if (census.geo == "place") {
     if (!("place" %in% names(voter.file))) {

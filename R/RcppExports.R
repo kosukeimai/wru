@@ -12,9 +12,9 @@
 #' @param M_rf Same as `M_rs`, but for first names (can be empty matrix for surname only models).
 #' @param M_rm Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).
 #' @param alpha Numeric matrix of race | geography prior probabilities.
-#' @param beta_s Numeric matrix of race | surname prior probabilities.
-#' @param beta_f Same as `beta_s`, but for first names.
-#' @param beta_m Same as `beta_s`, but for middle names.
+#' @param pi_s Numeric matrix of race | surname prior probabilities.
+#' @param pi_f Same as `pi_s`, but for first names.
+#' @param pi_m Same as `pi_s`, but for middle names.
 #' @param pi_nr Vector of marginal probability distribution over race categories; non-keyword names default to this distribution.
 #' @param which_names Integer; 0=surname only. 1=surname + first name. 2= surname, first, and middle names.
 #' @param samples Integer number of samples to take after (in total)
@@ -25,7 +25,7 @@
 #' @param verbose Boolean; should informative messages be printed?
 #'
 #' @keywords internal
-sample_me <- function(last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, beta_s, beta_f, beta_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose) {
-    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, beta_s, beta_f, beta_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose)
+sample_me <- function(last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose) {
+    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose)
 }
 

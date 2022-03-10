@@ -19,7 +19,9 @@
 #' \itemize{
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
 #'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
-#'  \item{census.surnames}{ Data frame. Census-provided table of counts by race and last name.} 
+#'  \item{table.surnames}{ Data frame. User-provided table of counts by race and last name.} 
+#'  \item{table.first}{ Data frame. User-provided table of counts by race and first name.} 
+#'  \item{table.middle}{ Data frame. User-provided table of counts by race and middle name.} 
 #'  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
 #'  \item{par.group}{ Required string. Higher level of aggregation for parallel sampling. One of "county", "zipcode", or "tract". 
 #'                    Must be a higher level of aggregation than \code{census.geo}. Defaults to "county". See Details for more information.}
@@ -55,7 +57,9 @@ predict_race_me <- function(voter.file,
                me.name = FALSE,
                me.race = FALSE,
                race.marginal = c(.6665, .0853, .1367, .0797, .0318),
-               census.surnames = NULL,
+               table.surnames = NULL,
+               table.first = NULL,
+               table.middle = NULL,
                seed = sample(1:1000, 1))
   ctrl$burnin <- floor(ctrl$iter/2)
   ctrl[names(control)] <- control
@@ -215,16 +219,24 @@ predict_race_me <- function(voter.file,
   if(ctrl$verbose){
     cat("Pre-processing names...\n")
   }
-  if(!is.null(ctrl$census.surnames)){
-    last_name_orig <- ctrl$census.surnames
+  if(!is.null(ctrl$table.surnames)){
+    last_name_orig <- ctrl$table.surnames
     names(last_name_orig) <- names(wruData::last_c)
+  }
+  if(!is.null(ctrl$table.first)){
+    first_name_orig <- ctrl$table.first
+    names(first_name_orig) <- names(wruData::first_c)
+  }
+  if(!is.null(ctrl$table.middle)){
+    middle_name_orig <- ctrl$table.middle
+    names(middle_name_orig) <- names(wruData::mid_c)
   }
   for(ntype in c("last","first","middle")){
     if(ntype %in% name_types){
       ntab <- switch(ntype, 
-                     last=as.data.frame(if(!is.null(ctrl$census.surnames)){last_name_orig}else{wruData::last_c}),
-                     middle=as.data.frame(wruData::mid_c),
-                     first=as.data.frame(wruData::first_c))
+                     last=as.data.frame(if(!is.null(ctrl$table.surnames)){last_name_orig}else{wruData::last_c}),
+                     first=as.data.frame(if(!is.null(ctrl$table.first)){first_name_orig}else{wruData::first_c}),
+                     middle=as.data.frame(if(!is.null(ctrl$table.middle)){middle_name_orig}else{wruData::mid_c}))
       str_names <- toupper(ntab[,1])
       proc_names_str <- .name_preproc(voter.file[,ntype], c(str_names))
       u_obs_names <- unique(proc_names_str)
@@ -236,9 +248,9 @@ predict_race_me <- function(voter.file,
       u_obs_names <- u_obs_names[reord]
       w_names <- match(proc_names_str, u_obs_names)
       w_names <- split(w_names, voter.file$state_cluster)
-      M_ <- as.matrix(ntab[which(kw_in_ind),-1])
+      M_ <- as.matrix(ntab[which(kw_in_ind),-1]) + 0.5
       if(ctrl$me.name){
-        beta_ <- apply(M_, 2, 
+        pi_ <- apply(M_, 2, 
                        function(x){
                          oprop <- x/sum(x)
                          zero_ind <- x==0
@@ -249,15 +261,15 @@ predict_race_me <- function(voter.file,
                        }
         )
       } else {
-        beta_ <- proportions(M_,2)
+        pi_ <- proportions(M_,2)
       }
       name_data[[ntype]] <- list(record_name_id = w_names,
                                  M_ = t(M_),
-                                 beta_ = t(beta_))
+                                 pi_ = t(pi_))
     } else {
       name_data[[ntype]] <- list(record_name_id = replicate(n_groups, vector("integer"), simplify=FALSE),
                                  M_ = matrix(NA, 0,0),
-                                 beta_ = matrix(NA, 0,0) )
+                                 pi_ = matrix(NA, 0,0) )
     }
   }
 
@@ -288,9 +300,9 @@ predict_race_me <- function(voter.file,
                                             name_data[["first"]]$M_,
                                             name_data[["middle"]]$M_,
                                             r_g_t[[cluster]]$alpha_,
-                                            name_data[["last"]]$beta_,
-                                            name_data[["first"]]$beta_,
-                                            name_data[["middle"]]$beta_,
+                                            name_data[["last"]]$pi_,
+                                            name_data[["first"]]$pi_,
+                                            name_data[["middle"]]$pi_,
                                             ctrl$race.marginal, 
                                             which.names,
                                             ctrl$iter,

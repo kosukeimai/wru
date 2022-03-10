@@ -101,7 +101,7 @@
 predict_race <- function(voter.file, 
                          census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.data = NULL,
                          census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
-                         party, retry = 0, impute.missing = FALSE) {
+                         party, retry = 0, impute.missing = TRUE) {
   
   # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
   if ((sex == TRUE || age == TRUE) && (year == "2020")) {
