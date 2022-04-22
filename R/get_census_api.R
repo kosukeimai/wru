@@ -29,11 +29,12 @@
 #' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-get_census_api <- function(data_url, key, vars, region, retry = 0) {
+get_census_api <- function(data_url, key, vars, region, retry = 3) {
   if(length(vars) > 50){
     vars <- vec_to_chunk(vars) # Split variables into a list
     get <- lapply(vars, function(x) paste(x, sep='', collapse=","))
-    data <- lapply(vars, function(x) get_census_api_2(data_url, key, x, region, retry))
+    # data <- lapply(vars, function(x) get_census_api_2(data_url, key, x, region, retry))
+    data <- furrr::map(vars, function(x) get_census_api_2(data_url, key, x, region, retry))
     } else {
       get <- paste(vars, sep='', collapse=',')
       data <- list(get_census_api_2(data_url, key, get, region, retry))

@@ -100,7 +100,7 @@ co_cluster <- function(voter.file,
                          census.geo = census.geo,
                          age = FALSE,
                          sex = FALSE,
-                         retry = 0)
+                         retry = 3)
   args_usr <- list(...)
   ## level of geo aggregation
   geo_id_names <- c("state", switch(race_pred_args$census.geo,

@@ -10,7 +10,7 @@ get_census_data(
   age = FALSE,
   sex = FALSE,
   census.geo = "block",
-  retry = 0
+  retry = 3
 )
 }
 \arguments{

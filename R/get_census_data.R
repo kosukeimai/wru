@@ -27,7 +27,7 @@
 #' @export
 #'
 #' @examples \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
-get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 0) {
+get_census_data <- function(key, states, age = FALSE, sex = FALSE, census.geo = "block", retry = 3) {
   
   if (missing(key)) {
     stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')

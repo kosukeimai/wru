@@ -37,7 +37,7 @@
 #' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
 #' @export
-census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 0, save_temp = NULL) {
+census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 3, save_temp = NULL) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')

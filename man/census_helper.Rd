@@ -12,7 +12,7 @@ census_helper(
   age = FALSE,
   sex = FALSE,
   census.data = NA,
-  retry = 0
+  retry = 3
 )
 }
 \arguments{

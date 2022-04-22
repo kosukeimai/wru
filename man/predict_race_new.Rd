@@ -10,7 +10,7 @@ predict_race_new(
   census.geo,
   census.key,
   census.data = NA,
-  retry = 0
+  retry = 3
 )
 }
 \arguments{

@@ -16,7 +16,7 @@ predict_race(
   sex = FALSE,
   party,
   impute.missing = TRUE,
-  retry = 0
+  retry = 3
 )
 }
 \arguments{

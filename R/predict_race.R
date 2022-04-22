@@ -98,7 +98,7 @@
 ## Race Prediction Function
 predict_race <- function(voter.file, 
                            census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                           census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, impute.missing = TRUE, retry = 0) {
+                           census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, party, impute.missing = TRUE, retry = 3) {
   
   if (!missing(census.geo) && (census.geo == "precinct")) {
     # geo <- "precinct"

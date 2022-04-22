@@ -10,7 +10,7 @@ census_geo_api(
   geo = "tract",
   age = FALSE,
   sex = FALSE,
-  retry = 0,
+  retry = 3,
   save_temp = NULL
 )
 }

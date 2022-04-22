@@ -72,7 +72,7 @@
 #' \dontrun{CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
 #' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
 predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census.key,
-                         census.data = NA, retry = 0) {
+                         census.data = NA, retry = 3) {
 
   # check the geography
   if (!missing(census.geo) && (census.geo == "precinct")) {

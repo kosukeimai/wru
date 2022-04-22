@@ -48,7 +48,7 @@
 #' age = TRUE, sex = TRUE)}
 #'
 #' @export
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, census.data = NA, retry = 0) {
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, census.data = NA, retry = 3) {
   
   if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE

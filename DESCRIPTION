@@ -22,10 +22,12 @@ Depends:
     utils
 Imports:
     devtools (>= 1.10.0),
+    dplyr (>= 1.0.0),
+    future,
+    furrr,
     PL94171,
-    stringr,
     Rcpp,
-    dplyr (>= 1.0.0)
+    stringr
 LinkingTo: 
     Rcpp,
     RcppEigen,
