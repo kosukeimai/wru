@@ -9,6 +9,9 @@ This R package implements the methods proposed in Imai, K. and Khanna, K. (2016)
 
 Here is a simple example that predicts the race/ethnicity of voters based only on their surnames. 
 ```r
+# optional
+# library(future)
+# plan(multisession) 
 library(wru)
 data(voters)
 predict_race(voter.file = voters, surname.only = T)
