@@ -36,6 +36,8 @@
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
 #' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
+#' @importFrom furrr future_map_dfr
+#' @importfrom purrr map_dfr
 #' @export
 census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, retry = 3, save_temp = NULL) {
   
@@ -107,16 +109,17 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     county_list <- temp$county_list
     census <- temp$census
     
-    for (c in 1:length(county_list)) {
-      print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-      region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
+    message('Running tract by county...')
+    
+    census_tracts <- furrr::future_map_dfr(1:length(county_list), function(county) {
+      message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
+      region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
       census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_county, retry)
-      census <- rbind(census, census.temp)
-      if (!is.null(save_temp)) {
-        save(census, file = save_temp)
       }
-    }
-    rm(census.temp)
+    )
+    
+    census <- rbind(census, census_tracts)
+    rm(census_tracts)
   }
   
   if (geo == "block") {
@@ -131,28 +134,30 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     county_list <- temp$county_list
     census <- temp$census
     
-    for (c in 1:length(county_list)) {
-      print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-      
-      region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      print(region_tract)
-      tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
-      tract_list <- tract_df$tract
-      
-      for (t in 1:length(tract_list)) {
-        print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
+    message('Running block by county...')
+    
+    census_blocks <- furrr::future_map_dfr(
+      1:length(county_list), 
+      function(county) {
+        message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         
-        region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-        census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
-        census <- rbind(census, census.temp)
+        region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
+        message(region_tract)
+        tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
+        tract_list <- tract_df$tract
+        
+        purrr::map_dfr(1:length(tract_list), function(tract) {
+          message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
+          
+          region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
+          census.temp <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
+          return(census.temp)
+        })
       }
-      if (!is.null(save_temp)) {
-        save(census, file = save_temp)
-      }
-    }
+    )
     
-    rm(census.temp)
-    
+    census <- rbind(census, census_blocks)
+    rm(census_blocks)
   }
   
   census$state <- state

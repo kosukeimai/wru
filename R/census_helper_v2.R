@@ -71,7 +71,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
   
   for (s in 1:length(states)) {
     
-    print(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
+    message(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
     
     if (geo == "place") {

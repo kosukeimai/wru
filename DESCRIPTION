@@ -26,6 +26,7 @@ Imports:
     future,
     furrr,
     PL94171,
+    purrr,
     Rcpp,
     stringr
 LinkingTo: 

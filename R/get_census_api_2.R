@@ -38,15 +38,15 @@ get_census_api_2 <- function(data_url, key, get, region, retry = 3){
   dat_raw <- try(readLines(api_call, warn="F"))
 
   while ((class(dat_raw) == 'try-error') && (retry > 0)) {
-    print(paste("Try census server again:", data_url))
+    message(paste("Try census server again:", data_url))
     Sys.sleep(30)
     retry <- retry - 1
     dat_raw <- try(readLines(api_call, warn="F"))
   }
 
   if(class(dat_raw) == 'try-error') {
-    print("Data access failure at the census website, please try again by re-run the previous command")
-    stop(print(api_call))
+    message("Data access failure at the census website, please try again by re-run the previous command")
+    stop(message(api_call))
     return()
   }
   if (class(dat_raw) != 'try-error' & "TRUE" %in% names(table(grepl("Invalid Key", dat_raw)))) {

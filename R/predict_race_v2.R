@@ -83,17 +83,17 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
 
   # check the names
   if(namesToUse == 'last') {
-    print("Proceeding with last name-only predictions...")
+    message("Proceeding with last name-only predictions...")
     if(!("last" %in% names(voter.file)))
       stop("Voter data frame needs to have a column named 'last'.")
 
   } else if(namesToUse == 'last, first') {
-    print("Proceeding with first and last name-only predictions...")
+    message("Proceeding with first and last name-only predictions...")
     if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)))
       stop("Voter data frame needs to have a column named 'last' and a column called 'first'.")
 
   } else if(namesToUse == 'last, first, middle') {
-    print("Proceeding with first, last, and middle name predictions...")
+    message("Proceeding with first, last, and middle name predictions...")
     if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))
        || !("middle" %in% names(voter.file)))
       stop("Voter data frame needs to have a column named 'last', a column called 'first', and a column called 'middle'.")
@@ -103,27 +103,27 @@ predict_race_new <- function(voter.file, namesToUse = 'last', census.geo, census
   if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == F) {
     stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
   } else {
-    print(paste("Proceeding with Census geographic data at", census.geo, "level..."))
+    message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
   }
   if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
     if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
       stop("Please provide a valid Census API key using census.key option.")
       } else {
-        print("Downloading Census geographic data using provided API key...")
+        message("Downloading Census geographic data using provided API key...")
       }
     } else {
       if (!("state" %in% names(voter.file))) {
         stop("voter.file object needs to have a column named state.")
       }
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
-        print("census.data object does not include all states in voter.file object.")
+        message("census.data object does not include all states in voter.file object.")
         if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
           stop("Please provide either a valid Census API key or valid census.data object that covers all states in voter.file object.")
         } else {
-          print("Downloading Census geographic data for states not included in census.data object...")
+          message("Downloading Census geographic data for states not included in census.data object...")
         }
       } else {
-        print("Using Census geographic data from provided census.data object...")
+        message("Using Census geographic data from provided census.data object...")
       }
     }
 
