@@ -34,7 +34,9 @@ get_census_api <- function(data_url, key, vars, region, retry = 3) {
     vars <- vec_to_chunk(vars) # Split variables into a list
     get <- lapply(vars, function(x) paste(x, sep='', collapse=","))
     # data <- lapply(vars, function(x) get_census_api_2(data_url, key, x, region, retry))
-    data <- lapply(vars, function(x) get_census_api_2(data_url, key, x, region, retry))
+    data <- furrr::future_map(
+      vars, 
+      function(x) get_census_api_2(data_url, key, x, region, retry))
     } else {
       get <- paste(vars, sep='', collapse=',')
       data <- list(get_census_api_2(data_url, key, get, region, retry))
