@@ -14,12 +14,11 @@
 //' @param pi_s Numeric matrix of race | surname prior probabilities.
 //' @param pi_f Same as `pi_s`, but for first names.
 //' @param pi_m Same as `pi_s`, but for middle names.
-//' @param pi_nr Vector of marginal probability distribution over race categories; non-keyword names default to this distribution.
+//' @param pi_nr Matrix of marginal probability distribution over missing names; non-keyword names default to this distribution.
 //' @param which_names Integer; 0=surname only. 1=surname + first name. 2= surname, first, and middle names.
 //' @param samples Integer number of samples to take after (in total)
 //' @param burnin Integer number of samples to discard as burn-in of Markov chain
 //' @param me_race Boolean; should measurement error in race | geography be corrected?
-//' @param me_name Boolean; should measurement error in race | names be corrected?
 //' @param race_init Integer vector of initial race assignments
 //' @param verbose Boolean; should informative messages be printed?
 //'
@@ -30,18 +29,14 @@ arma::umat sample_me(const arma::uvec& last_name,
                      const arma::uvec& mid_name,
                      const arma::uvec& geo,
                      const arma::umat& N_rg,
-                     const arma::umat& M_rs,
-                     const arma::umat& M_rf,
-                     const arma::umat& M_rm,
                      const arma::mat& alpha,
                      const arma::mat& pi_s,
                      const arma::mat& pi_f,
                      const arma::mat& pi_m,
-                     const arma::vec& pi_nr,
+                     const arma::mat& pi_nr,
                      const arma::uword which_names,
                      const arma::uword samples,
                      const arma::uword burnin,
-                     const bool me_name,
                      const bool me_race,
                      const arma::uvec& race_init,
                      const bool verbose)
@@ -63,39 +58,39 @@ arma::umat sample_me(const arma::uvec& last_name,
   arma::uvec race(&race_init[0], N);
   
   //Temporary storage
-  arma::uvec m_r(J, arma::fill::zeros);
-  arma::umat m_rs(J, K, arma::fill::zeros);
+ // arma::uvec m_r(J, arma::fill::zeros);
+  //arma::umat m_rs(J, K, arma::fill::zeros);
   arma::umat n_rg(J, L, arma::fill::zeros);
-  arma::umat m_rf, m_rm;
-  if(which_names > 0){
-    m_rf = m_rf.zeros(J, arma::max(first_name) + 1);
-    if(which_names > 1){
-      m_rm = m_rm.zeros(J, arma::max(mid_name) + 1);
-    }
-  }
+  //arma::umat m_rf, m_rm;
+  //if(which_names > 0){
+    //m_rf = m_rf.zeros(J, arma::max(first_name) + 1);
+    //if(which_names > 1){
+      //m_rm = m_rm.zeros(J, arma::max(mid_name) + 1);
+    //}
+  //}
   
   //Initialize global counts
   arma::uword r_i = 0, l_i = 0, g_i = 0;
   for(arma::uword i = 0; i < N; ++i) {
     r_i = race_init[i];
-    m_r(r_i)++;
-    m_rs(r_i, last_name[i])++;
+    //m_r(r_i)++;
+    //m_rs(r_i, last_name[i])++;
     n_rg(r_i, geo[i])++;
-    if(which_names > 0){
-      m_rf(r_i, first_name[i])++;
-      if(which_names > 1){
-        m_rm(r_i, mid_name[i])++;
-      }
-    }
+    // if(which_names > 0){
+    //   m_rf(r_i, first_name[i])++;
+    //   if(which_names > 1){
+    //     m_rm(r_i, mid_name[i])++;
+    //   }
+    // }
   }
-  const arma::uvec Ms_r = arma::sum(M_rs, 1);
-  arma::uvec Mf_r, Mm_r;
-  if(which_names > 0){
-    Mf_r = arma::sum(M_rf, 1);
-    if(which_names > 1){
-      Mm_r = arma::sum(M_rm, 1);
-    }
-  }
+  //const arma::uvec Ms_r = arma::sum(M_rs, 1);
+  //arma::uvec Mf_r, Mm_r;
+  // if(which_names > 0){
+  //   Mf_r = arma::sum(M_rf, 1);
+  //   if(which_names > 1){
+  //     Mm_r = arma::sum(M_rm, 1);
+  //   }
+  // }
   
   arma::vec probs(J, arma::fill::zeros);
   arma::uword new_r = 0;
@@ -107,16 +102,16 @@ arma::umat sample_me(const arma::uvec& last_name,
     for(arma::uword i = 0; i < N; ++i) {
       
       r_i = race[i]; l_i = last_name[i]; g_i = geo[i];
-      m_r(r_i)--;
+      //m_r(r_i)--;
       n_rg(r_i, g_i)--;
-      m_rs(r_i, l_i)--;
+      //m_rs(r_i, l_i)--;
       kw_lname = l_i < S_KW;
       if(which_names > 0){
         kw_fname = first_name[i] < F_KW;
-        m_rf(r_i, first_name[i])--;
+        //m_rf(r_i, first_name[i])--;
         if(which_names > 1){
           kw_mname = mid_name[i] < M_KW;
-          m_rm(r_i, mid_name[i])--;
+          //m_rm(r_i, mid_name[i])--;
         }
       }
       probs.zeros();
@@ -124,9 +119,9 @@ arma::umat sample_me(const arma::uvec& last_name,
         probs[j] = 0.0;
         // surname
         if(kw_lname){
-          probs[j] += me_name ? log(m_rs(j, l_i) + M_rs(j, l_i) + 1.0) - log(1.0 + Ms_r[j] + m_r[j]) : log(pi_s(j, l_i) + 1e-8);
+          probs[j] += log(pi_s(j, l_i) + 1e-8);
         } else {
-          probs[j] += log(pi_nr[j] + 1e-8);
+          probs[j] += log(pi_nr(j, 0) + 1e-8);
         }
         // if(!probs.is_finite()){
         //   Rcpp::Rcout << "Surname probs: "<< std::endl << probs << std::endl;
@@ -138,15 +133,15 @@ arma::umat sample_me(const arma::uvec& last_name,
         //other names
         if(which_names > 0){
           if(kw_fname){
-            probs[j] += me_name ? log(m_rf(j, first_name[i]) + M_rf(j, first_name[i]) + 1.0) - log(1.0 + Mf_r[j] + m_r[j]) : log(pi_f(j, first_name[i]));
+            probs[j] += log(pi_f(j, first_name[i]));
           } else {
-            probs[j] += log(pi_nr[j] + 1e-8);
+            probs[j] += log(pi_nr(j, 1) + 1e-8);
           }
           if(which_names > 1){
             if(kw_mname){
-              probs[j] += me_name ? log(m_rm(j, mid_name[i]) + M_rm(j, mid_name[i]) + 1.0) - log(1.0 + Mm_r[j] + m_r[j]) : log(pi_m(j, mid_name[i]));
+              probs[j] += log(pi_m(j, mid_name[i]));
             } else {
-              probs[j] += log(pi_nr[j] + 1e-8);
+              probs[j] += log(pi_nr(j, 2) + 1e-8);
             }
           }
         }
@@ -165,14 +160,13 @@ arma::umat sample_me(const arma::uvec& last_name,
       race[i] = new_r;
       
       //Increment counts
-      m_r(new_r)++;
-      
-      m_rs(new_r, l_i)++;
+      //m_r(new_r)++;
+      //m_rs(new_r, l_i)++;
       n_rg(new_r, g_i)++;
       if(which_names > 0){
-        m_rf(new_r, first_name[i])++;
+        //m_rf(new_r, first_name[i])++;
         if(which_names > 1){
-          m_rm(new_r, mid_name[i])++;
+          //m_rm(new_r, mid_name[i])++;
         }
       }
       // 

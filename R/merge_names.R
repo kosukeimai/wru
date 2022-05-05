@@ -42,6 +42,7 @@
 #' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).
 #' @param table.first See \code{\var{table.surnames}}.
 #' @param table.middle See \code{\var{table.surnames}}.
+#' @param impute.names See \code{predict_race}.
 #' @param clean.names A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched
 #' to the database will be cleaned, according to U.S. Census specifications,
@@ -63,56 +64,59 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first=NULL, table.middle=NULL, clean.names = TRUE, impute.missing=TRUE) {
+merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first=NULL, table.middle=NULL, clean.names = TRUE, impute.missing=FALSE, model="BISG_allnames") {
   
   # check the names
-  if(namesToUse == 'last') {
-    if(!("last" %in% names(voter.file)))
-      stop("Voter data frame needs to have a column named 'last'.")
+  if(namesToUse == 'surname') {
+    if(!("surname" %in% names(voter.file)))
+      stop("Voter data frame needs to have a column named 'surname'.")
     
-  } else if(namesToUse == 'last, first') {
-    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file)))
-      stop("Voter data frame needs to have a column named 'last' and a column called 'first'.")
+  } else if(namesToUse == 'surname, first') {
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)))
+      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
     
-  } else if(namesToUse == 'last, first, middle') {
-    if(!("last" %in% names(voter.file)) || !("first" %in% names(voter.file))
+  } else if(namesToUse == 'surname, first, middle') {
+    if(!("lasurnamest" %in% names(voter.file)) || !("first" %in% names(voter.file))
        || !("middle" %in% names(voter.file)))
-      stop("Voter data frame needs to have a column named 'last', a column called 'first', and a column called 'middle'.")
+      stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
   }
   
-  # read in the name files and cast NA to the null string
-  # firstNameDict[is.na(firstNameDict$first_name),]$first_name <- ''
-  # middleNameDict[is.na(middleNameDict$middle_name),]$middle_name <- ''
-  # lastNameDict[is.na(lastNameDict$last_name),]$last_name <- ''
   
-  p_eth <- c("p_whi", "p_bla", "p_his", "p_asi", "p_oth")
+  p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
+  margin_sel <- ifelse(model="BISG_allnames", 2, 1)
   if(is.null(table.surnames)){
-    lastNameDict<- wruData::last
+    lastNameDict<- wruData::last?c
   } else {
     lastNameDict <- table.surnames
-    names(lastNameDict) <- names(wruData::last)
+    lastNameDict[,-1] <- apply(table.surnames[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    lastNameDict[is.na(lastNameDict)] <- 0
+    names(lastNameDict) <- names(wruData::last_c)
   }
   if(is.null(table.first)){
-    firstNameDict<- wruData::first
+    firstNameDict<- wruData::first_c
   } else {
     firstNameDict <- table.first
-    names(firstNameDict) <- names(wruData::first)
+    firstNameDict[,-1] <- apply(table.first[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    firstNameDict[is.na(firstNameDict)] <- 0
+    names(firstNameDict) <- names(wruData::first_c)
   }
   if(is.null(table.middle)){
-    middleNameDict<- wruData::mid
+    middleNameDict<- wruData::mid_c
   } else {
     middleNameDict <- table.middle
-    names(middleNameDict) <- names(wruData::mid)
+    middleNameDict[,-1] <- apply(table.middle[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    middleNameDict[is.na(middleNameDict)] <- 0
+    names(middleNameDict) <- names(wruData::mid_c)
   }
   
   nameDict <- list('first' =firstNameDict,
                    'middle' = middleNameDict,
                    'last' = lastNameDict)
+
   ## Convert names in voter file to upper case
   df <- voter.file
   df$caseid <- 1:nrow(df)
-  
-  df$lastname.match <- df$lastname.upper <- toupper(as.character(df$last))
+  df$lastname.match <- df$lastname.upper <- toupper(as.character(df$surname))
   if(grepl('first', namesToUse))
     df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
   if(grepl('middle', namesToUse)) {
@@ -128,12 +132,12 @@ merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first
     df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
   }
   
-  if(namesToUse == 'last' && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0)
+  if(namesToUse == 'surname' && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0)
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
-  if(namesToUse == 'last, first' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
+  if(namesToUse == 'surname, first' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
      sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0)
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
-  if(namesToUse == 'last, first, middle' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
+  if(namesToUse == 'surname, first, middle' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
      sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0)
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
   
@@ -240,31 +244,43 @@ merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first
   }
   
   
-  ## For unmatched names, just fill with an 1
+  ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
   require(dplyr)
-  warning(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
+  p_miss_last <- mean(is.na(df$p_whi_last))
+  if(p_miss_last > 0){
+    message(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
+  }
   if(grepl('first', namesToUse)) {
-    warning(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
+    p_miss_first <- mean(is.na(df$p_whi_first))
+    if(p_miss_first > 0){
+      message(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
+    }
   }
   if(grepl('middle', namesToUse)) {
-    warning(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
-  }
-  
-  if(impute.missing){
-    inputer <- c(p_whi = .6665,p_bla = .0853, p_his = .1367, p_asi = .0797,p_oth = .0318)
-    for(i in grep("p_", names(df), value=TRUE)) {
-      #df[,i] <- coalesce(df[,i], 1)
-      df[is.na(df[,i]),i] <- inputer[i]
+    p_miss_mid <- mean(is.na(df$p_whi_middle))
+    if(p_miss_mid > 0){
+      message(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
     }
   }
   
+  if(impute.missing){
+    impute.vec <- colMeans(df[, grep("p_", names(df), value=TRUE)], na.rm=TRUE)
+    for(i in grep("p_", names(df), value=TRUE)) {
+      df[,i] <- coalesce(df[,i], impute.vec[i])
+    }
+  } else {
+    for(i in grep("p_", names(df), value=TRUE)) {
+      df[,i] <- coalesce(df[,i], 1)
+    } 
+  }
+  
   # return the data
-  if(namesToUse == 'last')
+  if(namesToUse == 'surname')
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
-  else if(namesToUse == 'last, first')
+  else if(namesToUse == 'surname, first')
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match",
                                   paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"))])
-  else if(namesToUse == 'last, first, middle')
+  else if(namesToUse == 'surname, first, middle')
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match",
                                   paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_"))])
   

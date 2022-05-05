@@ -21,13 +21,10 @@
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
 #'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List. 
-#'  If \code{FALSE}, \code{voter.file} object must contain additional fields specifying 
-#'  Pr(Race | Surname), named as follows: \code{\var{p_whi}} for Whites, 
-#'  \code{\var{p_bla}} for Blacks, \code{\var{p_his}} for Hispanics/Latinos, 
-#'  \code{\var{p_asi}} for Asians, and/or \code{\var{p_oth}} for Other. 
+#'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
 #'  Default is \code{TRUE}.
 #' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will 
-#'  only use surname data and calculate Pr(Race | Surnname). Default is \code{FALSE}.
+#'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 #' @param surname.year A number to specify the year of the census surname statistics. 
 #' These surname statistics is stored in the data, and will be automatically loaded.
 #' The default value is \code{2010}, which means the surname statistics from the 
@@ -72,8 +69,27 @@
 #' Whatever the name of the party registration field in \code{\var{voter.file}}, 
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param impute.missing 
+#' @param model Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".    
+#' @param name.dictionaries Optional named list of \code{data.frame}'s containing counts of names by race.
+#'                          Any of the following named elements are allowed: "surname", "first", "middle". 
+#'                          When present, the objects must follow the same structure as \code{wruData::last_c}, 
+#'                          \code{wruData::first_c}, \code{wruData::middle_c}, respectively.  
+#' @param names.to.use One of 'surname', 'surname, first', or  'surname, first, middle'. Defaults to 'surname'.
+#' @param race.init Vector of initial race for each observation in voter.file. Must be an integer vector, with
+#'                  1=white, 2=black, 3=hispanic, 4=asian, and 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
+#' @param ... Currently only used when \code{model="fBISG"}
+#' @param control List of control arguments only used when \code{model="fBISG"}, including 
+#' \itemize{
+#'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
+#'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+#'  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
+#'  \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
+#'  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
+#' }
+#' 
 #' @return Output will be an object of class \code{data.frame}. It will 
-#'  consist of the original user-input data with additional columns with 
+#'  consist of the original user-input \code{voter.file} with additional columns with 
 #'  predicted probabilities for each of the five major racial categories: 
 #'  \code{\var{pred.whi}} for White, 
 #'  \code{\var{pred.bla}} for Black, 
@@ -97,177 +113,28 @@
 #' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
 #' @export
 
-## Race Prediction Function
 predict_race <- function(voter.file, 
-                         census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.data = NULL,
+                         census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
                          census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
-                         party, retry = 0, impute.missing = TRUE) {
-  
-  # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
-  if ((sex == TRUE || age == TRUE) && (year == "2020")) {
-    stop('Warning: only predictions with both age and sex equal to FALSE are supported when using 2020 census data.')
+                         party, retry = 0, impute.missing = TRUE, 
+                         model="BISG_surname", name.dictionaries = NULL, names.to.use = "surname", ...) {
+  ## Check model type
+  if(!(model %in% c("BISG_surname","BISG_allnames", "fBISG"))){
+    stop("'model' must be one of 'BISG_surname' (for original wru results), 'BISG_allnames' (for model that also accommodates first and middle name data), or 'fBISG' (for the fully Bayesian model that accommodates all name data).")
   }
-  
-  if (!missing(census.geo) && (census.geo == "precinct")) {
-    # geo <- "precinct"
-    stop('Error: census_helper function does not currently support merging precinct-level data.')
-  }
-  
-  vars.orig <- names(voter.file)
-  
-  if (surname.only == T) {
-    print("Proceeding with surname-only predictions...")
-    if (!("surname" %in% names(voter.file))) {
-      stop("Voter data frame needs to have a column named surname")
-    }
+  ## Build model calls
+  cl <- match.call()
+  if(model == "BISG_surname"){
+    cl[[1L]] <- quote(wru:::.predict_race_old)
+  } else if ("BISG_allnames"){
+    cl[[1L]] <- quote(wru:::.predict_race_new)
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == F) {
-      stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
-    } else {
-      print(paste("Proceeding with Census geographic data at", census.geo, "level..."))
-    }
-    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
-      if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-        stop("Please provide a valid Census API key using census.key option.")
-      } else {
-        print("Downloading Census geographic data using provided API key...")
-      }
-    } else {
-      if (!("state" %in% names(voter.file))) {
-        stop("voter.file object needs to have a column named state.")
-      }
-      if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
-        print("census.data object does not include all states in voter.file object.")
-        if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-          stop("Please provide either a valid Census API key or valid census.data object that covers all states in voter.file object.")
-        } else {
-          print("Downloading Census geographic data for states not included in census.data object...")
-        }
-      } else {
-        print("Using Census geographic data from provided census.data object...")
-      }
-    }
+    cl[[1L]] <- quote(wru:::.predict_race_me)
   }
+  res <- eval(cl, parent.frame())
   
-  eth <- c("whi", "bla", "his", "asi", "oth")
+  return(res)
   
-  ## Merge in Pr(Race | Surname) if necessary
-  if (census.surname) {
-    if (!(surname.year %in% c(2000,2010,2020))) {
-      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2020."))
-    }
-      voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = name.data, impute.missing = impute.missing)
-  } else {
-    # Check if voter.file has the nessary data
-    for (k in 1:length(eth)) {
-      if (paste("p", eth[k], sep = "_") %in% names(voter.file) == F) {
-        stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))
-      }
-    }
-  }
-  
-  ## Surname-Only Predictions
-  if (surname.only) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("p", eth[k], sep = "_")] / apply(voter.file[paste("p", eth, sep = "_")], 1, sum)
-    }
-    pred <- paste("pred", eth, sep = ".")
-    return(voter.file[c(vars.orig, pred)])
-  }
-  
-  ## Merge in Pr(Party | Race) if necessary
-  if (missing(party) == F) {
-    voter.file$PID <- voter.file[, party]
-    voter.file <- merge(voter.file, get("pid")[names(get("pid")) %in% "party" == F], by = "PID", all.x = T)  
-  }
-  
-  if (census.geo == "place") {
-    if (!("place" %in% names(voter.file))) {
-      stop("voter.file object needs to have a column named place.")
-    }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "place", 
-                                age = age, 
-                                sex = sex, 
-                                year = year, 
-                                census.data = census.data, retry = retry)
-  }
-  
-  if (census.geo == "block") {
-    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
-      stop("voter.file object needs to have columns named block, tract, and county.")
-    }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "block", 
-                                age = age, 
-                                sex = sex, 
-                                year = year,
-                                census.data = census.data, retry = retry)
-  }
-  
-  if (census.geo == "precinct") {
-    geo <- "precinct"
-    stop('Error: census_helper function does not currently support precinct-level data.')
-  }
-  
-  if (census.geo == "tract") {
-    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
-      stop("voter.file object needs to have columns named tract and county.")
-    }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "tract", 
-                                age = age, 
-                                sex = sex, 
-                                year = year,
-                                census.data = census.data, retry = retry)
-  }
-  
-  if (census.geo == "county") {
-    if (!("county" %in% names(voter.file))) {
-      stop("voter.file object needs to have a column named county.")
-    }
-    voter.file <- census_helper(key = census.key, 
-                                voter.file = voter.file, 
-                                states = "all", 
-                                geo = "county", 
-                                age = age, 
-                                sex = sex, 
-                                year = year,
-                                census.data = census.data, retry = retry)
-  }
-  
-  ## Pr(Race | Surname, Geolocation)
-  if (missing(party)) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
-  
-  ## Pr(Race | Surname, Geolocation, Party)
-  if (missing(party) == F) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")] * voter.file[paste("r_pid", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = T)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
-  
-  for (k in 1:length(eth)) {
-    voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("q", eth[k], sep = "_")]
-  }
-  pred <- paste("pred", eth, sep = ".")
-  
-  return(voter.file[c(vars.orig, pred)])
 }
+  
+ 

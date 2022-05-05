@@ -158,7 +158,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
     census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
-    voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = T)
+    voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = TRUE)
       
     # }
     

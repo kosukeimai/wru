@@ -15,17 +15,16 @@
 #' @param pi_s Numeric matrix of race | surname prior probabilities.
 #' @param pi_f Same as `pi_s`, but for first names.
 #' @param pi_m Same as `pi_s`, but for middle names.
-#' @param pi_nr Vector of marginal probability distribution over race categories; non-keyword names default to this distribution.
+#' @param pi_nr Matrix of marginal probability distribution over missing names; non-keyword names default to this distribution.
 #' @param which_names Integer; 0=surname only. 1=surname + first name. 2= surname, first, and middle names.
 #' @param samples Integer number of samples to take after (in total)
 #' @param burnin Integer number of samples to discard as burn-in of Markov chain
 #' @param me_race Boolean; should measurement error in race | geography be corrected?
-#' @param me_name Boolean; should measurement error in race | names be corrected?
 #' @param race_init Integer vector of initial race assignments
 #' @param verbose Boolean; should informative messages be printed?
 #'
 #' @keywords internal
-sample_me <- function(last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose) {
-    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, M_rs, M_rf, M_rm, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_name, me_race, race_init, verbose)
+sample_me <- function(last_name, first_name, mid_name, geo, N_rg, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_race, race_init, verbose) {
+    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_race, race_init, verbose)
 }
 

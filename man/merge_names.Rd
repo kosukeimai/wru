@@ -4,7 +4,16 @@
 \alias{merge_names}
 \title{Surname probability merging function.}
 \usage{
-merge_names(voter.file, namesToUse, clean.names = T)
+merge_names(
+  voter.file,
+  namesToUse,
+  table.surnames = NULL,
+  table.first = NULL,
+  table.middle = NULL,
+  clean.names = TRUE,
+  impute.missing = FALSE,
+  model = "BISG_allnames"
+)
 }
 \arguments{
 \item{voter.file}{An object of class \code{data.frame}.  Must contain a row for each individual being predicted,
@@ -19,10 +28,24 @@ Other options are \code{"last, first"}, indicating that both last and first name
 used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 be used.}
 
+\item{table.surnames}{An object of class \code{data.frame} provided by the 
+users as an alternative surname dictionary. It will consist of a list of 
+U.S. surnames, along with the associated probabilities P(name | ethnicity) 
+for ethnicities: white, Black, Hispanic, Asian, and other. Default is \code{NULL}.
+(\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
+\code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
+\code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).}
+
+\item{table.first}{See \code{\var{table.surnames}}.}
+
+\item{table.middle}{See \code{\var{table.surnames}}.}
+
 \item{clean.names}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 any surnames in \code{\var{voter.file}} that cannot initially be matched
 to the database will be cleaned, according to U.S. Census specifications,
 in order to increase the chance of finding a match. Default is \code{TRUE}.}
+
+\item{impute.names}{See \code{predict_race}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

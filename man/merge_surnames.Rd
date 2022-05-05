@@ -7,8 +7,9 @@
 merge_surnames(
   voter.file,
   surname.year = 2010,
-  clean.surname = T,
-  impute.missing = T
+  name.data,
+  clean.surname = TRUE,
+  impute.missing = TRUE
 )
 }
 \arguments{
