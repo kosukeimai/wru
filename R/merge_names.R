@@ -64,7 +64,7 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first=NULL, table.middle=NULL, clean.names = TRUE, impute.missing=FALSE, model="BISG_allnames") {
+merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first=NULL, table.middle=NULL, clean.names = TRUE, impute.missing=FALSE, model="BISG") {
   
   # check the names
   if(namesToUse == 'surname') {
@@ -76,14 +76,14 @@ merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first
       stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
     
   } else if(namesToUse == 'surname, first, middle') {
-    if(!("lasurnamest" %in% names(voter.file)) || !("first" %in% names(voter.file))
+    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))
        || !("middle" %in% names(voter.file)))
       stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
   }
   
   
   p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
-  margin_sel <- ifelse(model="BISG_allnames", 2, 1)
+  margin_sel <- 2
   if(is.null(table.surnames)){
     lastNameDict<- wruData::last?c
   } else {
@@ -246,30 +246,30 @@ merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first
   
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
   require(dplyr)
-  p_miss_last <- mean(is.na(df$p_whi_last))
+  p_miss_last <- mean(is.na(df$c_whi_last))
   if(p_miss_last > 0){
-    message(paste(paste(sum(is.na(df$p_whi_last)), " (", round(100*mean(is.na(df$p_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
+    message(paste(paste(sum(is.na(df$c_whi_last)), " (", round(100*mean(is.na(df$c_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
   }
   if(grepl('first', namesToUse)) {
-    p_miss_first <- mean(is.na(df$p_whi_first))
+    p_miss_first <- mean(is.na(df$c_whi_first))
     if(p_miss_first > 0){
-      message(paste(paste(sum(is.na(df$p_whi_first)), " (", round(100*mean(is.na(df$p_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
+      message(paste(paste(sum(is.na(df$c_whi_first)), " (", round(100*mean(is.na(df$c_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
     }
   }
   if(grepl('middle', namesToUse)) {
-    p_miss_mid <- mean(is.na(df$p_whi_middle))
+    p_miss_mid <- mean(is.na(df$c_whi_middle))
     if(p_miss_mid > 0){
-      message(paste(paste(sum(is.na(df$p_whi_middle)), " (", round(100*mean(is.na(df$p_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
+      message(paste(paste(sum(is.na(df$c_whi_middle)), " (", round(100*mean(is.na(df$c_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
     }
   }
   
   if(impute.missing){
-    impute.vec <- colMeans(df[, grep("p_", names(df), value=TRUE)], na.rm=TRUE)
+    impute.vec <- colMeans(df[, grep("c_", names(df), value=TRUE)], na.rm=TRUE)
     for(i in grep("p_", names(df), value=TRUE)) {
       df[,i] <- coalesce(df[,i], impute.vec[i])
     }
   } else {
-    for(i in grep("p_", names(df), value=TRUE)) {
+    for(i in grep("c_", names(df), value=TRUE)) {
       df[,i] <- coalesce(df[,i], 1)
     } 
   }

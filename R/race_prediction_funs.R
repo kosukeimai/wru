@@ -43,7 +43,7 @@ NULL
 #' surname dictionary. 
 #' @rdname modfuns
 .predict_race_old <- function(voter.file, 
-                              census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.data = NULL,
+                              census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
                               census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
                               party, retry = 0, impute.missing = TRUE, ...) {
   
@@ -100,14 +100,20 @@ NULL
     if (!(surname.year %in% c(2000,2010,2020))) {
       stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2020."))
     }
-    voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = name.data, impute.missing = impute.missing)
+    voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = NULL, impute.missing = impute.missing)
   } else {
-    # Check if voter.file has the nessary data
+    # Check if voter.file has the necessary data
+    if(is.null(name.dictionaries) | !("surname" %in% names(name.dictionaries)) ){
+      stop("User must provide a 'name.dictionaries', with named element 'surname'.")
+    }
     for (k in 1:length(eth)) {
-      if (paste("p", eth[k], sep = "_") %in% names(voter.file) == FALSE) {
-        stop(paste("voter.file object needs to have columns named ", paste(paste("p", eth, sep = "_"), collapse = " and "), ".", sep = ""))
+      if ((paste("c", eth[k], sep = "_") %in% names(name.dictionaries[["surname"]])) == FALSE) {
+        stop(paste("name.dictionaries element 'surname' needs to have columns named ", paste(paste("c", eth, sep = "_"), collapse = " and "), ".", sep = ""))
       }
     }
+    name.dictionaries[["surname"]] <- apply(name.dictionaries[["surname"]], 1, function(x)x/sum(x, na.rm=TRUE))
+    name.dictionaries[["surname"]][is.na(name.dictionaries[["surname"]])] <- 0
+    voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data =  name.dictionaries[["surname"]], impute.missing = impute.missing)
   }
   
   ## Surname-Only Predictions
@@ -252,15 +258,15 @@ NULL
   if(any(!is.null(name.dictionaries))){
     if(!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData::last_c)))
-      stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
+      #stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
     }
     if(!is.null(name.dictionaries[["first"]])) {
       stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData::first_c)))  
-      stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
+      #stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
     }
     if(!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData::middle_c)))  
-      stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData::mid_c)))  
+      #stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
     }
     
   }
@@ -355,7 +361,7 @@ NULL
     preds <- preds*voter.file[,grep("_first", names(voter.file))]
   if(grepl('middle', names.to.use))
     preds <- preds*voter.file[,grep("_middle", names(voter.file))]
-  preds <- apply(preds, 2, FUN = function(x) {x/rowSums(preds)})
+  preds <- apply(preds, 2, function(x) {x/rowSums(preds)})
   colnames(preds) <- paste("pred", eth, sep = ".")
   
   return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
@@ -405,15 +411,15 @@ NULL
   if(any(!is.null(name.dictionaries))){
     if(!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData::last_c)))
-      stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
+      #stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
     }
     if(!is.null(name.dictionaries[["first"]])) {
       stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData::first_c)))  
-      stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
+      #stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
     }
     if(!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData::middle_c)))  
-      stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData::mid_c)))  
+      #stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
     }
     
   }
@@ -493,13 +499,13 @@ NULL
                        return(list(tots = tmp_la))
                      })
   N_rg <- do.call(rbind, lapply(tmp_tabs, function(x)x$tots))
-  zero_ind <- rowSums(N_rg[, grep("r_", names(N_rg), value=TRUE)]) < 1
-  n_zero <- sum(zero_ind)
-  rm(race_pred_args)
-  ##Subset to geo's in vf
   N_rg_geo <- do.call(paste, N_rg[,geo_id_names])
   N_rg <- N_rg[N_rg_geo %in% geo_id, ] 
+  rm(race_pred_args)
+  ##Subset to geo's in vf
   if(ctrl$me.correct){
+    zero_ind <- rowSums(N_rg[, grep("r_", names(N_rg), value=TRUE)]) < 1
+    n_zero <- sum(zero_ind)
     N_rg[zero_ind, grep("r_", names(N_rg), value=TRUE)] <- t(rmultinom(n_zero, 1, ctrl$race.marginal))
     alpha_ <- t(apply(as.matrix(N_rg[, grep("r_", names(N_rg), value=TRUE)]), 1,
                       function(x){
@@ -542,14 +548,14 @@ NULL
   n_groups <- length(orig_ord)
   ## Create name indeces
   name_data <- vector("list", 3)
-  names(name_data) <- c("last","first","middle") 
+  names(name_data) <- c("surname","first","middle") 
   if(ctrl$verbose){
     cat("Pre-processing names...\n")
   }
-  for(ntype in c("last","first","middle")){
+  for(ntype in c("surname","first","middle")){
     if(ntype %in% name_types){
       ntab <- switch(ntype, 
-                     last=as.data.frame(if(!is.null(name.dictionaries[["surname"]])){name.dictionaries[["surname"]]}else{wruData::last_c}),
+                     surname=as.data.frame(if(!is.null(name.dictionaries[["surname"]])){name.dictionaries[["surname"]]}else{wruData::last_c}),
                      first=as.data.frame(if(!is.null(name.dictionaries[["first"]])){name.dictionaries[["first"]]}else{wruData::first_c}),
                      middle=as.data.frame(if(!is.null(name.dictionaries[["middle"]])){name.dictionaries[["middle"]]}else{wruData::mid_c}))
       kw_names <- toupper(ntab[,1])
@@ -601,13 +607,13 @@ NULL
   }
   race_samples <- lapply(seq.int(n_groups),
                          function(cluster){
-                           tmp <- sample_me(name_data[["last"]]$record_name_id[[cluster]] - 1L,
+                           tmp <- sample_me(name_data[["surname"]]$record_name_id[[cluster]] - 1L,
                                             name_data[["first"]]$record_name_id[[cluster]] - 1L,
                                             name_data[["middle"]]$record_name_id[[cluster]] - 1L,
                                             r_g_t[[cluster]]$geo_ - 1L,
                                             r_g_t[[cluster]]$N_rg_,
                                             r_g_t[[cluster]]$alpha_,
-                                            name_data[["last"]]$pi_,
+                                            name_data[["surname"]]$pi_,
                                             name_data[["first"]]$pi_,
                                             name_data[["middle"]]$pi_,
                                             pi_miss, 

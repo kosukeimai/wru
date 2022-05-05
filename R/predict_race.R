@@ -117,16 +117,16 @@ predict_race <- function(voter.file,
                          census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
                          census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
                          party, retry = 0, impute.missing = TRUE, 
-                         model="BISG_surname", name.dictionaries = NULL, names.to.use = "surname", ...) {
+                         model="BISG", name.dictionaries = NULL, names.to.use = "surname", ...) {
   ## Check model type
-  if(!(model %in% c("BISG_surname","BISG_allnames", "fBISG"))){
-    stop("'model' must be one of 'BISG_surname' (for original wru results), 'BISG_allnames' (for model that also accommodates first and middle name data), or 'fBISG' (for the fully Bayesian model that accommodates all name data).")
+  if(!(model %in% c("BISG","fBISG"))){
+    stop("'model' must be one of 'BISG' (for standard BISG results, or results with all name data without error correction) or 'fBISG' (for the fully Bayesian model that accommodates all name data).")
   }
   ## Build model calls
   cl <- match.call()
-  if(model == "BISG_surname"){
+  if((model == "BISG") & (names.to.use == "surname")){
     cl[[1L]] <- quote(wru:::.predict_race_old)
-  } else if ("BISG_allnames"){
+  } else if ((model == "BISG") & (names.to.use != "surname")){
     cl[[1L]] <- quote(wru:::.predict_race_new)
   } else {
     cl[[1L]] <- quote(wru:::.predict_race_me)

@@ -28,6 +28,9 @@
 #' @param surname.year An object of class \code{numeric} indicating which year 
 #'  Census Surname List is from. Accepted values are \code{2010} and \code{2000}. 
 #'  Default is \code{2010}.
+#' @param name.data An object of class \code{data.frame}. Must contain a leading 
+#' column of surnames, and 5 subsequent columns, with Pr(Race | Surname) for each 
+#' of the five major racial categories.      
 #' @param clean.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched 
 #' to surname lists will be cleaned, according to U.S. Census specifications, 
