@@ -7,40 +7,44 @@
 get_census_api(data_url, key, vars, region, retry = 0)
 }
 \arguments{
-\item{data_url}{URL root of the API, including the question mark, 
+\item{data_url}{URL root of the API, including the question mark,
 e.g., \code{"https://api.census.gov/data/2010/dec/dec/sf1?"}.}
 
-\item{key}{A required character object containing user's Census API key, 
+\item{key}{A required character object containing user's Census API key,
 which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
-\item{vars}{A character vector of variables to get, 
+\item{vars}{A character vector of variables to get,
 e.g., \code{c("P005003","P005004","P005005", "P005006")}.
-If there are more than 50 variables, then function will automatically 
+If there are more than 50 variables, then function will automatically
 split variables into separate queries.}
 
 \item{region}{Character object specifying which region to obtain data for.
-Must contain "for" and possibly "in", 
+Must contain "for" and possibly "in",
 e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
-If successful, output will be an object of class \code{data.frame}. 
+If successful, output will be an object of class \code{data.frame}.
  If unsuccessful, function prints the URL query that caused the error.
 }
 \description{
 \code{get_census_api} obtains U.S. Census data via the public API.
 }
 \details{
-This function obtains U.S. Census data via the public API. User 
+This function obtains U.S. Census data via the public API. User
 can specify the variables and region(s) for which to obtain data.
 }
 \examples{
-\dontrun{get_census_api(data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...", 
-vars = c("P005003","P005004","P005005", "P005006"), region = "for=county:*&in=state:34")}
+\dontrun{
+get_census_api(
+  data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...",
+  vars = c("P005003", "P005004", "P005005", "P005006"), region = "for=county:*&in=state:34"
+)
+}
 
 }
 \references{
-Based on code authored by Nicholas Nagle, which is available 
+Based on code authored by Nicholas Nagle, which is available
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }

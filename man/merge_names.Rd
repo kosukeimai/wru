@@ -12,7 +12,7 @@ merge_names(
   table.middle = NULL,
   clean.names = TRUE,
   impute.missing = FALSE,
-  model = "BISG_allnames"
+  model = "BISG"
 )
 }
 \arguments{
@@ -28,9 +28,9 @@ Other options are \code{"last, first"}, indicating that both last and first name
 used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 be used.}
 
-\item{table.surnames}{An object of class \code{data.frame} provided by the 
-users as an alternative surname dictionary. It will consist of a list of 
-U.S. surnames, along with the associated probabilities P(name | ethnicity) 
+\item{table.surnames}{An object of class \code{data.frame} provided by the
+users as an alternative surname dictionary. It will consist of a list of
+U.S. surnames, along with the associated probabilities P(name | ethnicity)
 for ethnicities: white, Black, Hispanic, Asian, and other. Default is \code{NULL}.
 (\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
 \code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,

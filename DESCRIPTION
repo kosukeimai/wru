@@ -21,13 +21,16 @@ Depends:
     R (>= 4.1.0),
     utils
 Imports:
-    foreach (>= 1.5.1),
     devtools (>= 1.10.0),
+    dplyr,
+    future,
+    furrr,
+    purrr,
     stringr,
-    dplyr
+    piggyback
 Suggests:
     testthat,
-    wruData (>= 0.0.1),
+    covr
 LinkingTo:
     Rcpp,
     RcppArmadillo
@@ -37,4 +40,3 @@ LazyDataCompression: xz
 License: GPL (>= 3)
 RoxygenNote: 7.1.2
 Encoding: UTF-8
-Additional_repositories: https://solivella.github.io/wruData

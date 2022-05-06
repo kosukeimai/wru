@@ -2,84 +2,87 @@
 #'
 #' \code{predict_race} makes probabilistic estimates of individual-level race/ethnicity.
 #'
-#' This function implements the Bayesian race prediction methods outlined in 
-#' Imai and Khanna (2015). The function produces probabilistic estimates of 
+#' This function implements the Bayesian race prediction methods outlined in
+#' Imai and Khanna (2015). The function produces probabilistic estimates of
 #' individual-level race/ethnicity, based on surname, geolocation, and party.
-#' @param voter.file An object of class \code{data.frame}. 
-#' Must contain a row for each individual being predicted, 
+#' @param voter.file An object of class \code{data.frame}.
+#' Must contain a row for each individual being predicted,
 #' as well as a field named \code{\var{surname}} containing each individual's surname.
-#' If using geolocation in predictions, \code{\var{voter.file}} must contain a field named 
-#' \code{\var{state}}, which contains the two-character abbreviation for each individual's 
-#' state of residence (e.g., \code{"nj"} for New Jersey). 
-#' If using Census geographic data in race/ethnicity predictions, 
-#' \code{\var{voter.file}} must also contain at least one of the following fields: 
-#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}. 
-#' These fields should contain character strings matching U.S. Census categories. 
-#' County is three characters (e.g., \code{"031"} not \code{"31"}), 
-#' tract is six characters, and block is four characters. Place is five characters. 
+#' If using geolocation in predictions, \code{\var{voter.file}} must contain a field named
+#' \code{\var{state}}, which contains the two-character abbreviation for each individual's
+#' state of residence (e.g., \code{"nj"} for New Jersey).
+#' If using Census geographic data in race/ethnicity predictions,
+#' \code{\var{voter.file}} must also contain at least one of the following fields:
+#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}.
+#' These fields should contain character strings matching U.S. Census categories.
+#' County is three characters (e.g., \code{"031"} not \code{"31"}),
+#' tract is six characters, and block is four characters. Place is five characters.
 #' See below for other optional fields.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, 
-#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname) 
-#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List. 
+#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
+#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
+#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
 #'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
 #'  Default is \code{TRUE}.
-#' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will 
+#' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 #'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
-#' @param surname.year A number to specify the year of the census surname statistics. 
+#' @param surname.year A number to specify the year of the census surname statistics.
 #' These surname statistics is stored in the data, and will be automatically loaded.
-#' The default value is \code{2010}, which means the surname statistics from the 
+#' The default value is \code{2010}, which means the surname statistics from the
 #' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
-#' @param census.geo An optional character vector specifying what level of 
+#' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
-#' Note: sufficient information must be in user-defined \code{\var{voter.file}} object. 
-#' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}} 
+#' Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
+#' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
 #' must have column named \code{county}.
-#' If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}} 
+#' If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}}
 #' must have columns named \code{county} and \code{tract}.
-#' And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}} 
+#' And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}}
 #' must have columns named \code{county}, \code{tract}, and \code{block}.
-#' If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}} 
+#' If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
 #' must have column named \code{place}.
-#' Specifying \code{\var{census.geo}} will call \code{census_helper} function 
-#' to merge Census geographic data at specified level of geography. 
-#' @param census.key A character object specifying user's Census API 
-#'  key. Required if \code{\var{census.geo}} is specified, because 
+#' Specifying \code{\var{census.geo}} will call \code{census_helper} function
+#' to merge Census geographic data at specified level of geography.
+#' @param census.key A character object specifying user's Census API
+#'  key. Required if \code{\var{census.geo}} is specified, because
 #'  a valid Census API key is required to download Census geographic data.
-#' @param census.data A list indexed by two-letter state abbreviations, 
-#' which contains pre-saved Census geographic data. 
+#' @param census.data A list indexed by two-letter state abbreviations,
+#' which contains pre-saved Census geographic data.
 #' Can be generated using \code{get_census_data} function.
-#' @param age An optional \code{TRUE}/\code{FALSE} object specifying whether to 
-#' condition race predictions on age (in addition to surname and geolocation). 
+#' @param age An optional \code{TRUE}/\code{FALSE} object specifying whether to
+#' condition race predictions on age (in addition to surname and geolocation).
 #' Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
-#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
+#' May only be set to \code{TRUE} if \code{census.geo} option is specified.
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
-#' @param sex optional \code{TRUE}/\code{FALSE} object specifying whether to 
+#' @param sex optional \code{TRUE}/\code{FALSE} object specifying whether to
 #' condition race predictions on sex (in addition to surname and geolocation).
 #' Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
-#' May only be set to \code{TRUE} if \code{census.geo} option is specified. 
-#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}}, 
+#' May only be set to \code{TRUE} if \code{census.geo} option is specified.
+#' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
-#' @param year An optional character vector specifying the year of U.S. Census geographic 
+#' @param year An optional character vector specifying the year of U.S. Census geographic
 #' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
-#' @param party An optional character object specifying party registration field 
-#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}. 
-#' If specified, race/ethnicity predictions will be conditioned 
-#' on individual's party registration (in addition to geolocation). 
-#' Whatever the name of the party registration field in \code{\var{voter.file}}, 
+#' @param party An optional character object specifying party registration field
+#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
+#' If specified, race/ethnicity predictions will be conditioned
+#' on individual's party registration (in addition to geolocation).
+#' Whatever the name of the party registration field in \code{\var{voter.file}},
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
-#' @param impute.missing 
-#' @param model Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".    
-#' @param name.dictionaries Optional named list of \code{data.frame}'s containing counts of names by race.
-#'                          Any of the following named elements are allowed: "surname", "first", "middle". 
-#'                          When present, the objects must follow the same structure as \code{wruData::last_c}, 
-#'                          \code{wruData::first_c}, \code{wruData::middle_c}, respectively.  
-#' @param names.to.use One of 'surname', 'surname, first', or  'surname, first, middle'. Defaults to 'surname'.
-#' @param race.init Vector of initial race for each observation in voter.file. Must be an integer vector, with
-#'                  1=white, 2=black, 3=hispanic, 4=asian, and 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
+#' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
+#' @param model Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".
+#' @param name.dictionaries Optional named list of \code{data.frame}'s 
+#' containing counts of names by race. Any of the following named elements 
+#' are allowed: "surname", "first", "middle". When present, the objects must 
+#' follow the same structure as \code{last_c}, \code{first_c},
+#'\code{mid_c}, respectively.
+#' @param names.to.use One of 'surname', 'surname, first', or  'surname, first,
+#'  middle'. Defaults to 'surname'.
+#' @param race.init Vector of initial race for each observation in voter.file.
+#' Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
+#' 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
 #' @param ... Currently only used when \code{model="fBISG"}
-#' @param control List of control arguments only used when \code{model="fBISG"}, including 
+#' @param control List of control arguments only used when \code{model="fBISG"}, including
 #' \itemize{
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
 #'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
@@ -87,54 +90,72 @@
 #'  \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
 #'  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 #' }
-#' 
-#' @return Output will be an object of class \code{data.frame}. It will 
-#'  consist of the original user-input \code{voter.file} with additional columns with 
-#'  predicted probabilities for each of the five major racial categories: 
-#'  \code{\var{pred.whi}} for White, 
-#'  \code{\var{pred.bla}} for Black, 
-#'  \code{\var{pred.his}} for Hispanic/Latino, 
-#'  \code{\var{pred.asi}} for Asian/Pacific Islander, and 
+#'
+#' @return Output will be an object of class \code{data.frame}. It will
+#'  consist of the original user-input \code{voter.file} with additional columns with
+#'  predicted probabilities for each of the five major racial categories:
+#'  \code{\var{pred.whi}} for White,
+#'  \code{\var{pred.bla}} for Black,
+#'  \code{\var{pred.his}} for Hispanic/Latino,
+#'  \code{\var{pred.asi}} for Asian/Pacific Islander, and
 #'  \code{\var{pred.oth}} for Other/Mixed.
-#'  
+#'
 #' @examples
 #' data(voters)
 #' predict_race(voters, surname.only = TRUE)
 #' predict_race(voter.file = voters, surname.only = TRUE)
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...")}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)}
-#' \dontrun{predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")}
-#' \dontrun{CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ")); 
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")}
-#' \dontrun{CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T); 
-#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)}
-#' \dontrun{CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place");
-#' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)}
+#' \dontrun{
+#' predict_race(voter.file = voters, census.geo = "tract", census.key = "...")
+#' }
+#' \dontrun{
+#' predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)
+#' }
+#' \dontrun{
+#' predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)
+#' }
+#' \dontrun{
+#' predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")
+#' }
+#' \dontrun{
+#' CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ"))
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+#' }
+#' \dontrun{
+#' CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T)
+#' predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)
+#' }
+#' \dontrun{
+#' CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place")
+#' predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)
+#' }
 #' @export
 
-predict_race <- function(voter.file, 
-                         census.surname = TRUE, surname.only = FALSE, surname.year = 2010, 
-                         census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010", 
-                         party, retry = 0, impute.missing = TRUE, 
-                         model="BISG", name.dictionaries = NULL, names.to.use = "surname", ...) {
+predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
+                         surname.year = 2010, census.geo, census.key, census.data = NA, age = FALSE,
+                         sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
+                         use_counties = FALSE, model = "BISG", name.dictionaries = NULL,
+                         names.to.use = "surname", ...) {
+
   ## Check model type
-  if(!(model %in% c("BISG","fBISG"))){
-    stop("'model' must be one of 'BISG' (for standard BISG results, or results with all name data without error correction) or 'fBISG' (for the fully Bayesian model that accommodates all name data).")
+  if (!(model %in% c("BISG", "fBISG"))) {
+    stop(
+      paste0(
+        "'model' must be one of 'BISG' (for standard BISG results, or results",
+        " with all name data without error correction) or 'fBISG' (for the",
+        " fully Bayesian model that accommodates all name data)."
+      )
+    )
   }
   ## Build model calls
   cl <- match.call()
-  if((model == "BISG") & (names.to.use == "surname")){
+  if ((model == "BISG") & (names.to.use == "surname")) {
     cl[[1L]] <- quote(wru:::.predict_race_old)
-  } else if ((model == "BISG") & (names.to.use != "surname")){
+  } else if ((model == "BISG") & (names.to.use != "surname")) {
     cl[[1L]] <- quote(wru:::.predict_race_new)
   } else {
     cl[[1L]] <- quote(wru:::.predict_race_me)
   }
   res <- eval(cl, parent.frame())
-  
+
   return(res)
-  
 }
-  
- 

@@ -12,7 +12,7 @@
   census.surname = TRUE,
   surname.only = FALSE,
   surname.year = 2010,
-  name.data = NULL,
+  name.dictionaries = NULL,
   census.geo,
   census.key,
   census.data = NA,
@@ -20,8 +20,9 @@
   sex = FALSE,
   year = "2010",
   party,
-  retry = 0,
+  retry = 3,
   impute.missing = TRUE,
+  use_counties = FALSE,
   ...
 )
 
@@ -35,6 +36,7 @@
   census.data,
   retry = 0,
   impute.missing = TRUE,
+  use_counties = FALSE,
   ...
 )
 
@@ -58,7 +60,7 @@
 
 \item{surname.year}{See documentation in \code{race_predict}.}
 
-\item{name.data}{See documentation in \code{race_predict}.}
+\item{name.dictionaries}{See documentation in \code{race_predict}.}
 
 \item{census.geo}{See documentation in \code{race_predict}.}
 
@@ -82,26 +84,26 @@
 
 \item{names.to.use}{See documentation in \code{race_predict}.}
 
-\item{name.dictionaries}{See documentation in \code{race_predict}.}
-
 \item{race.init}{See documentation in \code{race_predict}.}
 
 \item{control}{See documentation in \code{race_predict}.}
+
+\item{name.data}{See documentation in \code{race_predict}.}
 }
 \value{
 See documentation in \code{race_predict}.
 }
 \description{
-These functions are intended for internal use only. Users should use the 
+These functions are intended for internal use only. Users should use the
 \code{race_predict} interface rather any of these functions directly.
 }
 \details{
 These functions fit different versions of WRU. \code{.predict_race_old} fits
-the original WRU model, also known as BISG with census-based surname dictionary. 
+the original WRU model, also known as BISG with census-based surname dictionary.
 \code{.predict_race_new} fits a new version of BISG which uses a new, augmented
 surname dictionary, and can also accommodate the use of first and middle
 name information. Finally, \code{.predict_race_me} fits a fully Bayesian Improved
-Surname Geocoding model (fBISG), which fits a model with measurement-error 
+Surname Geocoding model (fBISG), which fits a model with measurement-error
 correction of erroneous zeros in census tables, in addition to also accommodating
 the augmented surname dictionary, and the first and middle name
 dictionaries when making predictions.
@@ -120,7 +122,7 @@ surname dictionary, as well as first and middle name information.
 
 \section{.predict_race_me}{
 
-New race prediction function, implementing fBISG (i.e. measurement 
+New race prediction function, implementing fBISG (i.e. measurement
 error correction, fully Bayesian model) with augmented
 surname dictionary, as well as first and middle name information.
 }

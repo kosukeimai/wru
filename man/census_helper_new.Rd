@@ -11,7 +11,8 @@ census_helper_new(
   geo = "tract",
   year = "2010",
   census.data = NA,
-  retry = 0
+  retry = 3,
+  use_counties = FALSE
 )
 }
 \arguments{
