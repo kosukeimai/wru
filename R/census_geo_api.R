@@ -132,7 +132,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   if (geo == "county") {
     geo.merge <- c("state", "county")
-    region <- paste("for=county:*&in=state:", state.fips, sep = "")
+    
+    if (is.null(counties)) {
+      region <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
+    }
+
     census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
   }
   
@@ -140,7 +147,13 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     
     geo.merge <- c("state", "county", "tract")
     
-    region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    if (is.null(counties)) {
+      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
+    }
+    
     county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
     
     if(is.null(counties)) {
@@ -167,7 +180,13 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     
     geo.merge <- c("state", "county", "tract", "block")
     
-    region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    if (is.null(counties)) {
+      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
+    }
+    
     county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
     
     if(is.null(counties)) {
@@ -179,25 +198,26 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     if(length(county_list) > 0) {
       message('Running block by county...')
       
-      census_blocks <- furrr::future_map_dfr(
+      census_blocks <- purrr::map_dfr(
         1:length(county_list), 
         function(county) {
           # too verbose, commenting out
-          #message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
+          message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
           
           region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
-          #message(region_tract)
+          # message(region_tract)
           tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
           tract_list <- tract_df$tract
           
-          purrr::map_dfr(1:length(tract_list), function(tract) {
-            #message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
+          furrr::future_map_dfr(1:length(tract_list), function(tract) {
+            message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
             get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
           })
-        }, .progress = TRUE
+        }
       )
+      message("\n") # new line for progress bar
       
       census <- rbind(census, census_blocks)
       rm(census_blocks)
@@ -298,6 +318,5 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       }
     }
   }
-  
   return(census)
 }

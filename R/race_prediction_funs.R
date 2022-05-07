@@ -144,8 +144,7 @@ NULL
       sex = sex,
       year = year,
       census.data = census.data,
-      retry = retry,
-      use_counties = use_counties
+      retry = retry
     )
   }
 
@@ -184,7 +183,9 @@ NULL
       age = age,
       sex = sex,
       year = year,
-      census.data = census.data, retry = retry
+      census.data = census.data, 
+      retry = retry,
+      use_counties = use_counties
     )
   }
 
@@ -200,7 +201,8 @@ NULL
       age = age,
       sex = sex,
       year = year,
-      census.data = census.data, retry = retry
+      census.data = census.data, 
+      retry = retry
     )
   }
 
@@ -416,8 +418,8 @@ NULL
     thin = 1,
     verbose = TRUE,
     me.correct = TRUE,
-    race.marginal = c(.6665, .0853, .1367, .0797, .0318),
-    seed = sample(1:1000, 1)
+    race.marginal = c(.6665, .0853, .1367, .0797, .0318), # TODO: Default for what census year?
+    seed = sample(1:1000, 1) 
   )
   ctrl$burnin <- floor(ctrl$iter / 2)
   ctrl[names(control)] <- control

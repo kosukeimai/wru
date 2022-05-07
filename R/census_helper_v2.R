@@ -74,7 +74,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
         #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use_counties) {
-          census <- census_geo_api(key, state, geo = "place", age, sex, retry, counties = unique(voter.file$county))
+          census <- census_geo_api(key, state, geo = "place", age, sex, retry)
         } else {
           census <- census_geo_api(key, state, geo = "place", age, sex, retry)
         }
@@ -97,7 +97,9 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
       geo.merge <- c("county", "tract")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use_counties) {
-          census <- census_geo_api(key, state, geo = "tract", age, sex, retry, counties = unique(voter.file$county))
+          census <- census_geo_api(key, state, geo = "tract", age, sex, retry, 
+                                   # Only those counties within the target state
+                                   counties = unique(voter.file$county[voter.file$state == state]))
         } else {
           census <- census_geo_api(key, state, geo = "tract", age, sex, retry)
         }
@@ -109,7 +111,14 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     if (geo == "block") {
       geo.merge <- c("county", "tract", "block")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "block", age = FALSE, sex = FALSE, year, retry)
+        if(use_counties) {
+          census <- census_geo_api(key, state, geo = "block", age, sex, retry, 
+                                   # Only those counties within the target state
+                                   counties = unique(voter.file$county[voter.file$state == state]))
+        } else {
+          census <- census_geo_api(key, state, geo = "block", age, sex, retry)
+        }
+        
       } else {
         census <- census.data[[toupper(state)]]$block
       }
@@ -139,6 +148,8 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
       )
       drop <- c(grep("state", names(census)), grep("P2_", names(census)))
     }
+    
+    # TODO: If year is not one of 2020 or 2010, this should fail much earlier
     
     census$r_whi <- (census[, vars["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
     census$r_bla <- (census[, vars["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)

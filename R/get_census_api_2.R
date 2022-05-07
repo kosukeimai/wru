@@ -34,7 +34,9 @@ get_census_api_2 <- function(data_url, key, get, region, retry = 3){
   if(length(get) > 1) {
     get <- paste(get, collapse=',', sep='')
   }
+  
   api_call <- paste(data_url, 'key=', key, '&get=', get, '&', region, sep='')
+  
   dat_raw <- try(readLines(api_call, warn="F"))
 
   while ((class(dat_raw) == 'try-error') && (retry > 0)) {

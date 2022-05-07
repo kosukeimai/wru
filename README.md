@@ -4,11 +4,23 @@ This R package implements the methods proposed in Imai, K. and Khanna, K. (2016)
 
 ### Using wru
 
-Here is a simple example that predicts the race/ethnicity of voters based only on their surnames. 
+First, you should save your census key to your `.Rprofile` or `.Renviron`. Below is an example procedure:
+
+```
+> usethis::edit_r_profile()
+# edit the file with the following
+Sys.setenv("CENSUS_API_KEY" = "Your Key")
+# save and close the file
+# Restart your R session
+```
+
+Now, here is a simple example that predicts the race/ethnicity of voters based only on their surnames. 
+
 ```r
 library(wru)
+future::plan(future::multisession)
 data(voters)
-predict_race(voter.file = voters, surname.only = T)
+predict_race(voter.file = voters, surname.only = T, use_counties = TRUE)
 ```
 
 The above produces the following output, where the last five columns are probabilistic race/ethnicity predictions (e.g., 'pred.his' is the probability of being Hispanic/Latino):

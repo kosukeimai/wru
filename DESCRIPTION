@@ -27,9 +27,10 @@ Imports:
     furrr,
     purrr,
     stringr,
-    piggyback
+    piggyback, 
+    PL94171
 Suggests:
-    testthat,
+    testthat (>= 3.0.0),
     covr
 LinkingTo:
     Rcpp,
@@ -40,3 +41,4 @@ LazyDataCompression: xz
 License: GPL (>= 3)
 RoxygenNote: 7.1.2
 Encoding: UTF-8
+Config/testthat/edition: 3

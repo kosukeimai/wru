@@ -131,7 +131,7 @@
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
-                         surname.year = 2010, census.geo, census.key, census.data = NA, age = FALSE,
+                         surname.year = 2010, census.geo, census.key = NULL, census.data = NA, age = FALSE,
                          sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", name.dictionaries = NULL,
                          names.to.use = "surname", ...) {
@@ -146,8 +146,15 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       )
     )
   }
+  
   ## Build model calls
   cl <- match.call()
+  
+  if (is.null(cl$census.key)) {
+    cl$census.key <- Sys.getenv("CENSUS_API_KEY")
+  }
+  
+
   if ((model == "BISG") & (names.to.use == "surname")) {
     cl[[1L]] <- quote(wru:::.predict_race_old)
   } else if ((model == "BISG") & (names.to.use != "surname")) {
