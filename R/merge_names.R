@@ -42,7 +42,8 @@
 #' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).
 #' @param table.first See \code{\var{table.surnames}}.
 #' @param table.middle See \code{\var{table.surnames}}.
-#' @param impute.names See \code{predict_race}.
+#' @param impute.missing See \code{predict_race}.
+#' @param model See \code{predict_race}.
 #' @param clean.names A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched
 #' to the database will be cleaned, according to U.S. Census specifications,
@@ -268,7 +269,7 @@ merge_names <- function(voter.file, namesToUse, table.surnames = NULL, table.fir
 
 
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
-  require(dplyr)
+  # require(dplyr), now included as Import in package 
   p_miss_last <- mean(is.na(df$c_whi_last))
   if (p_miss_last > 0) {
     message(paste(paste(sum(is.na(df$c_whi_last)), " (", round(100 * mean(is.na(df$c_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))

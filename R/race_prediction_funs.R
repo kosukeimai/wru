@@ -17,7 +17,6 @@
 #' @param census.surname See documentation in \code{race_predict}.
 #' @param surname.only See documentation in \code{race_predict}.
 #' @param surname.year See documentation in \code{race_predict}.
-#' @param name.data See documentation in \code{race_predict}.
 #' @param census.geo See documentation in \code{race_predict}.
 #' @param census.key See documentation in \code{race_predict}.
 #' @param census.data See documentation in \code{race_predict}.

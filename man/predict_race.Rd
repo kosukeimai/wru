@@ -20,8 +20,10 @@ predict_race(
   impute.missing = TRUE,
   use_counties = FALSE,
   model = "BISG",
+  race.init = NULL,
   name.dictionaries = NULL,
   names.to.use = "surname",
+  control = NULL,
   ...
 )
 }
@@ -104,7 +106,14 @@ it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
+\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+available in \var{census.data}?}
+
 \item{model}{Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".}
+
+\item{race.init}{Vector of initial race for each observation in voter.file.
+Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
+5=other. Defaults to values obtained using \code{model="BISG_surname"}.}
 
 \item{name.dictionaries}{Optional named list of \code{data.frame}'s 
 containing counts of names by race. Any of the following named elements 
@@ -115,12 +124,6 @@ follow the same structure as \code{last_c}, \code{first_c},
 \item{names.to.use}{One of 'surname', 'surname, first', or  'surname, first,
 middle'. Defaults to 'surname'.}
 
-\item{...}{Currently only used when \code{model="fBISG"}}
-
-\item{race.init}{Vector of initial race for each observation in voter.file.
-Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
-5=other. Defaults to values obtained using \code{model="BISG_surname"}.}
-
 \item{control}{List of control arguments only used when \code{model="fBISG"}, including
 \itemize{
  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
@@ -129,6 +132,8 @@ Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
  \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
+
+\item{...}{Currently only used when \code{model="fBISG"}}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

@@ -70,6 +70,8 @@
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
+#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties 
+#' available in \var{census.data}?
 #' @param model Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".
 #' @param name.dictionaries Optional named list of \code{data.frame}'s 
 #' containing counts of names by race. Any of the following named elements 
@@ -133,8 +135,8 @@
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NA, age = FALSE,
                          sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
-                         use_counties = FALSE, model = "BISG", name.dictionaries = NULL,
-                         names.to.use = "surname", ...) {
+                         use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
+                         names.to.use = "surname",control = NULL, ...) {
 
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {

@@ -89,8 +89,6 @@
 \item{race.init}{See documentation in \code{race_predict}.}
 
 \item{control}{See documentation in \code{race_predict}.}
-
-\item{name.data}{See documentation in \code{race_predict}.}
 }
 \value{
 See documentation in \code{race_predict}.

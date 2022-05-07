@@ -45,7 +45,9 @@ any surnames in \code{\var{voter.file}} that cannot initially be matched
 to the database will be cleaned, according to U.S. Census specifications,
 in order to increase the chance of finding a match. Default is \code{TRUE}.}
 
-\item{impute.names}{See \code{predict_race}.}
+\item{impute.missing}{See \code{predict_race}.}
+
+\item{model}{See \code{predict_race}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

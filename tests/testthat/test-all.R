@@ -1,10 +1,10 @@
-context("tests wru")
-
-#
 # Note: must provide a valid U.S. Census API key for test cases that use U.S. Census statistics
 # > usethis::edit_r_profile 
 # Sys.setenv("CENSUS_API_KEY" = "yourkey")
 
+if (Sys.getenv('CENSUS_API_KEY') == "") {
+  message("Census key not available")
+}
 
 future::plan(future::multisession)
 # Load data
