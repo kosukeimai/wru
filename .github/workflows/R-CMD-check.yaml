@@ -47,7 +47,7 @@ jobs:
 
       - uses: r-lib/actions/check-r-package@v2
         with:
-          args: 'c("--no-examples")'
+          args: 'c("--no-examples", "--no-manual")'
 
       - name: Show testthat output
         if: always()
