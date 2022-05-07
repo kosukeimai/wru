@@ -26,6 +26,8 @@ Imports:
     future,
     furrr,
     purrr,
+    Rcpp,
+    RcppArmadillo,
     stringr,
     piggyback, 
     PL94171

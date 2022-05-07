@@ -5,13 +5,14 @@
 \title{Multilevel Census data download function.}
 \usage{
 get_census_data(
-  key,
+  key = NULL,
   states,
   age = FALSE,
   sex = FALSE,
   year = "2010",
   census.geo = "block",
-  retry = 3
+  retry = 3,
+  counties = NULL
 )
 }
 \arguments{

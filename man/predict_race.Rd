@@ -10,7 +10,7 @@ predict_race(
   surname.only = FALSE,
   surname.year = 2010,
   census.geo,
-  census.key,
+  census.key = NULL,
   census.data = NA,
   age = FALSE,
   sex = FALSE,

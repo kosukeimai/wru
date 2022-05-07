@@ -13,7 +13,8 @@ census_helper(
   sex = FALSE,
   year = "2010",
   census.data = NA,
-  retry = 3
+  retry = 3,
+  use_counties = FALSE
 )
 }
 \arguments{

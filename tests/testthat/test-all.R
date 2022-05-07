@@ -6,7 +6,7 @@ context("tests wru")
 # Sys.setenv("CENSUS_API_KEY" = "yourkey")
 
 
-
+future::plan(future::multisession)
 # Load data
 data(voters)
 
