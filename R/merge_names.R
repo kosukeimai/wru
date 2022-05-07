@@ -289,11 +289,11 @@ merge_names <- function(voter.file, namesToUse, table.surnames = NULL, table.fir
   if (impute.missing) {
     impute.vec <- colMeans(df[, grep("c_", names(df), value = TRUE)], na.rm = TRUE)
     for (i in grep("p_", names(df), value = TRUE)) {
-      df[, i] <- coalesce(df[, i], impute.vec[i])
+      df[, i] <- dplyr::coalesce(df[, i], impute.vec[i])
     }
   } else {
     for (i in grep("c_", names(df), value = TRUE)) {
-      df[, i] <- coalesce(df[, i], 1)
+      df[, i] <- dplyr::coalesce(df[, i], 1)
     }
   }
 

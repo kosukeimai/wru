@@ -80,6 +80,8 @@
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
+\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
+
 \item{...}{Additional arguments. Currently only useful for \code{.predict_race_me}.}
 
 \item{names.to.use}{See documentation in \code{race_predict}.}

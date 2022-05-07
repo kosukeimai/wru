@@ -156,11 +156,11 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   
 
   if ((model == "BISG") & (names.to.use == "surname")) {
-    cl[[1L]] <- quote(wru:::.predict_race_old)
+    cl[[1L]] <- quote(.predict_race_old)
   } else if ((model == "BISG") & (names.to.use != "surname")) {
-    cl[[1L]] <- quote(wru:::.predict_race_new)
+    cl[[1L]] <- quote(.predict_race_new)
   } else {
-    cl[[1L]] <- quote(wru:::.predict_race_me)
+    cl[[1L]] <- quote(.predict_race_me)
   }
   res <- eval(cl, parent.frame())
 

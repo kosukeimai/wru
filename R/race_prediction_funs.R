@@ -31,6 +31,7 @@
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
 #' @param control See documentation in \code{race_predict}.
+#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #' @param ... Additional arguments. Currently only useful for \code{.predict_race_me}.
 #'
 #' @return See documentation in \code{race_predict}.
@@ -41,6 +42,8 @@ NULL
 #' @section .predict_race_old:
 #' Original WRU race prediction function, implementing classical BISG with census-based
 #' surname dictionary.
+#' @importFrom stats rmultinom
+#' @importFrom utils txtProgressBar setTxtProgressBar
 #' @rdname modfuns
 .predict_race_old <- function(voter.file,
                               census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
@@ -425,7 +428,8 @@ NULL
   ctrl[names(control)] <- control
 
   ## Preliminary Data quality checks
-  .hasData()
+  wru_data_preflight()
+
   n_race <- 5
   if (!(names.to.use %in% c(c("surname"), c("surname, first"), c("surname, first, middle")))) {
     stop("'names.to.use' must be one of 'surname', 'surname, first', or 'surname, first, middle'")

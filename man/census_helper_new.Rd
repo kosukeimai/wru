@@ -47,6 +47,9 @@ elements must be \code{FALSE}. This corresponds to the defaults of \code{census_
 If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+available in \var{census.data}?}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 

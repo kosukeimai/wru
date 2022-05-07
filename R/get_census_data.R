@@ -23,6 +23,7 @@
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param counties A character vector of counties present in your \var{voter.file} 
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain a subset of the following elements: 
 #' \code{state}, \code{age}, \code{sex}, 

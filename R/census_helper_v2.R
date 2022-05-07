@@ -32,6 +32,8 @@
 #' elements must be \code{FALSE}. This corresponds to the defaults of \code{census_geo_api}.
 #' If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API. 
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties 
+#' available in \var{census.data}?
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
 #'  Census data.

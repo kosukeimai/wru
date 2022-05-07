@@ -23,11 +23,9 @@ Depends:
 Imports:
     devtools (>= 1.10.0),
     dplyr,
-    future,
     furrr,
     purrr,
     Rcpp,
-    RcppArmadillo,
     stringr,
     piggyback, 
     PL94171
