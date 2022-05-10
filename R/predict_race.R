@@ -124,9 +124,7 @@ predict_race <- function(voter.file,
   }
   ## Build model calls
   cl <- match.call()
-  if((model == "BISG") & (names.to.use == "surname")){
-    cl[[1L]] <- quote(wru:::.predict_race_old)
-  } else if ((model == "BISG") & (names.to.use != "surname")){
+  if((model == "BISG")){
     cl[[1L]] <- quote(wru:::.predict_race_new)
   } else {
     cl[[1L]] <- quote(wru:::.predict_race_me)
