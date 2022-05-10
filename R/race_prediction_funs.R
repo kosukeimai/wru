@@ -242,7 +242,7 @@ NULL
 #' New race prediction function, implementing classical BISG with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
-.predict_race_new <- function(voter.file, names.to.use, year = "2020",
+.predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                               census.geo, census.key, name.dictionaries,
                               census.data, retry = 0, impute.missing = TRUE, 
                               use_counties = FALSE, ...) {
@@ -275,13 +275,13 @@ NULL
 
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
-      stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
+      stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData:::last_c)))
     }
     if (!is.null(name.dictionaries[["first"]])) {
-      stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
+      stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData:::first_c)))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData:::mid_c)))
     }
   }
 
@@ -447,15 +447,15 @@ NULL
   }
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
-      stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
+      stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData:::last_c)))
       # stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
     }
     if (!is.null(name.dictionaries[["first"]])) {
-      stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
+      stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData:::first_c)))
       # stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData:::mid_c)))
       # stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
     }
   }
@@ -607,17 +607,17 @@ NULL
         surname = as.data.frame(if (!is.null(name.dictionaries[["surname"]])) {
           name.dictionaries[["surname"]]
         } else {
-          last_c
+          wruData:::last_c
         }),
         first = as.data.frame(if (!is.null(name.dictionaries[["first"]])) {
           name.dictionaries[["first"]]
         } else {
-          first_c
+          wruData:::first_c
         }),
         middle = as.data.frame(if (!is.null(name.dictionaries[["middle"]])) {
           name.dictionaries[["middle"]]
         } else {
-          mid_c
+          wruData:::mid_c
         })
       )
       kw_names <- toupper(ntab[, 1])
