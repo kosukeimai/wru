@@ -11,8 +11,9 @@ census_geo_api(
   age = FALSE,
   sex = FALSE,
   year = "2010",
-  retry = 0,
-  save_temp = NULL
+  retry = 3,
+  save_temp = NULL,
+  counties = NULL
 )
 }
 \arguments{
@@ -46,6 +47,9 @@ Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 \item{save_temp}{File indicating where to save the temporary outputs. 
 Defaults to NULL. If specified, the function will look for an .RData file
 with the same format as the expected output.}
+
+\item{counties}{A vector of counties continaed in your data. If \code{NULL}, all counties are pulled.
+Useful for smaller predictions where only a few counties are considered. Must be zero padded.}
 }
 \value{
 Output will be an object of class \code{list}, indexed by state names. It will 

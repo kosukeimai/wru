@@ -23,6 +23,7 @@
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param counties A character vector of counties present in your \var{voter.file} 
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain a subset of the following elements: 
 #' \code{state}, \code{age}, \code{sex}, 
@@ -33,9 +34,14 @@
 #' @examples 
 #' \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 #' \dontrun{get_census_data(key = "...", states = "MN", age = FALSE, sex = FALSE, year = "2020")}
-get_census_data <- function(key, states, age = FALSE, sex = FALSE, year = "2010", census.geo = "block", retry = 0) {
+get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year = "2010", census.geo = "block", retry = 3, counties = NULL) {
   
-  if (missing(key)) {
+  if (is.null(key)) {
+    # Matches tidycensus name for env var
+    key <- Sys.getenv("CENSUS_API_KEY")
+  }
+  
+  if (missing(key) | key == "") {
     stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
   
@@ -49,11 +55,11 @@ get_census_data <- function(key, states, age = FALSE, sex = FALSE, year = "2010"
       CensusObj[[s]]$place <- place
     }
     if (census.geo == "block") {
-      block <- census_geo_api(key, s, geo = "block", age, sex, year, retry)
+      block <- census_geo_api(key, s, geo = "block", age, sex, year, retry, counties = counties)
       CensusObj[[s]]$block <- block
     }
     if ((census.geo == "block") || (census.geo == "tract")) {
-      tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry)
+      tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry, counties = counties)
       CensusObj[[s]]$tract <- tract
     }
     if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {

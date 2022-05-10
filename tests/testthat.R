@@ -1,4 +1,4 @@
-# library(testthat)
-# library(wru)
+library(testthat)
+library(wru)
 
-#test_check("wru")
+test_check("wru")

@@ -12,6 +12,8 @@ A data frame with 10 rows and 12 variables:
   \item{state}{State of residence}
   \item{CD}{Congressional district}
   \item{county}{Census county (three-digit code)}
+  \item{first}{First name}
+  \item{last}{Last name or surname}
   \item{tract}{Census tract (six-digit code)}
   \item{block}{Census block (four-digit code)}
   \item{precinct}{Voting precinct}

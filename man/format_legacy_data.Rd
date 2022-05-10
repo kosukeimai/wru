@@ -11,6 +11,8 @@ format_legacy_data(legacyFilePath, state, outFile = NULL)
 sourced from https://www2.census.gov/programs-surveys/decennial/2020/data/01-Redistricting_File--PL_94-171/. 
 These file names should end in ".pl".}
 
+\item{state}{The two letter state postal code.}
+
 \item{outFile}{Optional character vector determining whether the formatted RData object should be saved. The
 filepath should end in ".RData".}
 }
