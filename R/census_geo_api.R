@@ -28,6 +28,8 @@
 #' @param save_temp File indicating where to save the temporary outputs. 
 #'  Defaults to NULL. If specified, the function will look for an .RData file
 #'  with the same format as the expected output. 
+#' @param counties A vector of counties continaed in your data. If \code{NULL}, all counties are pulled.
+#' Useful for smaller predictions where only a few counties are considered. Must be zero padded.
 #' @return Output will be an object of class \code{list}, indexed by state names. It will 
 #'  consist of the original user-input data with additional columns of Census geographic data.
 #'
@@ -41,13 +43,16 @@
 #' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
 #' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #' 
+#' @importFrom furrr future_map_dfr
+#' @importFrom purrr map_dfr
 #' @export
-census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, year = "2010", retry = 0, save_temp = NULL) {
+census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, year = "2010", retry = 3, save_temp = NULL, counties = NULL) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
   
+  census <- NULL
   state <- toupper(state)
   
   df.out <- NULL
@@ -127,7 +132,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   if (geo == "county") {
     geo.merge <- c("state", "county")
-    region <- paste("for=county:*&in=state:", state.fips, sep = "")
+    
+    if (is.null(counties)) {
+      region <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
+    }
+
     census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
   }
   
@@ -135,74 +147,86 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     
     geo.merge <- c("state", "county", "tract")
     
-    region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
-    county_list <- county_df$county
-    census <- NULL
-    temp <- check_temp_save(county_list, save_temp, census)
-    county_list <- temp$county_list
-    census <- temp$census
-    
-    for (c in 1:length(county_list)) {
-      print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-      region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      census.temp <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
-      census <- rbind(census, census.temp)
-      if (!is.null(save_temp)) {
-        save(census, file = save_temp)
-      }
+    if (is.null(counties)) {
+      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
-    rm(census.temp)
+    
+    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
+    
+    if(is.null(counties)) {
+      county_list <- county_df$county
+    } else {
+      county_list <- intersect(counties, county_df$county)
+    }
+    
+    if(length(county_list) > 0) {
+      census_tracts <- furrr::future_map_dfr(seq_along(county_list), function(county) {
+        message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
+        region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
+        get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
+      })
+      
+      census <- rbind(census, census_tracts)
+      rm(census_tracts)
+    } else {
+      message('There were no intersecting counties in your voter.file data (tract)')
+    } 
   }
   
   if (geo == "block") {
     
     geo.merge <- c("state", "county", "tract", "block")
     
-    region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
-    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
-    county_list <- county_df$county
-    census <- NULL
-    temp <- check_temp_save(county_list, save_temp, census)
-    county_list <- temp$county_list
-    census <- temp$census
-    
-    for (c in 1:length(county_list)) {
-      print(paste("County ", c, " of ", length(county_list), ": ", county_list[c], sep = ""))
-      
-      region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[c], sep = "")
-      print(region_tract)
-      tract_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_tract, retry)
-      tract_list <- tract_df$tract
-      
-      for (t in 1:length(tract_list)) {
-        print(paste("Tract ", t, " of ", length(tract_list), ": ", tract_list[t], sep = ""))
-        
-        region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[c], "+tract:", tract_list[t], sep = "")
-        census.temp <- get_census_api(census_data_url, key = key, vars = vars, region = region_block, retry)
-        census <- rbind(census, census.temp)
-      }
-      if (!is.null(save_temp)) {
-        save(census, file = save_temp)
-      }
+    if (is.null(counties)) {
+      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    rm(census.temp)
+    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
     
+    if(is.null(counties)) {
+      county_list <- county_df$county
+    } else {
+      county_list <- intersect(counties, county_df$county)
+    }
+    
+    if(length(county_list) > 0) {
+      message('Running block by county...')
+      
+      census_blocks <- purrr::map_dfr(
+        1:length(county_list), 
+        function(county) {
+          # too verbose, commenting out
+          message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
+          
+          region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
+          # message(region_tract)
+          tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
+          tract_list <- tract_df$tract
+          
+          furrr::future_map_dfr(1:length(tract_list), function(tract) {
+            message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
+            
+            region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
+            get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
+          })
+        }
+      )
+      message("\n") # new line for progress bar
+      
+      census <- rbind(census, census_blocks)
+      rm(census_blocks)
+    } else {
+      message('There were no intersecting counties in your voter.file data (block)')
+    } 
   }
   
   census$state <- state
-  
-  # if (age == F & sex == F) {
-  #   
-  #   ## Calculate Pr(Geolocation | Race)
-  #   census$r_whi <- census$P005003 / sum(census$P005003) #Pr(Tract|White)
-  #   census$r_bla <- census$P005004 / sum(census$P005004) #Pr(Tract|Black)
-  #   census$r_his <- census$P005010 / sum(census$P005010) #Pr(Tract|Latino)
-  #   census$r_asi <- (census$P005006 + census$P005007) / (sum(census$P005006) + sum(census$P005007)) #Pr(Tract | Asian or NH/PI)
-  #   census$r_oth <- (census$P005005 + census$P005008 + census$P005009) / (sum(census$P005005) + sum(census$P005008) + sum(census$P005009)) #Pr(Tract | AI/AN, Other, or Mixed)
-  #   
-  # }
   
   if (age == F & sex == F) {
     
@@ -294,24 +318,5 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       }
     }
   }
-  
   return(census)
-}
-
-check_temp_save <- function(county_list, save_temp, census) {
-  if (!is.null(save_temp)) {
-    if (file.exists(save_temp)) {
-      message("Temporary save file will be used as requested.")
-      load(save_temp)
-      ## Expecting a dataframe named census with the same format
-      county_list <- setdiff(county_list, unique(census$county))
-      message(paste0(
-        length(unique(census$county)), " counties in the temporary file."
-      ))
-      message(paste0(length(county_list), " counties to be processed."))
-    } else {
-      message("Results will be saved in the specified temporary file.")
-    }
-  }
-  return(list(county_list = county_list, census = census))
 }

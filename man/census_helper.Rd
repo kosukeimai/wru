@@ -13,76 +13,91 @@ census_helper(
   sex = FALSE,
   year = "2010",
   census.data = NA,
-  retry = 0
+  retry = 3,
+  use_counties = FALSE
 )
 }
 \arguments{
 \item{key}{A required character object. Must contain user's Census API
 key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
-\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named 
+\item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named
 \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}
-specifying geolocation. These should be character variables that match up with 
-U.S. Census categories. County should be three characters (e.g., "031" not "31"), 
-tract should be six characters, and block should be four characters. 
+specifying geolocation. These should be character variables that match up with
+U.S. Census categories. County should be three characters (e.g., "031" not "31"),
+tract should be six characters, and block should be four characters.
 Place should be five characters if it is included.}
 
-\item{states}{A character vector specifying which states to extract 
-Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts 
+\item{states}{A character vector specifying which states to extract
+Census data for, e.g. \code{c("NJ", "NY")}. Default is \code{"all"}, which extracts
 Census data for all states contained in user-input data.}
 
-\item{geo}{A character object specifying what aggregation level to use. 
-Use \code{"county"}, \code{"tract"}, \code{"block"} or \code{"place"}. Default is \code{"tract"}. 
+\item{geo}{A character object specifying what aggregation level to use.
+Use \code{"county"}, \code{"tract"}, \code{"block"} or \code{"place"}. Default is \code{"tract"}.
 Warning: extracting block-level data takes very long.}
 
-\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
 age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
-If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race).
 If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
-\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
-If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{year}{A character object specifying the year of U.S. Census data to be downloaded.
 Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
-Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and 
+Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 \code{\var{sex}} are both \code{FALSE}.}
 
-\item{census.data}{A optional census object of class \code{list} containing 
+\item{census.data}{A optional census object of class \code{list} containing
 pre-saved Census geographic data. Can be created using \code{get_census_data} function.
 If \code{\var{census.data}} is provided, the \code{\var{age}} element must have the same value
-as the \code{\var{age}} option specified in this function (i.e., \code{TRUE} in both or 
-\code{FALSE} in both). Similarly, the \code{\var{sex}} element in the object provided in 
+as the \code{\var{age}} option specified in this function (i.e., \code{TRUE} in both or
+\code{FALSE} in both). Similarly, the \code{\var{sex}} element in the object provided in
 \code{\var{census.data}} must have the same value as the \code{\var{sex}} option here.
-Moreover, the \code{\var{year}} element in the object provided in \code{\var{census.data}} 
-must have the same value as the \code{\var{year}} option in the function (i.e., \code{"2010"} 
+Moreover, the \code{\var{year}} element in the object provided in \code{\var{census.data}}
+must have the same value as the \code{\var{year}} option in the function (i.e., \code{"2010"}
 in both or \code{"2020"} in both).
 If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 }
 \value{
-Output will be an object of class \code{data.frame}. It will 
- consist of the original user-input data with additional columns of 
+Output will be an object of class \code{data.frame}. It will
+ consist of the original user-input data with additional columns of
  Census data.
 }
 \description{
 \code{census_helper} links user-input dataset with Census geographic data.
 }
 \details{
-This function allows users to link their geocoded dataset (e.g., voter file) 
-with U.S. Census data (2010 or 2020). The function extracts Census Summary File data 
-at the county, tract, block, or place level. Census data calculated are 
+This function allows users to link their geocoded dataset (e.g., voter file)
+with U.S. Census data (2010 or 2020). The function extracts Census Summary File data
+at the county, tract, block, or place level. Census data calculated are
 Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 }
 \examples{
-\dontshow{data(voters)}
-\dontrun{census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")}
-\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "tract", 
-age = TRUE, sex = TRUE)}
-\dontrun{census_helper(key = "...", voter.file = voters, states = "all", geo = "county", 
-age = FALSE, sex = FALSE, year = "2020")}
+\dontshow{
+data(voters)
+}
+\dontrun{
+census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")
+}
+\dontrun{
+census_helper(
+  key = "...", voter.file = voters, states = "all", geo = "tract",
+  age = TRUE, sex = TRUE
+)
+}
+\dontrun{
+census_helper(
+  key = "...", voter.file = voters, states = "all", geo = "county",
+  age = FALSE, sex = FALSE, year = "2020"
+)
+}
 
 }

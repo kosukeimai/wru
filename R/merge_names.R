@@ -33,16 +33,17 @@
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
-#' @param table.surnames An object of class \code{data.frame} provided by the 
-#' users as an alternative surname dictionary. It will consist of a list of 
-#' U.S. surnames, along with the associated probabilities P(name | ethnicity) 
+#' @param table.surnames An object of class \code{data.frame} provided by the
+#' users as an alternative surname dictionary. It will consist of a list of
+#' U.S. surnames, along with the associated probabilities P(name | ethnicity)
 #' for ethnicities: white, Black, Hispanic, Asian, and other. Default is \code{NULL}.
 #' (\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
 #' \code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
 #' \code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).
 #' @param table.first See \code{\var{table.surnames}}.
 #' @param table.middle See \code{\var{table.surnames}}.
-#' @param impute.names See \code{predict_race}.
+#' @param impute.missing See \code{predict_race}.
+#' @param model See \code{predict_race}.
 #' @param clean.names A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched
 #' to the database will be cleaned, according to U.S. Census specifications,
@@ -64,224 +65,275 @@
 #' merge_names(voters)
 #'
 #' @export
-merge_names <- function(voter.file, namesToUse, table.surnames=NULL, table.first=NULL, table.middle=NULL, clean.names = TRUE, impute.missing=FALSE, model="BISG") {
-  
+merge_names <- function(voter.file, namesToUse, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
+
   # check the names
-  if(namesToUse == 'surname') {
-    if(!("surname" %in% names(voter.file)))
+  if (namesToUse == "surname") {
+    if (!("surname" %in% names(voter.file))) {
       stop("Voter data frame needs to have a column named 'surname'.")
-    
-  } else if(namesToUse == 'surname, first') {
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)))
+    }
+  } else if (namesToUse == "surname, first") {
+    if (!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) {
       stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
-    
-  } else if(namesToUse == 'surname, first, middle') {
-    if(!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))
-       || !("middle" %in% names(voter.file)))
+    }
+  } else if (namesToUse == "surname, first, middle") {
+    if (!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) ||
+      !("middle" %in% names(voter.file))) {
       stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
+    }
   }
+
+  wru_data_preflight()
   
+  first_c <- readRDS("wru-data-first_c.rds")
+  mid_c <- readRDS("wru-data-mid_c.rds")
+  last_c <- readRDS("wru-data-last_c.rds")
   
   p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
   margin_sel <- 2
-  if(is.null(table.surnames)){
-    lastNameDict<- wruData::last?c
+  if (is.null(table.surnames)) {
+    lastNameDict <- last_c
   } else {
     lastNameDict <- table.surnames
-    lastNameDict[,-1] <- apply(table.surnames[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    lastNameDict[, -1] <- apply(table.surnames[, -1], margin_sel, function(x) x / sum(x, na.rm = TRUE))
     lastNameDict[is.na(lastNameDict)] <- 0
-    names(lastNameDict) <- names(wruData::last_c)
+    names(lastNameDict) <- names(last_c)
   }
-  if(is.null(table.first)){
-    firstNameDict<- wruData::first_c
+  if (is.null(table.first)) {
+    firstNameDict <- first_c
   } else {
     firstNameDict <- table.first
-    firstNameDict[,-1] <- apply(table.first[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    firstNameDict[, -1] <- apply(table.first[, -1], margin_sel, function(x) x / sum(x, na.rm = TRUE))
     firstNameDict[is.na(firstNameDict)] <- 0
-    names(firstNameDict) <- names(wruData::first_c)
+    names(firstNameDict) <- names(first_c)
   }
-  if(is.null(table.middle)){
-    middleNameDict<- wruData::mid_c
+  if (is.null(table.middle)) {
+    middleNameDict <- mid_c
   } else {
     middleNameDict <- table.middle
-    middleNameDict[,-1] <- apply(table.middle[,-1], margin_sel, function(x)x/sum(x, na.rm=TRUE))
+    middleNameDict[, -1] <- apply(table.middle[, -1], margin_sel, function(x) x / sum(x, na.rm = TRUE))
     middleNameDict[is.na(middleNameDict)] <- 0
-    names(middleNameDict) <- names(wruData::mid_c)
+    names(middleNameDict) <- names(mid_c)
   }
-  
-  nameDict <- list('first' =firstNameDict,
-                   'middle' = middleNameDict,
-                   'last' = lastNameDict)
+
+  nameDict <- list(
+    "first" = firstNameDict,
+    "middle" = middleNameDict,
+    "last" = lastNameDict
+  )
 
   ## Convert names in voter file to upper case
   df <- voter.file
   df$caseid <- 1:nrow(df)
   df$lastname.match <- df$lastname.upper <- toupper(as.character(df$surname))
-  if(grepl('first', namesToUse))
+  if (grepl("first", namesToUse)) {
     df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
-  if(grepl('middle', namesToUse)) {
-    df$middlename.match <- df$middlename.upper <- toupper(as.character(df$middle))
-    df$middlename.match[is.na(df$middlename.match)] <- ''
   }
-  
+  if (grepl("middle", namesToUse)) {
+    df$middlename.match <- df$middlename.upper <- toupper(as.character(df$middle))
+    df$middlename.match[is.na(df$middlename.match)] <- ""
+  }
+
   ## Merge Surnames with Census List (No Cleaning Yet)
   df <- merge(df, lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
-  if(grepl('first', namesToUse))
+  if (grepl("first", namesToUse)) {
     df <- merge(df, firstNameDict, by.x = "firstname.match", by.y = "first_name", all.x = TRUE)
-  if(grepl('middle', namesToUse)) {
+  }
+  if (grepl("middle", namesToUse)) {
     df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
   }
-  
-  if(namesToUse == 'surname' && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0)
+
+  if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
-  if(namesToUse == 'surname, first' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0)
+  }
+  if (namesToUse == "surname, first" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
+    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0) {
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
-  if(namesToUse == 'surname, first, middle' && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0)
+  }
+  if (namesToUse == "surname, first, middle" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
+    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0) {
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
-  
+  }
+
   ## Clean names (if specified by user)
-  if(clean.names) {
-    
-    for(nameType in str_split(namesToUse, ', ')[[1]]) {
-      
-      df1 <- df[!is.na(df[,paste('p_whi_', nameType, sep = '')]), ] #Matched names
-      df2 <- df[is.na(df[,paste('p_whi_', nameType, sep = '')]), ] #Unmatched names
-      
+  if (clean.names) {
+    for (nameType in str_split(namesToUse, ", ")[[1]]) {
+      df1 <- df[!is.na(df[, paste("p_whi_", nameType, sep = "")]), ] # Matched names
+      df2 <- df[is.na(df[, paste("p_whi_", nameType, sep = "")]), ] # Unmatched names
+
       ## Remove All Punctuation and Try Merge Again
-      if(nrow(df2) > 0) {
-        df2[,paste(nameType, "name.match", sep = "")] <- gsub("[^[:alnum:] ]", "", df2[,paste(nameType, "name.upper", sep = "")])
-        
-        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE,
-                     by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
-        df2 <- df2[,names(df1)] # reorder the columns
-        
-        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
-          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = ''),]), ])
-          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+      if (nrow(df2) > 0) {
+        df2[, paste(nameType, "name.match", sep = "")] <- gsub("[^[:alnum:] ]", "", df2[, paste(nameType, "name.upper", sep = "")])
+
+        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
+          all.x = TRUE,
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+        )
+        df2 <- df2[, names(df1)] # reorder the columns
+
+        if (sum(!is.na(df2[, paste("p_whi_", nameType, sep = ""), ])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[, paste("p_whi_", nameType, sep = ""), ]), ])
+          df2 <- df2[is.na(df2[, paste("p_whi_", nameType, sep = "")]), ]
         }
       }
-      
+
       ## Remove All Spaces and Try Merge Again
-      if(nrow(df2) > 0) {
-        df2[,paste(nameType, "name.match", sep = "")] <- gsub(" ", "", df2[,paste(nameType, "name.match", sep = "")])
-        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE,
-                     by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
-        df2 <- df2[,names(df1)] # reorder the columns
-        
-        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
-          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = ''),]), ])
-          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+      if (nrow(df2) > 0) {
+        df2[, paste(nameType, "name.match", sep = "")] <- gsub(" ", "", df2[, paste(nameType, "name.match", sep = "")])
+        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
+          all.x = TRUE,
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+        )
+        df2 <- df2[, names(df1)] # reorder the columns
+
+        if (sum(!is.na(df2[, paste("p_whi_", nameType, sep = ""), ])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[, paste("p_whi_", nameType, sep = ""), ]), ])
+          df2 <- df2[is.na(df2[, paste("p_whi_", nameType, sep = "")]), ]
         }
       }
-      
+
       # Edits specific to common issues with last names
-      if(nameType == 'last' & nrow(df2) > 0) {
-        
+      if (nameType == "last" & nrow(df2) > 0) {
+
         ## Remove Jr/Sr/III Suffixes for last names
         suffix <- c("JUNIOR", "SENIOR", "THIRD", "III", "JR", " II", " J R", " S R", " IV")
         for (i in 1:length(suffix)) {
           df2$lastname.match <- ifelse(substr(df2$lastname.match, nchar(df2$lastname.match) - (nchar(suffix)[i] - 1), nchar(df2$lastname.match)) == suffix[i],
-                                       substr(df2$lastname.match, 1, nchar(df2$lastname.match) - nchar(suffix)[i]),
-                                       df2$lastname.match)
+            substr(df2$lastname.match, 1, nchar(df2$lastname.match) - nchar(suffix)[i]),
+            df2$lastname.match
+          )
         }
         df2$lastname.match <- ifelse(nchar(df2$lastname.match) >= 7,
-                                     ifelse(substr(df2$lastname.match, nchar(df2$lastname.match) - 1, nchar(df2$lastname.match)) == "SR",
-                                            substr(df2$lastname.match, 1, nchar(df2$lastname.match) - 2),
-                                            df2$lastname.match),
-                                     df2$lastname.match) #Remove "SR" only if name has at least 7 characters
-        
-        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
-        df2 <- df2[,names(df1)] # reorder the columns
-        
-        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
-          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = ''),]), ])
-          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+          ifelse(substr(df2$lastname.match, nchar(df2$lastname.match) - 1, nchar(df2$lastname.match)) == "SR",
+            substr(df2$lastname.match, 1, nchar(df2$lastname.match) - 2),
+            df2$lastname.match
+          ),
+          df2$lastname.match
+        ) # Remove "SR" only if name has at least 7 characters
+
+        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+        df2 <- df2[, names(df1)] # reorder the columns
+
+        if (sum(!is.na(df2[, paste("p_whi_", nameType, sep = ""), ])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[, paste("p_whi_", nameType, sep = ""), ]), ])
+          df2 <- df2[is.na(df2[, paste("p_whi_", nameType, sep = "")]), ]
         }
       }
-      
-      
+
+
       ## Names with Hyphens or Spaces, e.g. Double-Barreled Names
-      if(nrow(df2) > 0) {
+      if (nrow(df2) > 0) {
         df2$name2 <- df2$name1 <- NA
-        df2$name1[grep("-", df2[,paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep("-", df2[,paste(nameType, "name.upper", sep = "")], value = T), "-"), "[", 1)
-        df2$name2[grep("-", df2[,paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep("-", df2[,paste(nameType, "name.upper", sep = "")], value = T), "-"), "[", 2)
-        df2$name1[grep(" ", df2[,paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep(" ", df2[,paste(nameType, "name.upper", sep = "")], value = T), " "), "[", 1)
-        df2$name2[grep(" ", df2[,paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep(" ", df2[,paste(nameType, "name.upper", sep = "")], value = T), " "), "[", 2)
-        
+        df2$name1[grep("-", df2[, paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep("-", df2[, paste(nameType, "name.upper", sep = "")], value = T), "-"), "[", 1)
+        df2$name2[grep("-", df2[, paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep("-", df2[, paste(nameType, "name.upper", sep = "")], value = T), "-"), "[", 2)
+        df2$name1[grep(" ", df2[, paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep(" ", df2[, paste(nameType, "name.upper", sep = "")], value = T), " "), "[", 1)
+        df2$name2[grep(" ", df2[, paste(nameType, "name.upper", sep = "")])] <- sapply(strsplit(grep(" ", df2[, paste(nameType, "name.upper", sep = "")], value = T), " "), "[", 2)
+
         ## Use first half of name to merge in priors
-        df2[,paste(nameType, "name.match", sep = "")]  <- as.character(df2$name1)
-        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE,
-                     by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
-        df2 <- df2[,c(names(df1), "name1", "name2")] # reorder the columns
-        
-        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
-          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = '')]), !(names(df2) %in% c("name1", "name2"))])
-          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+        df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name1)
+        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
+          all.x = TRUE,
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+        )
+        df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
+
+        if (sum(!is.na(df2[, paste("p_whi_", nameType, sep = ""), ])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[, paste("p_whi_", nameType, sep = "")]), !(names(df2) %in% c("name1", "name2"))])
+          df2 <- df2[is.na(df2[, paste("p_whi_", nameType, sep = "")]), ]
         }
       }
-      
+
       ## Use second half of name to merge in priors for rest
-      if(nrow(df2) > 0) {
-        df2[,paste(nameType, "name.match", sep = "")]  <- as.character(df2$name2)
-        df2 <- merge(df2[,!grepl(paste('_', nameType, sep = ''), names(df2))], nameDict[[nameType]], all.x = TRUE,
-                     by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = '_'))
-        df2 <- df2[,c(names(df1), "name1", "name2")] # reorder the columns
-        
-        if (sum(!is.na(df2[,paste('p_whi_', nameType, sep = ''),])) > 0) {
-          df1 <- rbind(df1, df2[!is.na(df2[,paste('p_whi_', nameType, sep = '')]), !(names(df2) %in% c("name1", "name2"))])
-          df2 <- df2[is.na(df2[,paste('p_whi_', nameType, sep = '')]), ]
+      if (nrow(df2) > 0) {
+        df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name2)
+        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
+          all.x = TRUE,
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+        )
+        df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
+
+        if (sum(!is.na(df2[, paste("p_whi_", nameType, sep = ""), ])) > 0) {
+          df1 <- rbind(df1, df2[!is.na(df2[, paste("p_whi_", nameType, sep = "")]), !(names(df2) %in% c("name1", "name2"))])
+          df2 <- df2[is.na(df2[, paste("p_whi_", nameType, sep = "")]), ]
         }
       }
-      
-      if(nrow(df2) > 0)
+
+      if (nrow(df2) > 0) {
         df <- rbind(df1, df2[, !(names(df2) %in% c("name1", "name2"))])
-      else
+      } else {
         df <- df1
-      df <- df[order(df$caseid),]
+      }
+      df <- df[order(df$caseid), ]
     }
   }
-  
-  
+
+
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
-  require(dplyr)
+  # require(dplyr), now included as Import in package 
   p_miss_last <- mean(is.na(df$c_whi_last))
-  if(p_miss_last > 0){
-    message(paste(paste(sum(is.na(df$c_whi_last)), " (", round(100*mean(is.na(df$c_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
+  if (p_miss_last > 0) {
+    message(paste(paste(sum(is.na(df$c_whi_last)), " (", round(100 * mean(is.na(df$c_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
   }
-  if(grepl('first', namesToUse)) {
+  if (grepl("first", namesToUse)) {
     p_miss_first <- mean(is.na(df$c_whi_first))
-    if(p_miss_first > 0){
-      message(paste(paste(sum(is.na(df$c_whi_first)), " (", round(100*mean(is.na(df$c_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
+    if (p_miss_first > 0) {
+      message(paste(paste(sum(is.na(df$c_whi_first)), " (", round(100 * mean(is.na(df$c_whi_first)), 1), "%) individuals' first names were not matched.", sep = "")))
     }
   }
-  if(grepl('middle', namesToUse)) {
+  if (grepl("middle", namesToUse)) {
     p_miss_mid <- mean(is.na(df$c_whi_middle))
-    if(p_miss_mid > 0){
-      message(paste(paste(sum(is.na(df$c_whi_middle)), " (", round(100*mean(is.na(df$c_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
+    if (p_miss_mid > 0) {
+      message(paste(paste(sum(is.na(df$c_whi_middle)), " (", round(100 * mean(is.na(df$c_whi_middle)), 1), "%) individuals' middle names were not matched.", sep = "")))
     }
   }
-  
-  if(impute.missing){
-    impute.vec <- colMeans(df[, grep("c_", names(df), value=TRUE)], na.rm=TRUE)
-    for(i in grep("p_", names(df), value=TRUE)) {
-      df[,i] <- coalesce(df[,i], impute.vec[i])
+
+  if (impute.missing) {
+    impute.vec <- colMeans(df[, grep("c_", names(df), value = TRUE)], na.rm = TRUE)
+    for (i in grep("p_", names(df), value = TRUE)) {
+      df[, i] <- dplyr::coalesce(df[, i], impute.vec[i])
     }
   } else {
-    for(i in grep("c_", names(df), value=TRUE)) {
-      df[,i] <- coalesce(df[,i], 1)
-    } 
+    for (i in grep("c_", names(df), value = TRUE)) {
+      df[, i] <- dplyr::coalesce(df[, i], 1)
+    }
   }
-  
+
   # return the data
-  if(namesToUse == 'surname')
+  if (namesToUse == "surname") {
     return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
-  else if(namesToUse == 'surname, first')
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match",
-                                  paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"))])
-  else if(namesToUse == 'surname, first, middle')
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match",
-                                  paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_"))])
-  
+  } else if (namesToUse == "surname, first") {
+    return(df[order(df$caseid), c(
+      names(voter.file), "lastname.match", "firstname.match",
+      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+    )])
+  } else if (namesToUse == "surname, first, middle") {
+    return(df[order(df$caseid), c(
+      names(voter.file), "lastname.match", "firstname.match", "middlename.match",
+      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+    )])
+  }
+}
+
+
+#' Preflight for name data
+#'
+#' Checks if namedata is avialable in the current working directory, if not
+#' downloads it from github using piggyback.
+#'
+#' @importFrom piggyback pb_download
+wru_data_preflight <- function() {
+  if (!all(
+    file.exists("wru-data-first_c.rds"),
+    file.exists("wru-data-mid_c.rds"),
+    file.exists("wru-data-last_c.rds")
+  )
+  ) {
+    # TODO: Point to a repository that is not private! See inst/scripts/
+    # prep-piggyback.R for example
+    piggyback::pb_download("wru-data-first_c.rds", repo = "solivella/wruData")
+    piggyback::pb_download("wru-data-mid_c.rds", repo = "solivella/wruData")
+    piggyback::pb_download("wru-data-last_c.rds", repo = "solivella/wruData")
+  } else {
+    message("`wru` name data already available in working directory")
+  }
 }

@@ -4,7 +4,7 @@
 \alias{get_census_api_2}
 \title{Census API URL assembler.}
 \usage{
-get_census_api_2(data_url, key, get, region, retry = 0)
+get_census_api_2(data_url, key, get, region, retry = 3)
 }
 \arguments{
 \item{data_url}{URL root of the API, including the question mark, 

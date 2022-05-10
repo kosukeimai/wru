@@ -6,6 +6,12 @@ sudo: required
 
 r_build_args: --resave-data
 
+r_binary_packages: 
+  - piggyback
+  - PL94171
+  - Rcpp
+  - RcppArmadillo
+  
 notifications:
   email:
     on_success: change
