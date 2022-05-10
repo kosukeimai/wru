@@ -272,16 +272,19 @@ NULL
       stop("Voter data frame needs to have a column named 'surname', a column called 'first', and a column called 'middle'.")
     }
   }
+  
+  ## Preliminary Data quality checks
+  wru_data_preflight()
 
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
-      stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData:::last_c)))
+      stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     }
     if (!is.null(name.dictionaries[["first"]])) {
-      stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData:::first_c)))
+      stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData:::mid_c)))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
     }
   }
 
@@ -447,15 +450,15 @@ NULL
   }
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
-      stopifnot(identical(names(name.dictionaries[["surname"]]), names(wruData:::last_c)))
+      stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
       # stopifnot(all(is.integer(name.dictionaries[["surname"]][,-1])))
     }
     if (!is.null(name.dictionaries[["first"]])) {
-      stopifnot(identical(names(name.dictionaries[["first"]]), names(wruData:::first_c)))
+      stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
       # stopifnot(all(is.integer(name.dictionaries[["first"]][,-1])))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
-      stopifnot(identical(names(name.dictionaries[["middle"]]), names(wruData:::mid_c)))
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
       # stopifnot(all(is.integer(name.dictionaries[["middle"]][,-1])))
     }
   }
