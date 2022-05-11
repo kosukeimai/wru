@@ -247,6 +247,10 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
                              census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                              use_counties = FALSE, ...) {
   
+  # Check years
+  if (!(year %in% c("2000", "2010", "2020"))){
+    stop("Year should be one of 2000, 2010, or 2020.")
+  }
   # Define 2020 race marginal
   race.margin <- c(r_whi=0.5783619, r_bla=0.1205021, r_his=0.1872988,
                    r_asi=0.06106737, r_oth=0.05276981)
@@ -326,68 +330,31 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       }
     }
     
-    if (census.geo == "place") {
-      if (!("place" %in% names(voter.file))) {
-        stop("voter.file object needs to have a column named place.")
-      }
-      voter.file <- census_helper_new(
-        key = census.key,
-        voter.file = voter.file,
-        states = "all",
-        geo = "place",
-        census.data = census.data, 
-        retry = retry,
-        use_counties = use_counties
-      )
+    geo_id_names <- switch(
+      census.geo,
+      "county" = c("county"),
+      "tract" = c("county", "tract"),
+      "block" = c("county", "tract", "block"),
+      "place" = c("place")
+    )
+    
+    if (!all(geo_id_names %in% names(voter.file))) {
+      stop(cat("To use",census.geo,"as census.geo, voter.file needs to include the following column(s):",
+               paste(geo_id_names, collapse=", ")))
     }
     
-    if (census.geo == "block") {
-      if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
-        stop("voter.file object needs to have columns named block, tract, and county.")
-      }
-      voter.file <- census_helper_new(
-        key = census.key,
-        voter.file = voter.file,
-        states = "all",
-        geo = "block",
-        census.data = census.data, 
-        retry = retry,
-        use_counties = use_counties
-      )
-    }
-    
-    if (census.geo == "precinct") {
-      geo <- "precinct"
-      stop("Error: census_helper function does not currently support precinct-level data.")
-    }
-    
-    if (census.geo == "tract") {
-      if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
-        stop("voter.file object needs to have columns named tract and county.")
-      }
-      voter.file <- census_helper_new(
-        key = census.key,
-        voter.file = voter.file,
-        states = "all",
-        geo = "tract",
-        census.data = census.data, 
-        retry = retry, 
-        use_counties = use_counties
-      )
-    }
-    
-    if (census.geo == "county") {
-      if (!("county" %in% names(voter.file))) {
-        stop("voter.file object needs to have a column named county.")
-      }
-      voter.file <- census_helper_new(
-        key = census.key,
-        voter.file = voter.file,
-        states = "all",
-        geo = "county",
-        census.data = census.data, retry = retry
-      )
-    }
+    voter.file <- census_helper_new(
+      key = census.key,
+      voter.file = voter.file,
+      states = "all",
+      geo = census.geo,
+      age = age, 
+      sex = sex,
+      year = year,
+      census.data = census.data, 
+      retry = retry,
+      use_counties = use_counties
+    )
   }  
   eth <- c("whi", "bla", "his", "asi", "oth")
   

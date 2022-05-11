@@ -21,6 +21,14 @@
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
 #'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
+#' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+#'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+#'  If \code{TRUE}, function will return Pr(Geolocation, Age | Race).
+#'  If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
+#' @param sex A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+#'  sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+#'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
+#'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
 #' @param year A character object specifying the year of U.S. Census data to be downloaded.
 #'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
 #' @param census.data A optional census object of class \code{list} containing 
@@ -45,7 +53,15 @@
 #' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place", year = "2020")}
 #'
 #' @export
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", year = "2010", census.data = NA, retry = 3, use_counties = FALSE) {
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use_counties = FALSE) {
+  
+  if (geo == "precinct") {
+    stop("Error: census_helper_new function does not currently support precinct-level data.")
+  }
+  
+  if (any(age, sex)){
+    stop("Models using age and sex not currently implemented.")
+  }
   
   if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
@@ -130,7 +146,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
       
     ## Calculate Pr(Geolocation | Race)
-    if (year == "2010") {
+    if (year != "2020") {
       geoPopulations <- rowSums(census[,grepl("P00", names(census))])
       vars <- c(
         pop_white = 'P005003', pop_black = 'P005004',

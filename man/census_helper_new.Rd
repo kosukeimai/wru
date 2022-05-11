@@ -9,6 +9,8 @@ census_helper_new(
   voter.file,
   states = "all",
   geo = "tract",
+  age = FALSE,
+  sex = FALSE,
   year = "2010",
   census.data = NA,
   retry = 3,
@@ -33,6 +35,16 @@ Census data for all states contained in user-input data.}
 \item{geo}{A character object specifying what aggregation level to use. 
 Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
 Default is \code{"tract"}. Warning: extracting block-level data takes very long.}
+
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race).
+If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
+
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
+If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{year}{A character object specifying the year of U.S. Census data to be downloaded.
 Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.}
