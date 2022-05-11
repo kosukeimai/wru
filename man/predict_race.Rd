@@ -23,8 +23,7 @@ predict_race(
   race.init = NULL,
   name.dictionaries = NULL,
   names.to.use = "surname",
-  control = NULL,
-  ...
+  control = NULL
 )
 }
 \arguments{

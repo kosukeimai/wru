@@ -24,7 +24,7 @@
 #' @param verbose Boolean; should informative messages be printed?
 #'
 #' @keywords internal
-sample_me <- function(last_name, first_name, mid_name, geo, N_rg, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_race, race_init, verbose) {
-    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, alpha, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, me_race, race_init, verbose)
+sample_me <- function(last_name, first_name, mid_name, geo, N_rg, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, race_init, verbose) {
+    .Call(`_wru_sample_me`, last_name, first_name, mid_name, geo, N_rg, pi_s, pi_f, pi_m, pi_nr, which_names, samples, burnin, race_init, verbose)
 }
 

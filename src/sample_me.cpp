@@ -29,7 +29,6 @@ arma::umat sample_me(const arma::uvec& last_name,
                      const arma::uvec& mid_name,
                      const arma::uvec& geo,
                      const arma::umat& N_rg,
-                     const arma::mat& alpha,
                      const arma::mat& pi_s,
                      const arma::mat& pi_f,
                      const arma::mat& pi_m,
@@ -37,7 +36,6 @@ arma::umat sample_me(const arma::uvec& last_name,
                      const arma::uword which_names,
                      const arma::uword samples,
                      const arma::uword burnin,
-                     const bool me_race,
                      const arma::uvec& race_init,
                      const bool verbose)
 { 
@@ -46,7 +44,7 @@ arma::umat sample_me(const arma::uvec& last_name,
   arma::uword J = pi_s.n_rows; // Nr. of racial cats
   arma::uword K = arma::max(last_name) + 1; //Nr. of surnames
   arma::uword L = arma::max(geo) + 1; //Nr. of locations
-  arma::uword S_KW = pi_s.n_cols;
+  arma::uword S_KW = pi_s.n_cols; //Nr, of keyword surnames
   arma::uword F_KW, M_KW;
   if(which_names > 0){
     F_KW = pi_f.n_cols;
@@ -57,43 +55,16 @@ arma::umat sample_me(const arma::uvec& last_name,
   arma::umat r_samp(N, J, arma::fill::zeros);
   arma::uvec race(&race_init[0], N);
   
-  //Temporary storage
- // arma::uvec m_r(J, arma::fill::zeros);
-  //arma::umat m_rs(J, K, arma::fill::zeros);
-  arma::umat n_rg(J, L, arma::fill::zeros);
-  //arma::umat m_rf, m_rm;
-  //if(which_names > 0){
-    //m_rf = m_rf.zeros(J, arma::max(first_name) + 1);
-    //if(which_names > 1){
-      //m_rm = m_rm.zeros(J, arma::max(mid_name) + 1);
-    //}
-  //}
   
   //Initialize global counts
-  arma::uword r_i = 0, l_i = 0, g_i = 0;
+  arma::umat n_rg(J, L, arma::fill::zeros);
   for(arma::uword i = 0; i < N; ++i) {
-    r_i = race_init[i];
-    //m_r(r_i)++;
-    //m_rs(r_i, last_name[i])++;
-    n_rg(r_i, geo[i])++;
-    // if(which_names > 0){
-    //   m_rf(r_i, first_name[i])++;
-    //   if(which_names > 1){
-    //     m_rm(r_i, mid_name[i])++;
-    //   }
-    // }
+    n_rg(race_init[i], geo[i])++;
   }
-  //const arma::uvec Ms_r = arma::sum(M_rs, 1);
-  //arma::uvec Mf_r, Mm_r;
-  // if(which_names > 0){
-  //   Mf_r = arma::sum(M_rf, 1);
-  //   if(which_names > 1){
-  //     Mm_r = arma::sum(M_rm, 1);
-  //   }
-  // }
-  
+
+  //Temporary storage
   arma::vec probs(J, arma::fill::zeros);
-  arma::uword new_r = 0;
+  arma::uword new_r = 0, r_i = 0, g_i = 0;;
   bool kw_lname = true, kw_fname = true, kw_mname = true; 
   for (arma::uword iter = 0; iter < max_iter; ++iter) {
     // Check stop signal
@@ -101,45 +72,35 @@ arma::umat sample_me(const arma::uvec& last_name,
     // Sample from full conditionals
     for(arma::uword i = 0; i < N; ++i) {
       
-      r_i = race[i]; l_i = last_name[i]; g_i = geo[i];
-      //m_r(r_i)--;
+      r_i = race[i];  g_i = geo[i];
       n_rg(r_i, g_i)--;
-      //m_rs(r_i, l_i)--;
-      kw_lname = l_i < S_KW;
+      kw_lname = last_name[i] < S_KW;
       if(which_names > 0){
         kw_fname = first_name[i] < F_KW;
-        //m_rf(r_i, first_name[i])--;
         if(which_names > 1){
           kw_mname = mid_name[i] < M_KW;
-          //m_rm(r_i, mid_name[i])--;
         }
       }
       probs.zeros();
       for(arma::uword j = 0; j < J; ++j){
-        probs[j] = 0.0;
-        // surname
+        // race | geo
+        probs[j] += log(n_rg(j, g_i) + N_rg(j, g_i) + 1.0);
+        // surname | race
         if(kw_lname){
-          probs[j] += log(pi_s(j, l_i) + 1e-8);
+          probs[j] += log(pi_s(j, last_name[i]) + 1e-8);
         } else {
           probs[j] += log(pi_nr(j, 0) + 1e-8);
         }
-        // if(!probs.is_finite()){
-        //   Rcpp::Rcout << "Surname probs: "<< std::endl << probs << std::endl;
-        //   Rcpp::stop("wtf!");
-        // }
-        // geography
-        probs[j] += me_race ? log(n_rg(j, g_i) + N_rg(j, g_i) + 1.0) : log(alpha(j, g_i) + 1e-8);
-        
         //other names
         if(which_names > 0){
           if(kw_fname){
-            probs[j] += log(pi_f(j, first_name[i]));
+            probs[j] += log(pi_f(j, first_name[i]) + 1e-8);
           } else {
             probs[j] += log(pi_nr(j, 1) + 1e-8);
           }
           if(which_names > 1){
             if(kw_mname){
-              probs[j] += log(pi_m(j, mid_name[i]));
+              probs[j] += log(pi_m(j, mid_name[i]) + 1e-8);
             } else {
               probs[j] += log(pi_nr(j, 2) + 1e-8);
             }
@@ -147,30 +108,16 @@ arma::umat sample_me(const arma::uvec& last_name,
         }
       }
       // exponentiate probabilities (using logsumexp)
-      //Rcpp::Rcout << "Done" << std::endl;
       probs -= probs.max();
       probs = arma::exp(probs);
       probs /= arma::accu(probs);
       probs = arma::cumsum(probs);
       // //Sample race
       new_r = random_discrete(probs);
-      // Rcpp::Rcout << "probs:" << probs << std::endl;
-      // Rcpp::Rcout << "new_r" << new_r << std::endl;
-      
       race[i] = new_r;
       
       //Increment counts
-      //m_r(new_r)++;
-      //m_rs(new_r, l_i)++;
       n_rg(new_r, g_i)++;
-      if(which_names > 0){
-        //m_rf(new_r, first_name[i])++;
-        if(which_names > 1){
-          //m_rm(new_r, mid_name[i])++;
-        }
-      }
-      // 
-      //Rcpp::Rcout << "Done for real" << std::endl;
       //Store sample
       if(iter >= burnin){
         r_samp(i, new_r)++;
