@@ -72,7 +72,8 @@
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
 #' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
-#' @param model Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".
+#' @param model Character string, either "BISG" (default) or "fBISG" (for error-correction, 
+#' fully-Bayesian model).
 #' @param name.dictionaries Optional named list of \code{data.frame}'s 
 #' containing counts of names by race. Any of the following named elements 
 #' are allowed: "surname", "first", "middle". When present, the objects must 
