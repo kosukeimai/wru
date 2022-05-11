@@ -148,7 +148,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     ## Calculate Pr(Geolocation | Race)
     if (year != "2020") {
       geoPopulations <- rowSums(census[,grepl("P00", names(census))])
-      vars <- c(
+      vars_ <- c(
         pop_white = 'P005003', pop_black = 'P005004',
         pop_aian = 'P005005', pop_asian = 'P005006',
         pop_nhpi = 'P005007', pop_other = 'P005008', 
@@ -158,7 +158,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     }
     else if (year == "2020") {
       geoPopulations <- rowSums(census[,grepl("P2_", names(census))])
-      vars <- c(
+      vars_ <- c(
         pop_white = 'P2_005N', pop_black = 'P2_006N',
         pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
         pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
@@ -169,11 +169,11 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     
     # TODO: If year is not one of 2020 or 2010, this should fail much earlier
     
-    census$r_whi <- (census[, vars["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
-    census$r_bla <- (census[, vars["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
-    census$r_his <- (census[, vars["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
-    census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
-    census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
+    census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
+    census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
+    census$r_his <- (census[, vars_["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
+    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
+    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
     voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = TRUE)
       

@@ -68,7 +68,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   
   # assign variable values based on the year of the census data
   if (year == "2010"){
-    vars <- c(
+    vars_ <- c(
       pop_white = 'P005003', pop_black = 'P005004',
       pop_aian = 'P005005', pop_asian = 'P005006',
       pop_nhpi = 'P005007', pop_other = 'P005008', 
@@ -76,7 +76,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     )
   }
   else if (year == "2020") {
-    vars <- c(
+    vars_ <- c(
       pop_white = 'P2_005N', pop_black = 'P2_006N',
       pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
       pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
@@ -85,34 +85,34 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   }
   
   if (age == F & sex == F) {
-    vars <- vars[c("pop_white", "pop_black", "pop_aian", "pop_asian", 
+    vars_ <- vars_[c("pop_white", "pop_black", "pop_aian", "pop_asian", 
                    "pop_nhpi", "pop_other", "pop_two", "pop_hisp")]
   }
   
   if (age == F & sex == T) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c("01", "02", "26"))
-    vars <- NULL
+    vars_ <- NULL
     for (e in 1:length(eth.let)) {
-      vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
+      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
   
   if (age == T & sex == F) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    vars <- NULL
+    vars_ <- NULL
     for (e in 1:length(eth.let)) {
-      vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
+      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
   
   if (age == T & sex == T) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    vars <- NULL
+    vars_ <- NULL
     for (e in 1:length(eth.let)) {
-      vars <- c(vars, paste("P012", eth.let[e], "0", num, sep = ""))
+      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }
   }
   
@@ -127,7 +127,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (geo == "place") {
     geo.merge <- c("state", "place")
     region <- paste("for=place:*&in=state:", state.fips, sep = "")
-    census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, var.names = vars_, region = region, retry)
   }
   
   if (geo == "county") {
@@ -140,7 +140,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       region <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
 
-    census <- get_census_api(census_data_url, key = key, vars = vars, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, var.names = vars_, region = region, retry)
   }
   
   if (geo == "tract") {
@@ -154,7 +154,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
     
     if(is.null(counties)) {
       county_list <- county_df$county
@@ -166,7 +166,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       census_tracts <- furrr::future_map_dfr(seq_along(county_list), function(county) {
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
-        get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
+        get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
       })
       
       census <- rbind(census, census_tracts)
@@ -187,7 +187,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
       region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    county_df <- get_census_api(census_data_url, key = key, vars = vars, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
     
     if(is.null(counties)) {
       county_list <- county_df$county
@@ -206,14 +206,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
           
           region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
           # message(region_tract)
-          tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_tract, retry)
+          tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = region_tract, retry)
           tract_list <- tract_df$tract
           
           furrr::future_map_dfr(1:length(tract_list), function(tract) {
             message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
-            get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, vars = vars, region = region_block, retry)
+            get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = region_block, retry)
           })
         }
       )
@@ -231,11 +231,11 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (age == F & sex == F) {
     
     ## Calculate Pr(Geolocation | Race)
-    census$r_whi <- census[, vars["pop_white"]] / sum(census[, vars["pop_white"]]) #Pr(Geo|White)
-    census$r_bla <- census[, vars["pop_black"]] / sum(census[, vars["pop_black"]]) #Pr(Geo|Black)
-    census$r_his <- census[, vars["pop_hisp"]] / sum(census[, vars["pop_hisp"]]) #Pr(Geo|Latino)
-    census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (sum(census[, vars["pop_asian"]]) + sum(census[, vars["pop_nhpi"]])) #Pr(Geo | Asian or NH/PI)
-    census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (sum(census[, vars["pop_aian"]]) + sum(census[, vars["pop_other"]]) + sum(census[, vars["pop_two"]])) #Pr(Geo | AI/AN, Other, or Mixed)
+    census$r_whi <- census[, vars_["pop_white"]] / sum(census[, vars_["pop_white"]]) #Pr(Geo|White)
+    census$r_bla <- census[, vars_["pop_black"]] / sum(census[, vars_["pop_black"]]) #Pr(Geo|Black)
+    census$r_his <- census[, vars_["pop_hisp"]] / sum(census[, vars_["pop_hisp"]]) #Pr(Geo|Latino)
+    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (sum(census[, vars_["pop_asian"]]) + sum(census[, vars_["pop_nhpi"]])) #Pr(Geo | Asian or NH/PI)
+    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (sum(census[, vars_["pop_aian"]]) + sum(census[, vars_["pop_other"]]) + sum(census[, vars_["pop_two"]])) #Pr(Geo | AI/AN, Other, or Mixed)
     
   }
   

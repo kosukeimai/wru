@@ -9,7 +9,7 @@
 #'  e.g., \code{"https://api.census.gov/data/2010/dec/dec/sf1?"}.
 #' @param key A required character object containing user's Census API key,
 #'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
-#' @param vars A character vector of variables to get,
+#' @param var.names A character vector of variables to get,
 #'  e.g., \code{c("P005003","P005004","P005005", "P005006")}.
 #'  If there are more than 50 variables, then function will automatically
 #'  split variables into separate queries.
@@ -24,7 +24,7 @@
 #' \dontrun{
 #' get_census_api(
 #'   data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...",
-#'   vars = c("P005003", "P005004", "P005005", "P005006"), region = "for=county:*&in=state:34"
+#'   var.names = c("P005003", "P005004", "P005005", "P005006"), region = "for=county:*&in=state:34"
 #' )
 #' }
 #'
@@ -33,16 +33,16 @@
 #' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @export
-get_census_api <- function(data_url, key, vars, region, retry = 0) {
-  if (length(vars) > 50) {
-    vars <- vec_to_chunk(vars) # Split variables into a list
-    get <- lapply(vars, function(x) paste(x, sep = "", collapse = ","))
+get_census_api <- function(data_url, key, var.names, region, retry = 0) {
+  if (length(var.names) > 50) {
+    var.names <- vec_to_chunk(var.names) # Split variables into a list
+    get <- lapply(var.names, function(x) paste(x, sep = "", collapse = ","))
     data <- lapply(
-      vars,
+      var.names,
       function(x) get_census_api_2(data_url, key, x, region, retry)
     )
   } else {
-    get <- paste(vars, sep = "", collapse = ",")
+    get <- paste(var.names, sep = "", collapse = ",")
     data <- list(get_census_api_2(data_url, key, get, region, retry))
   }
 

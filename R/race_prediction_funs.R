@@ -525,14 +525,14 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     cat("Forming Pr(race | location) tables from census data...\n")
   }
   if(year == "2020") {
-    vars <- c(
+    vars_ <- c(
       pop_white = 'P2_005N', pop_black = 'P2_006N',
       pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
       pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
       pop_two = 'P2_011N', pop_hisp = 'P2_002N'
     ) 
   } else {
-    vars <- c(
+    vars_ <- c(
       pop_white = 'P005003', pop_black = 'P005004',
       pop_aian = 'P005005', pop_asian = 'P005006',
       pop_nhpi = 'P005007', pop_other = 'P005008', 
@@ -544,11 +544,11 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     function(x) {
       all_names <- names(x[[census.geo]])
       tmp <- x[[census.geo]][, c(geo_id_names, grep("P00|P2_0", all_names, value = TRUE))]
-      tmp$r_whi <- tmp[, vars["pop_white"]]
-      tmp$r_bla <- tmp[, vars["pop_black"]]
-      tmp$r_his <- tmp[, vars["pop_hisp"]]
-      tmp$r_asi <- (tmp[, vars["pop_asian"]] + tmp[, vars["pop_nhpi"]])
-      tmp$r_oth <- (tmp[, vars["pop_aian"]] + tmp[, vars["pop_other"]] + tmp[, vars["pop_two"]])
+      tmp$r_whi <- tmp[, vars_["pop_white"]]
+      tmp$r_bla <- tmp[, vars_["pop_black"]]
+      tmp$r_his <- tmp[, vars_["pop_hisp"]]
+      tmp$r_asi <- (tmp[, vars_["pop_asian"]] + tmp[, vars_["pop_nhpi"]])
+      tmp$r_oth <- (tmp[, vars_["pop_aian"]] + tmp[, vars_["pop_other"]] + tmp[, vars_["pop_two"]])
       all_names <- names(tmp)
       ## Totals
       tmp_la <- tmp[, c(geo_id_names, grep("r_", all_names, value = TRUE))]
