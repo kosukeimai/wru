@@ -59,6 +59,9 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
   
+  if(!(year %in% c("2000","2010","2020"))){
+    stop("Interface only implemented for census years '2000', '2010', or '2020'.")
+  }
   if (any(age, sex)){
     stop("Models using age and sex not currently implemented.")
   }
@@ -155,8 +158,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
         pop_two = 'P005009', pop_hisp = 'P005010'
       )
       drop <- c(grep("state", names(census)), grep("P005", names(census)))
-    }
-    else if (year == "2020") {
+    } else {
       geoPopulations <- rowSums(census[,grepl("P2_", names(census))])
       vars_ <- c(
         pop_white = 'P2_005N', pop_black = 'P2_006N',

@@ -67,15 +67,14 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   # }
   
   # assign variable values based on the year of the census data
-  if (year == "2010"){
+  if (year != "2020"){
     vars_ <- c(
       pop_white = 'P005003', pop_black = 'P005004',
       pop_aian = 'P005005', pop_asian = 'P005006',
       pop_nhpi = 'P005007', pop_other = 'P005008', 
       pop_two = 'P005009', pop_hisp = 'P005010'
     )
-  }
-  else if (year == "2020") {
+  } else {
     vars_ <- c(
       pop_white = 'P2_005N', pop_black = 'P2_006N',
       pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
@@ -117,10 +116,10 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   }
   
   # set the census data url links
-  if (year == "2010") {
+  if (year != "2020") {
     census_data_url = "https://api.census.gov/data/2010/dec/sf1?"
   }
-  else if (year == "2020") {
+  else {
     census_data_url = "https://api.census.gov/data/2020/dec/pl?"
   }
   
