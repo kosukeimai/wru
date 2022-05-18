@@ -126,5 +126,5 @@ predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = cens
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, County, Party)
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
-### A related song 
-Watch [this](https://www.youtube.com/watch?v=r5kmCgVhADY)!
+
+
