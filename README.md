@@ -127,4 +127,18 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 
+## Notes about process design
 
+For larger scale imputations garbage-collection can become a problem and your machine(s) can quickly run out of memory (RAM). It is recommended to use the `future.callr::callr` plan instead of `future::multisession`. The `callr` plan instantiates a new session at every iteration of your parallel loop or map. This simultaneously has the effect of creating more overhead, but also clearing the often sticky memory elements that would be left over to grow to eventual system failure when using `multisession`. You end up with a process that is more stable, but slightly slower. 
+
+```
+library(wru)
+future::plan(future.callr::callr)
+# ...
+```
+
+## Census Data
+
+This package uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.
+
+U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov. Retrieved from https://www.census.gov/data/developers/data-sets/decennial-census.html
