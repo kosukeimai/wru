@@ -7,6 +7,7 @@
 merge_names(
   voter.file,
   namesToUse,
+  census.surname,
   table.surnames = NULL,
   table.first = NULL,
   table.middle = NULL,

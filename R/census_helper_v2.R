@@ -21,6 +21,14 @@
 #' @param geo A character object specifying what aggregation level to use. 
 #'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
 #'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
+#' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+#'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+#'  If \code{TRUE}, function will return Pr(Geolocation, Age | Race).
+#'  If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
+#' @param sex A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+#'  sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+#'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
+#'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
 #' @param year A character object specifying the year of U.S. Census data to be downloaded.
 #'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
 #' @param census.data A optional census object of class \code{list} containing 
@@ -45,7 +53,18 @@
 #' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place", year = "2020")}
 #'
 #' @export
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", year = "2010", census.data = NA, retry = 3, use_counties = FALSE) {
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use_counties = FALSE) {
+  
+  if (geo == "precinct") {
+    stop("Error: census_helper_new function does not currently support precinct-level data.")
+  }
+  
+  if(!(year %in% c("2000","2010","2020"))){
+    stop("Interface only implemented for census years '2000', '2010', or '2020'.")
+  }
+  if (any(age, sex)){
+    stop("Models using age and sex not currently implemented.")
+  }
   
   if (is.na(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
@@ -130,19 +149,18 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
       
     ## Calculate Pr(Geolocation | Race)
-    if (year == "2010") {
+    if (year != "2020") {
       geoPopulations <- rowSums(census[,grepl("P00", names(census))])
-      vars <- c(
+      vars_ <- c(
         pop_white = 'P005003', pop_black = 'P005004',
         pop_aian = 'P005005', pop_asian = 'P005006',
         pop_nhpi = 'P005007', pop_other = 'P005008', 
         pop_two = 'P005009', pop_hisp = 'P005010'
       )
       drop <- c(grep("state", names(census)), grep("P005", names(census)))
-    }
-    else if (year == "2020") {
+    } else {
       geoPopulations <- rowSums(census[,grepl("P2_", names(census))])
-      vars <- c(
+      vars_ <- c(
         pop_white = 'P2_005N', pop_black = 'P2_006N',
         pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
         pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
@@ -153,11 +171,11 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ye
     
     # TODO: If year is not one of 2020 or 2010, this should fail much earlier
     
-    census$r_whi <- (census[, vars["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
-    census$r_bla <- (census[, vars["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
-    census$r_his <- (census[, vars["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
-    census$r_asi <- (census[, vars["pop_asian"]] + census[, vars["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
-    census$r_oth <- (census[, vars["pop_aian"]] + census[, vars["pop_other"]] + census[, vars["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
+    census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
+    census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
+    census$r_his <- (census[, vars_["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
+    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
+    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
     voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = TRUE)
       

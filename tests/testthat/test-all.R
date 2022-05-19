@@ -14,12 +14,12 @@ test_that("Tests surname only predictions", {
   set.seed(12345)
 
   # Prediction using surname only
-  x <- predict_race(voter.file = voters, surname.only = T)
+  x <- predict_race(voter.file = voters, surname.only = TRUE, census.surname = TRUE)
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10,20))
   expect_equal(sum(is.na(x)), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0676)
-  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0236)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0049)
+  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0263)
 })
 
 test_that("Tests predictions using the Census object", {

@@ -3,8 +3,8 @@
 \name{modfuns}
 \alias{modfuns}
 \alias{.predict_race_old}
-\alias{.predict_race_new}
-\alias{.predict_race_me}
+\alias{predict_race_new}
+\alias{predict_race_me}
 \title{Internal model fitting functions}
 \usage{
 .predict_race_old(
@@ -26,28 +26,41 @@
   ...
 )
 
-.predict_race_new(
+predict_race_new(
   voter.file,
   names.to.use,
-  year = "2020",
+  year = "2010",
+  age = FALSE,
+  sex = FALSE,
   census.geo,
   census.key,
   name.dictionaries,
+  surname.only = FALSE,
   census.data,
   retry = 0,
   impute.missing = TRUE,
+  census.surname = FALSE,
   use_counties = FALSE,
   ...
 )
 
-.predict_race_me(
+predict_race_me(
   voter.file,
   names.to.use,
+  year = "2010",
+  age = FALSE,
+  sex = FALSE,
   census.geo,
-  race.init = NULL,
-  name.dictionaries = NULL,
+  census.key,
+  name.dictionaries,
+  surname.only = FALSE,
+  census.data,
+  retry = 0,
   impute.missing = TRUE,
-  control = NULL,
+  census.surname = FALSE,
+  use_counties = FALSE,
+  race.init = NULL,
+  control,
   ...
 )
 }

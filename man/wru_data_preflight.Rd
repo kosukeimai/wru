@@ -7,6 +7,6 @@
 wru_data_preflight()
 }
 \description{
-Checks if namedata is avialable in the current working directory, if not
+Checks if namedata is available in the current working directory, if not
 downloads it from github using piggyback.
 }

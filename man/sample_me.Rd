@@ -10,7 +10,6 @@ sample_me(
   mid_name,
   geo,
   N_rg,
-  alpha,
   pi_s,
   pi_f,
   pi_m,
@@ -18,7 +17,6 @@ sample_me(
   which_names,
   samples,
   burnin,
-  me_race,
   race_init,
   verbose
 )
@@ -31,8 +29,6 @@ sample_me(
 \item{geo}{Integer vector of geographic units for each record. Must match column number in N_rg}
 
 \item{N_rg}{Integer matrix of race | geography counts in census (geograpgies in columns).}
-
-\item{alpha}{Numeric matrix of race | geography prior probabilities.}
 
 \item{pi_s}{Numeric matrix of race | surname prior probabilities.}
 
@@ -48,8 +44,6 @@ sample_me(
 
 \item{burnin}{Integer number of samples to discard as burn-in of Markov chain}
 
-\item{me_race}{Boolean; should measurement error in race | geography be corrected?}
-
 \item{race_init}{Integer vector of initial race assignments}
 
 \item{verbose}{Boolean; should informative messages be printed?}
@@ -61,6 +55,10 @@ sample_me(
 \item{M_rf}{Same as `M_rs`, but for first names (can be empty matrix for surname only models).}
 
 \item{M_rm}{Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).}
+
+\item{alpha}{Numeric matrix of race | geography prior probabilities.}
+
+\item{me_race}{Boolean; should measurement error in race | geography be corrected?}
 }
 \description{
 Collapsed Gibbs sampler for hWRU. Internal function

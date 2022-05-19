@@ -23,8 +23,7 @@ predict_race(
   race.init = NULL,
   name.dictionaries = NULL,
   names.to.use = "surname",
-  control = NULL,
-  ...
+  control = NULL
 )
 }
 \arguments{
@@ -109,7 +108,8 @@ it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 \item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
 available in \var{census.data}?}
 
-\item{model}{Character string, one of "BISG_surname" (default), "BISG_allnames", or "fBISG".}
+\item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction, 
+fully-Bayesian model).}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
 Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
