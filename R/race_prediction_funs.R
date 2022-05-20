@@ -339,7 +339,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
     )
     
     if (!all(geo_id_names %in% names(voter.file))) {
-      stop(cat("To use",census.geo,"as census.geo, voter.file needs to include the following column(s):",
+      stop(message("To use",census.geo,"as census.geo, voter.file needs to include the following column(s):",
                paste(geo_id_names, collapse=", ")))
     }
     
@@ -399,7 +399,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
 predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use_counties = FALSE, race.init = NULL, control, ...) 
+                            use_counties = FALSE, race.init, control, ...) 
 {
   ## Form control list
   ctrl <- list(
@@ -504,25 +504,11 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     census.data <- census.data[all_states]
   }
   race.suff <- c("whi", "bla", "his", "asi", "oth")
-  if (is.null(race.init)) {
-    if (ctrl$verbose) {
-      cat("Using predict_race() to obtain initial race predictions...\n")
-    }
-    cl <- match.call()
-    cl$model <- "BISG"
-    race_pred <- evalq(cl)
-    race.init <- apply(race_pred[, paste0("pred_", race.suff)], 1, which.max)
-    rm(race_pred)
-  }
-  if (any(is.na(race.init))) {
-    stop("Some initial race values are NA.\n
-         If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
-         The most likely reason for getting a missing race prediction is having a missing geolocation value.")
-  }
+
   geo_id <- do.call(paste, voter.file[, geo_id_names])
   
   if (ctrl$verbose) {
-    cat("Forming Pr(race | location) tables from census data...\n")
+    message("Forming Pr(race | location) tables from census data...\n")
   }
   if(year == "2020") {
     vars_ <- c(
@@ -592,7 +578,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   name_data <- vector("list", 3)
   names(name_data) <- c("surname", "first", "middle")
   if (ctrl$verbose) {
-    cat("Pre-processing names...\n")
+    message("Pre-processing names...\n")
   }
   for (ntype in c("surname", "first", "middle")) {
     if (ntype %in% name_types) {
@@ -650,7 +636,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Run Gibbs sampler
   if (ctrl$verbose) {
-    cat("Sampling races...\n")
+    message("Sampling races...\n")
     pb <- txtProgressBar(min = 0, max = n_groups, style = 3)
   }
   race_samples <- lapply(seq.int(n_groups),
@@ -683,7 +669,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     close(pb)
   }
   if (ctrl$verbose) {
-    cat("Post-processing results and wrapping up.\n")
+    message("Post-processing results and wrapping up.\n")
   }
   ## Get posterior race probabilities and append to voter.file
   race_samples <- do.call(rbind, race_samples)
