@@ -510,8 +510,8 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     }
     cl <- match.call()
     cl$model <- "BISG"
-    race_pred <- evalq(cl)
-    race.init <- apply(race_pred[, paste0("pred_", race.suff)], 1, which.max)
+    race_pred <- do.call(predict_race_new, cl)
+    race.init <- max.col(race_pred[, paste0("pred.", race.suff)], ties.method="random")
     rm(race_pred)
   }
   if (any(is.na(race.init))) {
