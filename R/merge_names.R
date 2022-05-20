@@ -334,6 +334,6 @@ wru_data_preflight <- function() {
   ) {
     # TODO: Point to a repository that is not private! See inst/scripts/
     # prep-piggyback.R for example
-    piggyback::pb_download("solivella/wruData")
+    piggyback::pb_download(repo = "solivella/wruData")
   }
 }
