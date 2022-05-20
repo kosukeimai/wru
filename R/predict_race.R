@@ -150,12 +150,14 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
   
+  voter.file$case.id <- 1:nrow(voter.file)
+  
   ## Build model calls
   arg_list <- as.list(match.call())[-1]
   cl <- formals()
   cl[names(arg_list)] <- arg_list
   if((model == "BISG")){
-    return(do.call(predict_race_new, cl))
+    preds <- do.call(predict_race_new, cl)
   } else {
     if (is.null(race.init)) {
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
@@ -170,8 +172,9 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
     cl$race.init <- race.init
-    return(do.call(predict_race_me, cl))
+    preds <- do.call(predict_race_me, cl)
   }
+  preds[order(voter.file$case.id),setdiff(names(preds), "caseid")]
 }
   
  

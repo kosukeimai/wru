@@ -124,7 +124,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   ## Convert names in voter file to upper case
   df <- voter.file
-  df$caseid <- 1:nrow(df)
+
   df$lastname.match <- df$lastname.upper <- toupper(as.character(df$surname))
   if (grepl("first", namesToUse)) {
     df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
@@ -144,15 +144,15 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
+    return(df[, c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
   }
   if (namesToUse == "surname, first" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
+    return(df[, c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
   }
   if (namesToUse == "surname, first, middle" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
+    return(df[, c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
   }
 
   ## Clean names (if specified by user)
@@ -266,7 +266,6 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
       } else {
         df <- df1
       }
-      df <- df[order(df$caseid), ]
     }
   }
 
@@ -303,14 +302,14 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   # return the data
   if (namesToUse == "surname") {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+    return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
   } else if (namesToUse == "surname, first") {
-    return(df[order(df$caseid), c(
+    return(df[, c(
       names(voter.file), "lastname.match", "firstname.match",
       paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
     )])
   } else if (namesToUse == "surname, first, middle") {
-    return(df[order(df$caseid), c(
+    return(df[, c(
       names(voter.file), "lastname.match", "firstname.match", "middlename.match",
       paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
     )])
