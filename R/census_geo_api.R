@@ -46,7 +46,7 @@
 #' @importFrom furrr future_map_dfr
 #' @importFrom purrr map_dfr
 #' @export
-census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, year = "2010", retry = 3, save_temp = NULL, counties = NULL) {
+census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = FALSE, year = "2010", retry = 3, save_temp = NULL, counties = NULL) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
@@ -83,15 +83,15 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
     )
   }
   
-  if (age == F & sex == F) {
-    vars_ <- vars_[c("pop_white", "pop_black", "pop_aian", "pop_asian", 
-                   "pop_nhpi", "pop_other", "pop_two", "pop_hisp")]
-  }
+  # if (age == F & sex == F) {
+  #   vars_ <- vars_[c("pop_white", "pop_black", "pop_aian", "pop_asian", 
+  #                  "pop_nhpi", "pop_other", "pop_two", "pop_hisp")]
+  # }
   
   if (age == F & sex == T) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c("01", "02", "26"))
-    vars_ <- NULL
+    #vars_ <- NULL
     for (e in 1:length(eth.let)) {
       vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }
@@ -100,7 +100,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (age == T & sex == F) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    vars_ <- NULL
+    # vars_ <- NULL
     for (e in 1:length(eth.let)) {
       vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }
@@ -109,7 +109,7 @@ census_geo_api <- function(key, state, geo = "tract", age = FALSE, sex = FALSE, 
   if (age == T & sex == T) {
     eth.let <- c("I", "B", "H", "D", "E", "F", "C")
     num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    vars_ <- NULL
+    #vars_ <- NULL
     for (e in 1:length(eth.let)) {
       vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
     }

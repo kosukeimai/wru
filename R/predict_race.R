@@ -134,7 +134,7 @@
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
-                         surname.year = 2010, census.geo, census.key = NULL, census.data = NA, age = FALSE,
+                         surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL) {
@@ -150,12 +150,28 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
   
+
+
   voter.file$case.id <- 1:nrow(voter.file)
   
   ## Build model calls
   arg_list <- as.list(match.call())[-1]
   cl <- formals()
   cl[names(arg_list)] <- arg_list
+  
+  if(is.null(census.key) & is.null(census.data)) {
+    k <- Sys.getenv("CENSUS_API_KEY")
+    
+    if(k == "") 
+      stop(
+        "Please provide a valid Census API key using census.key option.",
+        " Or set CENSUS_API_KEY in your .Renviron or .Rprofile"
+      )
+    cl$census.key <- k
+  
+  }
+  
+  
   if((model == "BISG")){
     preds <- do.call(predict_race_new, cl)
   } else {
