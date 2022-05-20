@@ -32,7 +32,8 @@ census_data_preflight <- function(census.data, census.geo, year) {
       paste0(
         "Missing ", 
         paste0(vars_, collapse = ", "), 
-        " from census.data object. Please run `get_census_data` again"
+        " from census.data object. Please update your census.data by",
+        " running `get_census_data` again."
       )
     )
   }

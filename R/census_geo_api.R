@@ -157,7 +157,7 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
       census_tracts <- furrr::future_map_dfr(seq_along(county_list), function(county) {
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
-        get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
+        get_census_api(data_url = census_data_url, key = key, var.names = vars_, region = region_county, retry)
       })
       
       census <- rbind(census, census_tracts)
