@@ -334,11 +334,6 @@ wru_data_preflight <- function() {
   ) {
     # TODO: Point to a repository that is not private! See inst/scripts/
     # prep-piggyback.R for example
-    piggyback::pb_download("wru-data-first_c.rds", repo = "solivella/wruData")
-    piggyback::pb_download("wru-data-mid_c.rds", repo = "solivella/wruData")
-    piggyback::pb_download("wru-data-last_c.rds", repo = "solivella/wruData")
-    piggyback::pb_download("wru-data-census_last_c.rds", repo = "solivella/wruData")
-  } #else {
-    #message("`wru` name data already available in working directory")
-  #}
+    piggyback::pb_download("solivella/wruData")
+  }
 }

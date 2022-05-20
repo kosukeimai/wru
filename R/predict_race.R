@@ -137,7 +137,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NA, age = FALSE,
                          sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
-                         names.to.use = "surname",control = NULL) {
+                         names.to.use = "surname", control = NULL) {
 
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
@@ -150,15 +150,28 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
   
-    ## Build model calls
-    arg_list <- as.list(match.call())[-1]
-    cl <- formals()
-    cl[names(arg_list)] <- arg_list
-    if((model == "BISG")){
-        return(do.call(predict_race_new, cl))
-    } else {
-        return(do.call(predict_race_me, cl))
+  ## Build model calls
+  arg_list <- as.list(match.call())[-1]
+  cl <- formals()
+  cl[names(arg_list)] <- arg_list
+  if((model == "BISG")){
+    return(do.call(predict_race_new, cl))
+  } else {
+    if (is.null(race.init)) {
+      message("Using `predict_race` to obtain initial race prediction priors with BISG model")
+      interim <- cl
+      interim$model <- "BISG"
+      race.init <- do.call(predict_race_new, interim)
+      race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
+    if (any(is.na(race.init))) {
+      stop("Some initial race values are NA.\n
+         If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
+         The most likely reason for getting a missing race prediction is having a missing geolocation value.")
+    }
+    cl$race.init <- race.init
+    return(do.call(predict_race_me, cl))
+  }
 }
   
  
