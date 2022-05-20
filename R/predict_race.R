@@ -162,7 +162,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       interim <- cl
       interim$model <- "BISG"
       race.init <- do.call(predict_race_new, interim)
-      race.init <- max.col(race.init[, paste0("pred_", race.suff)], ties.method = "random")
+      race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
     if (any(is.na(race.init))) {
       stop("Some initial race values are NA.\n
