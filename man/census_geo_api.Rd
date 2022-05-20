@@ -5,7 +5,7 @@
 \title{Census Data download function.}
 \usage{
 census_geo_api(
-  key,
+  key = NULL,
   state,
   geo = "tract",
   age = FALSE,

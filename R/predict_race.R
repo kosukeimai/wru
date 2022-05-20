@@ -149,8 +149,6 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       )
     )
   }
-  
-
 
   voter.file$case.id <- 1:nrow(voter.file)
   

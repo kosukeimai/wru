@@ -402,6 +402,11 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
                             use_counties = FALSE, race.init, control, ...) 
 {
   ## Form control list
+  
+  if(!is.null(census.data)) {
+    census_data_preflight(census.data, census.geo, year)
+  }
+  
   ctrl <- list(
     iter = 1000,
     thin = 1,
