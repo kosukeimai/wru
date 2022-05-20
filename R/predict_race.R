@@ -150,18 +150,15 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
   
-  ## Build model calls
-  arg_list <- as.list(match.call())[-1]
-  cl <- formals()
-  cl[names(arg_list)] <- arg_list
-  if((model == "BISG")){
-    cl <- c(quote(wru:::predict_race_new), cl)
-  } else {
-    cl <- c(quote(wru:::predict_race_me), cl)
-  }
-  res <- eval(as.call(cl), parent.frame())
-
-  return(res)
+    ## Build model calls
+    arg_list <- as.list(match.call())[-1]
+    cl <- formals()
+    cl[names(arg_list)] <- arg_list
+    if((model == "BISG")){
+        return(do.call(predict_race_new, cl))
+    } else {
+        return(do.call(predict_race_me, cl))
+    }
 }
   
  
