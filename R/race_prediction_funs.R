@@ -508,7 +508,9 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
     if (ctrl$verbose) {
       cat("Using predict_race() to obtain initial race predictions...\n")
     }
-    cl <- match.call()
+    arg_list <- as.list(match.call())[-1]
+    cl <- formals()
+    cl[names(arg_list)] <- arg_list
     cl$model <- "BISG"
     race_pred <- do.call(predict_race_new, cl)
     race.init <- max.col(race_pred[, paste0("pred.", race.suff)], ties.method="random")
