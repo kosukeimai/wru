@@ -135,12 +135,12 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   ## Merge Surnames with Census List (No Cleaning Yet)
-  df <- merge(df, lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+  df <- merge(df, lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE, sort = FALSE)
   if (grepl("first", namesToUse)) {
-    df <- merge(df, firstNameDict, by.x = "firstname.match", by.y = "first_name", all.x = TRUE)
+    df <- merge(df, firstNameDict, by.x = "firstname.match", by.y = "first_name", all.x = TRUE, sort = FALSE)
   }
   if (grepl("middle", namesToUse)) {
-    df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
+    df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE, sort = FALSE)
   }
 
   if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
@@ -170,7 +170,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, names(df1)] # reorder the columns
 
@@ -185,7 +186,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- gsub(" ", "", df2[, paste(nameType, "name.match", sep = "")])
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, names(df1)] # reorder the columns
 
@@ -214,7 +216,10 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
           df2$lastname.match
         ) # Remove "SR" only if name has at least 7 characters
 
-        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+        df2 <- merge(
+          df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], 
+          lastNameDict, by.x = "lastname.match", by.y = "last_name", 
+          all.x = TRUE, sort = FALSE)
         df2 <- df2[, names(df1)] # reorder the columns
 
         if (sum(!is.na(df2[, paste("c_whi_", nameType, sep = ""), ])) > 0) {
@@ -236,7 +241,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name1)
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
 
@@ -251,7 +257,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name2)
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
 

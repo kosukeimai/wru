@@ -282,6 +282,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Preliminary Data quality checks
   wru_data_preflight()
+  
   first_c <- readRDS("wru-data-first_c.rds")
   mid_c <- readRDS("wru-data-mid_c.rds")
   if(census.surname){
@@ -355,7 +356,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       retry = retry,
       use_counties = use_counties
     )
-  }  
+  }
+  
   eth <- c("whi", "bla", "his", "asi", "oth")
   
   ## Merge in Pr(Name | Race)

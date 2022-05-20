@@ -150,12 +150,14 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
 
-  voter.file$case.id <- 1:nrow(voter.file)
   
   ## Build model calls
   arg_list <- as.list(match.call())[-1]
   cl <- formals()
   cl[names(arg_list)] <- arg_list
+  
+  voter.file$caseid <- 1:nrow(voter.file)
+  cl$voter.file <- voter.file 
   
   if(is.null(census.key) & is.null(census.data)) {
     k <- Sys.getenv("CENSUS_API_KEY")
@@ -177,6 +179,18 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       interim <- cl
       interim$model <- "BISG"
+      
+      if(is.null(census.data)) {
+        # Otherwise predict_race_new and predict_race_me will both
+        # attempt to pull census_data
+        census.data <- get_census_data(
+          cl$census.key, cl$states, cl$age, 
+          cl$sex, cl$year, cl$census.geo, 
+          cl$retry, cl$counties
+        )
+        cl$census.data <- census.data
+      }
+      
       race.init <- do.call(predict_race_new, interim)
       race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
@@ -188,7 +202,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     cl$race.init <- race.init
     preds <- do.call(predict_race_me, cl)
   }
-  preds[order(voter.file$case.id),setdiff(names(preds), "caseid")]
+  preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
   
  
