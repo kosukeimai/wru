@@ -135,7 +135,7 @@
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
-                         sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
+                         sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL) {
 
@@ -150,12 +150,13 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
 
-  
-  ## Build model calls
   arg_list <- as.list(match.call())[-1]
   cl <- formals()
   cl[names(arg_list)] <- arg_list
   
+  ## Build model calls
+  
+  # Adjust voter.file with caseid for ordering at the end
   voter.file$caseid <- 1:nrow(voter.file)
   cl$voter.file <- voter.file 
   
@@ -173,7 +174,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   
   
   if((model == "BISG")){
-    preds <- do.call(predict_race_new, cl)
+    cl <- c(as.name("predict_race_new"), cl)
+    preds <- eval.parent(as.call(cl))
   } else {
     if (is.null(race.init)) {
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
@@ -188,10 +190,13 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
           cl$sex, cl$year, cl$census.geo, 
           cl$retry, cl$counties
         )
+        # We also need it for the race.init if it's null
+        interim$census.data <- census$data
         cl$census.data <- census.data
       }
       
-      race.init <- do.call(predict_race_new, interim)
+      interim <- c(as.name("predict_race_new"), interim)
+      race.init <- eval.parent(as.call(interim))
       race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
     if (any(is.na(race.init))) {
@@ -200,7 +205,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
     cl$race.init <- race.init
-    preds <- do.call(predict_race_me, cl)
+    cl <- c(as.name("predict_race_me"), cl)
+    preds <- eval.parent(as.call(cl))
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
