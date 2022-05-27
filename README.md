@@ -142,3 +142,7 @@ future::plan(future.callr::callr)
 This package uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.
 
 U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov. Retrieved from https://www.census.gov/data/developers/data-sets/decennial-census.html
+
+## A related video
+
+https://www.youtube.com/watch?v=LYb_nqU_43w
