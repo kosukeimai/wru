@@ -67,7 +67,8 @@ test_that("BISG NJ at block level", {
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-
+  voters[voters$surname=="Ratkovic", "block"] <- "3001"
+  
   x <- suppressMessages(predict_race(
     voter.file = voters[voters$state == "NJ", ], 
     census.geo = "block", 
@@ -77,7 +78,7 @@ test_that("BISG NJ at block level", {
   )
   
   expect_equal(dim(x), c(7, 20))
-  expect_equal(sum(is.na(x$pred.asi)), 1L)
+  expect_equal(sum(is.na(x$pred.asi)), 0L)
   expect_true(!any(duplicated(x$surname)))
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7640, tolerance = 0.01)
   expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.1)
@@ -116,3 +117,38 @@ test_that("Fails on territories", {
     "The wru package does not support US territories"
   )
 }) 
+
+test_that("Fails on missing geolocation", {
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
+  expect_error(suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "block", 
+    census.key = NULL, 
+    census.data = census, 
+    use_counties = TRUE)
+  ),
+  "The following locations in the voter\\.file are not available"
+  )
+})
+
+test_that("Handles zero-pop. geolocations", {
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
+  census$NJ$county[6,grep("P005",colnames(census$NJ$county))] <- 0
+  x <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "county", 
+    census.key = NULL, 
+    census.data = census, 
+    use_counties = TRUE)
+  )
+  expect_equal(dim(x), c(7, 21))
+  expect_equal(sum(is.na(x$pred.asi)), 0)
+  expect_true(!any(duplicated(x$surname)))
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.99, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.92, tolerance = 0.01)
+})
