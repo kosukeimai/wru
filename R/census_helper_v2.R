@@ -192,17 +192,32 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       drop <- c(grep("state", names(census)), grep("P2_", names(census)))
     }
     
-    # TODO: If year is not one of 2020 or 2010, this should fail much earlier
-    
     census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
     census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
     census$r_his <- (census[, vars_["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
     census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
     census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
+    # check locations with zero people
+    # get average without places with zero people, and assign that to zero locs.
+    if(any((geoPopulations - 0.0) < .Machine$double.eps)){
+      zero_ind <- which((geoPopulations - 0.0) < .Machine$double.eps)
+      for(rcat in c("r_whi","r_bla","r_his","r_asi","r_oth") ){
+        census[[rcat]][zero_ind] <- mean(census[[rcat]], na.rm=TRUE)
+      }
+    }
+    
     voters.census <- merge(
       voter.file[toupper(voter.file$state) == toupper(states[s]), ],
       census[, -drop], by = geo.merge, all.x  = TRUE)
+    
+    #Check if geolocation missing from census object
+    if(any(is.na(voters.census$r_whi))){
+      miss_ind <- which(is.na(voters.census$r_whi))
+      stop("The following locations in the voter.file are not available in the census data ",
+           paste0("(listed as ", paste0(c("state",geo.merge), collapse="-"),"):\n"),
+           do.call(paste, c(unique(voters[miss_ind, c("state",geo.merge)]), sep="-")))
+    }
       
     # }
     
