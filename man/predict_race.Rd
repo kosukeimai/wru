@@ -15,7 +15,7 @@ predict_race(
   age = FALSE,
   sex = FALSE,
   year = "2010",
-  party,
+  party = NULL,
   retry = 3,
   impute.missing = TRUE,
   use_counties = FALSE,
