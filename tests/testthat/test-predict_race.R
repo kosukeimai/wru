@@ -6,9 +6,13 @@
 test_that("Tests surname only predictions", {
   set.seed(42)
   data(voters)
-
+  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
   # Prediction using surname only
-  x <- suppressMessages(predict_race(voter.file = voters, census.geo = "tract", surname.only = TRUE, census.surname = TRUE))
+  x <- suppressMessages(predict_race(
+    voter.file = voters, 
+    census.geo = "tract",
+    census.data = census,
+    surname.only = TRUE, census.surname = TRUE))
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)

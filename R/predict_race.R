@@ -140,7 +140,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
-                         names.to.use = "surname", control = NULL) {
+                         names.to.use = "surname", control = NULL, ...) {
 
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
