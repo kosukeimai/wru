@@ -451,24 +451,26 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Preliminary Data quality checks
   wru_data_preflight()
+  path <- readLines(".wru_name_data")
+  
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   if (!is.null(name.dictionaries[["surname"]])) {
     stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     last_c <- name.dictionaries[["surname"]]
   } 
   if("first" %in% name_types){
-    first_c <- readRDS("wru-data-first_c.rds")
+    first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
     if (!is.null(name.dictionaries[["first"]])){
       stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
       first_c <- name.dictionaries[["first"]]
     }
   } 
   if("middle" %in% name_types){
-    mid_c <- readRDS("wru-data-mid_c.rds")
+    mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
     if (!is.null(name.dictionaries[["middle"]])){
       stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
       mid_c <- name.dictionaries[["middle"]]

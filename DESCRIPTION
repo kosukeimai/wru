@@ -23,6 +23,7 @@ Depends:
 Imports:
     devtools (>= 1.10.0),
     dplyr,
+    future,
     furrr,
     purrr,
     Rcpp,

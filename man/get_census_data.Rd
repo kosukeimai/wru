@@ -48,7 +48,7 @@ geography to use to merge in U.S. Census 2010 geographic data. Currently
 Output will be an object of class \code{list} indexed by state. 
 Output will contain a subset of the following elements: 
 \code{state}, \code{age}, \code{sex}, 
-\code{county}, \code{tract}, \code{block}, and \code{place}.
+\code{county}, \code{tract}, \code{block_group}, \code{block}, and \code{place}.
 }
 \description{
 \code{get_census_data} returns county-, tract-, and block-level Census data 
