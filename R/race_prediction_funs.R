@@ -300,13 +300,14 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Preliminary Data quality checks
   wru_data_preflight()
+  path <- readLines(".wru_name_data")
   
-  first_c <- readRDS("wru-data-first_c.rds")
-  mid_c <- readRDS("wru-data-mid_c.rds")
+  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
+  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {

@@ -84,13 +84,14 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   wru_data_preflight()
+  path <- readLines(".wru_name_data")
   
-  first_c <- readRDS("wru-data-first_c.rds")
-  mid_c <- readRDS("wru-data-mid_c.rds")
+  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
+  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   
   p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
@@ -331,15 +332,12 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 #'
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
-  if (!all(
-    file.exists("wru-data-first_c.rds"),
-    file.exists("wru-data-mid_c.rds"),
-    file.exists("wru-data-last_c.rds"),
-    file.exists("wru-data-census_last_c.rds")
-  )
-  ) {
-    # TODO: Point to a repository that is not private! See inst/scripts/
-    # prep-piggyback.R for example
-    piggyback::pb_download(repo = "solivella/wruData")
+  if(file.exists(".wru_name_data")) {
+    dest <- readLines(".wru_name_data")
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
+  } else {
+    dest <- tempdir()
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
+    writeLines(dest, ".wru_name_data")
   }
 }
