@@ -78,14 +78,13 @@ merge_surnames <- function(voter.file, surname.year = 2010, name.data, clean.sur
   
   ## Convert Surnames in Voter File to Upper Case 
   df <- voter.file
-  df$caseid <- 1:nrow(df)
   df$surname.match <- df$surname.upper <- toupper(as.character(df$surname))
 
   ## Merge Surnames with Census List (No Cleaning Yet)
   df <- merge(df[names(df) %in% p_eth == FALSE], surnames[c("surname", p_eth)], by.x = "surname.match", by.y = "surname", all.x = TRUE)
 
   if (nrow(df[df$surname.upper %in% surnames$surname == F, ]) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
+    return(df[, c(names(voter.file), "surname.match", p_eth)])
   }
 
   df[df$surname.upper %in% surnames$surname == F, ]$surname.match <- ""
@@ -169,5 +168,5 @@ merge_surnames <- function(voter.file, surname.year = 2010, name.data, clean.sur
   } else message(paste(nrow(df2), ifelse(nrow(df2) == 1, "surname was", "surnames were"), "not matched."))
   
   df <- rbind(df1, df2)
-  return(df[order(df$caseid), c(names(voter.file), "surname.match", p_eth)])
+  return(df[, c(names(voter.file), "surname.match", p_eth)])
 }

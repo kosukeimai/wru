@@ -33,6 +33,11 @@
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
+#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
+#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
+#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
+#'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
+#'  Default is \code{TRUE}.
 #' @param table.surnames An object of class \code{data.frame} provided by the
 #' users as an alternative surname dictionary. It will consist of a list of
 #' U.S. surnames, along with the associated probabilities P(name | ethnicity)
@@ -84,13 +89,14 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   wru_data_preflight()
+  path <- readLines(".wru_name_data")
   
-  first_c <- readRDS("wru-data-first_c.rds")
-  mid_c <- readRDS("wru-data-mid_c.rds")
+  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
+  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   
   p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
@@ -124,7 +130,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   ## Convert names in voter file to upper case
   df <- voter.file
-  df$caseid <- 1:nrow(df)
+
   df$lastname.match <- df$lastname.upper <- toupper(as.character(df$surname))
   if (grepl("first", namesToUse)) {
     df$firstname.match <- df$firstname.upper <- toupper(as.character(df$first))
@@ -135,24 +141,24 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   ## Merge Surnames with Census List (No Cleaning Yet)
-  df <- merge(df, lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+  df <- merge(df, lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE, sort = FALSE)
   if (grepl("first", namesToUse)) {
-    df <- merge(df, firstNameDict, by.x = "firstname.match", by.y = "first_name", all.x = TRUE)
+    df <- merge(df, firstNameDict, by.x = "firstname.match", by.y = "first_name", all.x = TRUE, sort = FALSE)
   }
   if (grepl("middle", namesToUse)) {
-    df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE)
+    df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE, sort = FALSE)
   }
 
   if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
+    return(df[, c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
   }
   if (namesToUse == "surname, first" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
+    return(df[, c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
   }
   if (namesToUse == "surname, first, middle" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
     sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0) {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
+    return(df[, c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
   }
 
   ## Clean names (if specified by user)
@@ -170,7 +176,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, names(df1)] # reorder the columns
 
@@ -185,7 +192,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- gsub(" ", "", df2[, paste(nameType, "name.match", sep = "")])
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, names(df1)] # reorder the columns
 
@@ -214,7 +222,10 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
           df2$lastname.match
         ) # Remove "SR" only if name has at least 7 characters
 
-        df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], lastNameDict, by.x = "lastname.match", by.y = "last_name", all.x = TRUE)
+        df2 <- merge(
+          df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], 
+          lastNameDict, by.x = "lastname.match", by.y = "last_name", 
+          all.x = TRUE, sort = FALSE)
         df2 <- df2[, names(df1)] # reorder the columns
 
         if (sum(!is.na(df2[, paste("c_whi_", nameType, sep = ""), ])) > 0) {
@@ -236,7 +247,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name1)
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
 
@@ -251,7 +263,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
         df2[, paste(nameType, "name.match", sep = "")] <- as.character(df2$name2)
         df2 <- merge(df2[, !grepl(paste("_", nameType, sep = ""), names(df2))], nameDict[[nameType]],
           all.x = TRUE,
-          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_")
+          by.x = paste(nameType, "name.match", sep = ""), by.y = paste(nameType, "name", sep = "_"),
+          sort = FALSE
         )
         df2 <- df2[, c(names(df1), "name1", "name2")] # reorder the columns
 
@@ -266,7 +279,6 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
       } else {
         df <- df1
       }
-      df <- df[order(df$caseid), ]
     }
   }
 
@@ -303,14 +315,14 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   # return the data
   if (namesToUse == "surname") {
-    return(df[order(df$caseid), c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+    return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
   } else if (namesToUse == "surname, first") {
-    return(df[order(df$caseid), c(
+    return(df[, c(
       names(voter.file), "lastname.match", "firstname.match",
       paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
     )])
   } else if (namesToUse == "surname, first, middle") {
-    return(df[order(df$caseid), c(
+    return(df[, c(
       names(voter.file), "lastname.match", "firstname.match", "middlename.match",
       paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
     )])
@@ -325,15 +337,12 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 #'
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
-  if (!all(
-    file.exists("wru-data-first_c.rds"),
-    file.exists("wru-data-mid_c.rds"),
-    file.exists("wru-data-last_c.rds"),
-    file.exists("wru-data-census_last_c.rds")
-  )
-  ) {
-    # TODO: Point to a repository that is not private! See inst/scripts/
-    # prep-piggyback.R for example
-    piggyback::pb_download("solivella/wruData")
+  if(file.exists(".wru_name_data")) {
+    dest <- readLines(".wru_name_data")
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
+  } else {
+    dest <- tempdir()
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
+    writeLines(dest, ".wru_name_data")
   }
 }

@@ -15,20 +15,20 @@ saveRDS(mid_c, "wru-data-mid_c.rds")
 saveRDS(census_last_c, file="wru-data-census_last_c.rds")
 
 pb_new_release(
-  repo = "solivella/wruData",
-  tag = "v0.0.2"
+  repo = "kosukeimai/wru",
+  tag = "v0.0.1"
 )
 
 list.files(pattern = "wru-data") %>% 
   pb_upload(
-    repo = "solivella/wruData", 
-    tag = "v0.0.2"
+    repo = "kosukeimai/wru", 
+    tag = "v0.0.1"
   )
 
 # validate/verify
 pb_list(
-  repo = "solivella/wruData", 
-  tag = "v0.0.2"
+  repo = "kosukeimai/wru", 
+  tag = "v0.0.1"
 )
 
 #              file_name     size           timestamp    tag     owner    repo

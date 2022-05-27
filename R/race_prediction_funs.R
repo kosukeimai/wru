@@ -46,7 +46,7 @@ NULL
 #' @rdname modfuns
 .predict_race_old <- function(voter.file,
                               census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
-                              census.geo, census.key, census.data = NA, age = FALSE, sex = FALSE, year = "2010",
+                              census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2010",
                               party, retry = 3, impute.missing = TRUE, use_counties = FALSE, ...) {
   
   # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
@@ -150,6 +150,24 @@ NULL
     )
   }
   
+  if (census.geo == "block_group") {
+    if (!("block_group" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("tract" %in% names(voter.file))) {
+      stop("voter.file object needs to have columns named block, tract, and county.")
+    }
+    voter.file <- census_helper(
+      key = census.key,
+      voter.file = voter.file,
+      states = "all",
+      geo = "block_group",
+      age = age,
+      sex = sex,
+      year = year,
+      census.data = census.data,
+      retry = retry,
+      use_counties = use_counties
+    )
+  }
+  
   if (census.geo == "block") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
       stop("voter.file object needs to have columns named block, tract, and county.")
@@ -243,7 +261,7 @@ NULL
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
 predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
-                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
+                             census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
                              census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                              use_counties = FALSE, ...) {
   
@@ -282,12 +300,14 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Preliminary Data quality checks
   wru_data_preflight()
-  first_c <- readRDS("wru-data-first_c.rds")
-  mid_c <- readRDS("wru-data-mid_c.rds")
+  path <- readLines(".wru_name_data")
+  
+  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
+  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
@@ -303,7 +323,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   # check the geographies
   if (surname.only == FALSE) {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
+    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract","block_group", "block", "place") == FALSE) {
       stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
@@ -334,6 +354,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       census.geo,
       "county" = c("county"),
       "tract" = c("county", "tract"),
+      "block_group" = c("county", "tract", "block_group"),
       "block" = c("county", "tract", "block"),
       "place" = c("place")
     )
@@ -355,7 +376,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       retry = retry,
       use_counties = use_counties
     )
-  }  
+  }
+  
   eth <- c("whi", "bla", "his", "asi", "oth")
   
   ## Merge in Pr(Name | Race)
@@ -398,10 +420,15 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
 #' @rdname modfuns
 predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
-                            census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
+                            census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                             use_counties = FALSE, race.init, control, ...) 
 {
   ## Form control list
+  
+  if(!is.null(census.data)) {
+    census_data_preflight(census.data, census.geo, year)
+  }
+  
   ctrl <- list(
     iter = 1000,
     thin = 1,
@@ -424,24 +451,26 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Preliminary Data quality checks
   wru_data_preflight()
+  path <- readLines(".wru_name_data")
+  
   if(census.surname){
-    last_c <- readRDS("wru-data-census_last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS("wru-data-last_c.rds")
+    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
   }
   if (!is.null(name.dictionaries[["surname"]])) {
     stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     last_c <- name.dictionaries[["surname"]]
   } 
   if("first" %in% name_types){
-    first_c <- readRDS("wru-data-first_c.rds")
+    first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
     if (!is.null(name.dictionaries[["first"]])){
       stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
       first_c <- name.dictionaries[["first"]]
     }
   } 
   if("middle" %in% name_types){
-    mid_c <- readRDS("wru-data-mid_c.rds")
+    mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
     if (!is.null(name.dictionaries[["middle"]])){
       stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
       mid_c <- name.dictionaries[["middle"]]
@@ -450,7 +479,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Other quick checks...
   stopifnot(
-    census.geo %in% c("county", "tract", "block", "place"),
+    census.geo %in% c("county", "tract", "block_group", "block", "place"),
     all(!is.na(voter.file$surname))
   )
   # if (!is.logical(ctrl$me.correct)) {
@@ -481,6 +510,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   geo_id_names <- c("state", switch(census.geo,
                                     "county" = c("county"),
                                     "tract" = c("county", "tract"),
+                                    "block_group" = c("county", "tract", "block_group"),
                                     "block" = c("county", "tract", "block"),
                                     "place" = c("place"),
                                     "zipcode" = c("zipcode")

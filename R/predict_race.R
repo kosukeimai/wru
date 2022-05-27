@@ -13,10 +13,12 @@
 #' state of residence (e.g., \code{"nj"} for New Jersey).
 #' If using Census geographic data in race/ethnicity predictions,
 #' \code{\var{voter.file}} must also contain at least one of the following fields:
-#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}.
+#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block_group}}, \code{\var{block}}, 
+#' and/or \code{\var{place}}.
 #' These fields should contain character strings matching U.S. Census categories.
 #' County is three characters (e.g., \code{"031"} not \code{"31"}),
-#' tract is six characters, and block is four characters. Place is five characters.
+#' tract is six characters, block group is usually a single character and block
+#'  is four characters. Place is five characters.
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
@@ -31,7 +33,8 @@
 #' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
 #' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census geographic data. Currently
-#' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
+#' \code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"} 
+#' are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
 #' must have column named \code{county}.
@@ -134,10 +137,10 @@
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
-                         surname.year = 2010, census.geo, census.key = NULL, census.data = NA, age = FALSE,
-                         sex = FALSE, year = "2010", party, retry = 3, impute.missing = TRUE,
+                         surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
+                         sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
                          use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
-                         names.to.use = "surname", control = NULL) {
+                         names.to.use = "surname", control = NULL, ...) {
 
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
@@ -149,19 +152,59 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       )
     )
   }
-  
-  ## Build model calls
+
   arg_list <- as.list(match.call())[-1]
   cl <- formals()
   cl[names(arg_list)] <- arg_list
+  
+  ## Build model calls
+  
+  # block_group is missing, pull from block
+  if(census.geo == "block_group" & !"block_group" %in% names(voter.file)) {
+    voter.file$block_group <- substring(voter.file$block, 1, 1)
+  }
+  
+  # Adjust voter.file with caseid for ordering at the end
+  voter.file$caseid <- 1:nrow(voter.file)
+  cl$voter.file <- voter.file 
+  
+  if(is.null(census.key) & is.null(census.data)) {
+    k <- Sys.getenv("CENSUS_API_KEY")
+    
+    if(k == "") 
+      stop(
+        "Please provide a valid Census API key using census.key option.",
+        " Or set CENSUS_API_KEY in your .Renviron or .Rprofile"
+      )
+    cl$census.key <- k
+  
+  }
+  
+  
   if((model == "BISG")){
-    return(do.call(predict_race_new, cl))
+    cl <- c(as.name("predict_race_new"), cl)
+    preds <- eval.parent(as.call(cl))
   } else {
     if (is.null(race.init)) {
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       interim <- cl
       interim$model <- "BISG"
-      race.init <- do.call(predict_race_new, interim)
+      
+      if(is.null(census.data)) {
+        # Otherwise predict_race_new and predict_race_me will both
+        # attempt to pull census_data
+        census.data <- get_census_data(
+          cl$census.key, cl$states, cl$age, 
+          cl$sex, cl$year, cl$census.geo, 
+          cl$retry, cl$counties
+        )
+        # We also need it for the race.init if it's null
+        interim$census.data <- census$data
+        cl$census.data <- census.data
+      }
+      
+      interim <- c(as.name("predict_race_new"), interim)
+      race.init <- eval.parent(as.call(interim))
       race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
     if (any(is.na(race.init))) {
@@ -170,8 +213,10 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
     cl$race.init <- race.init
-    return(do.call(predict_race_me, cl))
+    cl <- c(as.name("predict_race_me"), cl)
+    preds <- eval.parent(as.call(cl))
   }
+  preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
   
  

@@ -5,7 +5,7 @@
 \title{Census Data download function.}
 \usage{
 census_geo_api(
-  key,
+  key = NULL,
   state,
   geo = "tract",
   age = FALSE,
@@ -24,7 +24,7 @@ key, which can be requested \href{https://api.census.gov/data/key_signup.html}{h
 e.g., \code{"NJ"}.}
 
 \item{geo}{A character object specifying what aggregation level to use. 
-Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
+Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}. 
 Default is \code{"tract"}. Warning: extracting block-level data takes very long.}
 
 \item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
