@@ -10,7 +10,7 @@
 #' @param state A required character object specifying which state to extract Census data for, 
 #'  e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use \code{"county"}, \code{"tract"}, \code{"block"}, or \code{"place"}. 
+#'  Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}. 
 #'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
@@ -165,6 +165,50 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
     } else {
       message('There were no intersecting counties in your voter.file data (tract)')
     } 
+  }
+  
+  if (geo == "block_group") {
+    geo.merge <- c("state", "county", "tract", "block_group")
+    
+    if (is.null(counties)) {
+      region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
+    } else {
+      counties_paste <- paste0(counties, collapse = ",")
+      region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
+    }
+    
+    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
+    
+    if(is.null(counties)) {
+      county_list <- county_df$county
+    } else {
+      county_list <- intersect(counties, county_df$county)
+    }
+    
+    if(length(county_list) > 0) {
+      message('Running block_group by county...')
+      
+      census_blockgroup <- purrr::map_dfr(
+        1:length(county_list), 
+        function(county) {
+          # too verbose, commenting out
+          message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
+          
+          blockgroup <- paste("for=block+group:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
+  
+          # message(region_tract)
+          blockgroup_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = blockgroup, retry)
+          names(blockgroup_df)[4] <- "block_group" # Fix name, it comes in with a space from api. 
+          blockgroup_df
+        }
+      )
+      message("\n") # new line for progress bar
+      
+      census <- rbind(census, census_blockgroup)
+      rm(census_blockgroup)
+    } else {
+      message('There were no intersecting counties in your voter.file data (block)')
+    }
   }
   
   if (geo == "block") {

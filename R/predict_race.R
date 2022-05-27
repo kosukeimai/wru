@@ -13,10 +13,12 @@
 #' state of residence (e.g., \code{"nj"} for New Jersey).
 #' If using Census geographic data in race/ethnicity predictions,
 #' \code{\var{voter.file}} must also contain at least one of the following fields:
-#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}.
+#' \code{\var{county}}, \code{\var{tract}}, \code{\var{block_group}}, \code{\var{block}}, 
+#' and/or \code{\var{place}}.
 #' These fields should contain character strings matching U.S. Census categories.
 #' County is three characters (e.g., \code{"031"} not \code{"31"}),
-#' tract is six characters, and block is four characters. Place is five characters.
+#' tract is six characters, block group is usually a single character and block
+#'  is four characters. Place is five characters.
 #' See below for other optional fields.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
 #'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
@@ -31,7 +33,8 @@
 #' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
 #' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census geographic data. Currently
-#' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
+#' \code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"} 
+#' are supported.
 #' Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
 #' If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
 #' must have column named \code{county}.
@@ -155,6 +158,11 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   cl[names(arg_list)] <- arg_list
   
   ## Build model calls
+  
+  # block_group is missing, pull from block
+  if(census.geo == "block_group" & !"block_group" %in% names(voter.file)) {
+    voter.file$block_group <- substring(voter.file$block, 1, 1)
+  }
   
   # Adjust voter.file with caseid for ordering at the end
   voter.file$caseid <- 1:nrow(voter.file)

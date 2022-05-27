@@ -1,3 +1,4 @@
+
 #' Census helper function.
 #'
 #' \code{census_helper_new} links user-input dataset with Census geographic data.
@@ -129,8 +130,30 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       }
     }
     
+    if (geo == "block_group") {
+      geo.merge <- c("county", "tract", "block_group")
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+        if(use_counties) {
+          census <- census_geo_api(key, state, geo = "block_group", age, sex, retry, 
+                                   # Only those counties within the target state
+                                   counties = unique(voter.file$county[voter.file$state == state]))
+        } else {
+          census <- census_geo_api(key, state, geo = "block_group", age, sex, retry)
+        }
+        
+      } else {
+        census <- census.data[[toupper(state)]]$block_group
+      }
+    }
+    
+    
     if (geo == "block") {
-      geo.merge <- c("county", "tract", "block")
+      if(any(names(census.data) == "block_group")) {
+        geo.merge <- c("county", "tract", "block_group", "block")
+      } else {
+        geo.merge <- c("county", "tract", "block")
+      }
+
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use_counties) {
           census <- census_geo_api(key, state, geo = "block", age, sex, retry, 
@@ -177,7 +200,9 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
     census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
-    voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[, -drop], by = geo.merge, all.x  = TRUE)
+    voters.census <- merge(
+      voter.file[toupper(voter.file$state) == toupper(states[s]), ],
+      census[, -drop], by = geo.merge, all.x  = TRUE)
       
     # }
     

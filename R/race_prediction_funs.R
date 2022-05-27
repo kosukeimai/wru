@@ -150,6 +150,24 @@ NULL
     )
   }
   
+  if (census.geo == "block_group") {
+    if (!("block_group" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("tract" %in% names(voter.file))) {
+      stop("voter.file object needs to have columns named block, tract, and county.")
+    }
+    voter.file <- census_helper(
+      key = census.key,
+      voter.file = voter.file,
+      states = "all",
+      geo = "block_group",
+      age = age,
+      sex = sex,
+      year = year,
+      census.data = census.data,
+      retry = retry,
+      use_counties = use_counties
+    )
+  }
+  
   if (census.geo == "block") {
     if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
       stop("voter.file object needs to have columns named block, tract, and county.")
@@ -304,7 +322,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   # check the geographies
   if (surname.only == FALSE) {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
+    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract","block_group", "block", "place") == FALSE) {
       stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
@@ -335,6 +353,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       census.geo,
       "county" = c("county"),
       "tract" = c("county", "tract"),
+      "block_group" = c("county", "tract", "block_group"),
       "block" = c("county", "tract", "block"),
       "place" = c("place")
     )
@@ -457,7 +476,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Other quick checks...
   stopifnot(
-    census.geo %in% c("county", "tract", "block", "place"),
+    census.geo %in% c("county", "tract", "block_group", "block", "place"),
     all(!is.na(voter.file$surname))
   )
   # if (!is.logical(ctrl$me.correct)) {
@@ -488,6 +507,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   geo_id_names <- c("state", switch(census.geo,
                                     "county" = c("county"),
                                     "tract" = c("county", "tract"),
+                                    "block_group" = c("county", "tract", "block_group"),
                                     "block" = c("county", "tract", "block"),
                                     "place" = c("place"),
                                     "zipcode" = c("zipcode")

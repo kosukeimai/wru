@@ -12,6 +12,16 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     expect_true(all(r$DC$block$state == "DC"))
   })
   
+  test_that("Census block_group download works", {
+    r <- suppressMessages(get_census_data(
+      key = NULL,
+      state = "RI",
+      census.geo = "block_group"
+    ))
+    expect_named(r$RI, c("state", "age", "sex", "year", "block_group", "tract", "county"))
+    expect_true(all(r$RI$place$state == "RI"))
+  })
+  
   test_that("Census tract download works", {
     r <- suppressMessages(get_census_data(
       key = NULL,

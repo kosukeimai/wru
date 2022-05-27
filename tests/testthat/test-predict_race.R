@@ -8,7 +8,7 @@ test_that("Tests surname only predictions", {
   data(voters)
 
   # Prediction using surname only
-  x <- suppressMessages(predict_race(voter.file = voters, surname.only = TRUE, census.surname = TRUE))
+  x <- suppressMessages(predict_race(voter.file = voters, census.geo = "tract", surname.only = TRUE, census.surname = TRUE))
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)
@@ -78,4 +78,28 @@ test_that("BISG NJ at block level", {
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7640, tolerance = 0.01)
   expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.1)
   expect_equal(x[x$surname == "Lopez", "pred.his"], 0.7, tolerance = 0.1)
+})
+
+test_that("BISG NJ at block_group level", {
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
+  
+  voters <- voters[voters$state == "NJ", ]
+  voters$block_group <- "1"
+  
+  x <- suppressMessages(predict_race(
+    voter.file = voters, 
+    census.geo = "block_group", 
+    census.key = NULL, 
+    census.data = census, 
+    use_counties = TRUE)
+  )
+  
+  expect_equal(dim(x), c(7, 21))
+  expect_equal(sum(is.na(x$pred.asi)), 0)
+  expect_true(!any(duplicated(x$surname)))
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9183, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.75, tolerance = 0.01)
 })

@@ -27,7 +27,7 @@
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain a subset of the following elements: 
 #' \code{state}, \code{age}, \code{sex}, 
-#' \code{county}, \code{tract}, \code{block}, and \code{place}.
+#' \code{county}, \code{tract}, \code{block_group}, \code{block}, and \code{place}.
 #' 
 #' @export
 #'
@@ -58,11 +58,18 @@ get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year =
       block <- census_geo_api(key, s, geo = "block", age, sex, year, retry, counties = counties)
       CensusObj[[s]]$block <- block
     }
-    if ((census.geo == "block") || (census.geo == "tract")) {
+    
+    if (census.geo == "block_group") {
+      block_group <- census_geo_api(key, s, geo = "block_group", age, sex, year, retry, counties = counties)
+      CensusObj[[s]]$block_group <- block_group
+    }
+    
+    if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "block_group")) {
       tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry, counties = counties)
       CensusObj[[s]]$tract <- tract
     }
-    if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county")) {
+
+    if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county") || (census.geo == "block_group")) {
       county <- census_geo_api(key, s, geo = "county", age, sex, year, retry)
       CensusObj[[s]]$county <- county
     }
