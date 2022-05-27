@@ -152,6 +152,14 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       )
     )
   }
+  
+  if (any(unique(voter.file$state) %in% c("AS","GU","MP","PR","VI"))) {
+    stop(
+      paste0(
+        "The wru package does not support US territories", 
+        " please filter these from your voter.file data")
+    )
+  }
 
   arg_list <- as.list(match.call())[-1]
   cl <- formals()

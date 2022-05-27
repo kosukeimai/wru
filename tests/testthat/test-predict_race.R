@@ -107,3 +107,12 @@ test_that("BISG NJ at block_group level", {
   expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.01)
   expect_equal(x[x$surname == "Lopez", "pred.his"], 0.75, tolerance = 0.01)
 })
+
+test_that("Fails on territories", {
+  data(voters)
+  voters$state <- "GU"
+  expect_error(
+    predict_race(voter.file = voters),
+    "The wru package does not support US territories"
+  )
+}) 
