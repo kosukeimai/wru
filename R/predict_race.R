@@ -191,7 +191,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   
   if((model == "BISG")){
     cl <- c(as.name("predict_race_new"), cl)
-    preds <- eval(as.call(cl))
+    preds <- eval.parent(as.call(cl))
   } else {
     if (is.null(race.init)) {
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
@@ -212,7 +212,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       }
       
       interim <- c(as.name("predict_race_new"), interim)
-      race.init <- eval(as.call(interim))
+      race.init <- eval.parent(as.call(interim))
       race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
     }
     if (any(is.na(race.init))) {
@@ -222,7 +222,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     }
     cl$race.init <- race.init
     cl <- c(as.name("predict_race_me"), cl)
-    preds <- eval(as.call(cl))
+    preds <- eval.parent(as.call(cl))
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }

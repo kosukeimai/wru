@@ -1,7 +1,8 @@
 # Note: must provide a valid U.S. Census API key for test cases that use U.S. Census statistics
 # > usethis::edit_r_profile
 # Sys.setenv("CENSUS_API_KEY" = "yourkey")
-
+options("piggyback.verbose" = FALSE)
+options("wru_data_wd" = TRUE)
 
 test_that("Tests surname only predictions", {
   set.seed(42)
@@ -145,7 +146,7 @@ test_that("Handles zero-pop. geolocations", {
     census.data = census, 
     use_counties = TRUE)
   )
-  expect_equal(dim(x), c(7, 21))
+  expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
