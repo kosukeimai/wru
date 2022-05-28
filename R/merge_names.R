@@ -89,7 +89,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   wru_data_preflight()
-  path <- readLines(".wru_name_data")
+  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
   
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
@@ -333,16 +333,13 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 #' Preflight for name data
 #'
 #' Checks if namedata is available in the current working directory, if not
-#' downloads it from github using piggyback.
+#' downloads it from github using piggyback. By default, wru will download the
+#' data to a temporary directory that lasts as long as your session does.
+#' However, you may wish to set the \code{wru_data_wd} option to save the 
+#' downloaded data to your current working directory for more permanence. 
 #'
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
-  if(file.exists(".wru_name_data")) {
-    dest <- readLines(".wru_name_data")
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
-  } else {
-    dest <- tempdir()
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
-    writeLines(dest, ".wru_name_data")
-  }
+  dest <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
 }
