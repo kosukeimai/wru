@@ -300,7 +300,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Preliminary Data quality checks
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
@@ -451,7 +451,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Preliminary Data quality checks
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   
   if(census.surname){
     last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
