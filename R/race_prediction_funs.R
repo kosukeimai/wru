@@ -29,7 +29,7 @@
 #' @param names.to.use See documentation in \code{race_predict}.
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
-#' @param control See documentation in \code{race_predict}.
+#' @param ctrl See \code{control} in documentation for \code{race_predict}.
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #'
 #' @return See documentation in \code{race_predict}.
@@ -423,24 +423,11 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
 predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use.counties = FALSE, race.init, control) 
+                            use.counties = FALSE, race.init, ctrl) 
 {
-  ## Form control list
-  
   if(!is.null(census.data)) {
     census_data_preflight(census.data, census.geo, year)
   }
-  
-  ctrl <- list(
-    iter = 1000,
-    thin = 1,
-    verbose = TRUE,
-   # me.correct = TRUE,
-    seed = sample(1:1000, 1) 
-  )
-  ctrl$burnin <- floor(ctrl$iter / 2)
-  ctrl[names(control)] <- control
-  
   
   n_race <- 5
   if (!(names.to.use %in% c(c("surname"), c("surname, first"), c("surname, first, middle")))) {
@@ -496,7 +483,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Set RNG seed
   set.seed(ctrl$seed)
-  if(is.null(control$seed) & (ctrl$verbose)){
+  if(!(ctrl$usr_seed) & (ctrl$verbose)){
     message("fBISG relies on MCMC; for reproducibility, I am setting RNG seed and returning it as attribute 'RNGseed'.")
   }
   

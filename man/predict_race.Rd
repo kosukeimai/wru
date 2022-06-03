@@ -23,8 +23,7 @@ predict_race(
   race.init = NULL,
   name.dictionaries = NULL,
   names.to.use = "surname",
-  control = NULL,
-  ...
+  control = NULL
 )
 }
 \arguments{
@@ -136,8 +135,6 @@ middle'. Defaults to 'surname'.}
  \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
-
-\item{...}{Currently only used when \code{model="fBISG"}}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

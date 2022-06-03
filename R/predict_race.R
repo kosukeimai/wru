@@ -87,7 +87,6 @@
 #' @param race.init Vector of initial race for each observation in voter.file.
 #' Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
 #' 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
-#' @param ... Currently only used when \code{model="fBISG"}
 #' @param control List of control arguments only used when \code{model="fBISG"}, including
 #' \itemize{
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
@@ -133,7 +132,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
                          use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
-                         names.to.use = "surname", control = NULL, ...) {
+                         names.to.use = "surname", control = NULL) {
   
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
@@ -206,8 +205,18 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                               census.surname = census.surname,
                               use.counties = use.counties)
   } else {
+    ctrl <- list(
+      iter = 1000,
+      thin = 1,
+      verbose = TRUE,
+      seed = sample(1:1000, 1) 
+    )
+    ctrl$burnin <- floor(ctrl$iter / 2)
+    ctrl[names(control)] <- control
+    ctrl$usr_seed <- ifelse(is.null(control$seed), FALSE, TRUE)
+
     if (is.null(race.init)) {
-      if(control$verbose){
+      if(ctrl$verbose){
         message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       }
       race.init <-  predict_race_new(voter.file = voter.file,
@@ -245,7 +254,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                              impute.missing = impute.missing,
                              census.surname = census.surname,
                              use.counties = use.counties, race.init = race.init,
-                             control = control)
+                             ctrl = ctrl)
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }

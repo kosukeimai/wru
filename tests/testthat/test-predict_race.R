@@ -71,7 +71,7 @@ test_that("BISG NJ at block level", {
     census.geo = "block", 
     census.key = NULL, 
     census.data = census, 
-    use_counties = TRUE)
+    use.counties = TRUE)
   )
   
   expect_equal(dim(x), c(7, 20))
@@ -95,7 +95,7 @@ test_that("BISG NJ at block_group level", {
     census.geo = "block_group", 
     census.key = NULL, 
     census.data = census, 
-    use_counties = TRUE)
+    use.counties = TRUE)
   )
   
   expect_equal(dim(x), c(7, 21))
@@ -124,7 +124,7 @@ test_that("Fails on missing geolocation", {
     census.geo = "block", 
     census.key = NULL, 
     census.data = census, 
-    use_counties = TRUE)
+    use.counties = TRUE)
   ),
   "The following locations in the voter\\.file are not available"
   )
@@ -140,7 +140,7 @@ test_that("Handles zero-pop. geolocations", {
     census.geo = "county", 
     census.key = NULL, 
     census.data = census, 
-    use_counties = TRUE)
+    use.counties = TRUE)
   )
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0)

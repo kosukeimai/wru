@@ -58,7 +58,7 @@ predict_race_me(
   census.surname = FALSE,
   use.counties = FALSE,
   race.init,
-  control
+  ctrl
 )
 }
 \arguments{
@@ -96,7 +96,7 @@ predict_race_me(
 
 \item{race.init}{See documentation in \code{race_predict}.}
 
-\item{control}{See documentation in \code{race_predict}.}
+\item{ctrl}{See \code{control} in documentation for \code{race_predict}.}
 }
 \value{
 See documentation in \code{race_predict}.
