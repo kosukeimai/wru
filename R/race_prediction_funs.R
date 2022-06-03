@@ -263,7 +263,7 @@ NULL
 #' @rdname modfuns
 predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
-                             census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
+                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                              use.counties = FALSE) {
   
   # Check years
@@ -325,12 +325,12 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   # check the geographies
   if (surname.only == FALSE) {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract","block_group", "block", "place") == FALSE) {
-      stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
+    if (!(census.geo %in% c("county", "tract","block_group", "block", "place"))) {
+      stop("census.geo must be either 'county', 'tract', 'block', 'block_group', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
-    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
+    if (is.null(census.data)) {
       if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
         stop("Please provide a valid Census API key using census.key option.")
       } else {
@@ -340,6 +340,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       if (!("state" %in% names(voter.file))) {
         stop("voter.file object needs to have a column named state.")
       }
+      census_data_preflight(census.data, census.geo, year)
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
         message("census.data object does not include all states in voter.file object.")
         if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
@@ -467,13 +468,12 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   } 
   
   ## Other quick checks...
+  if (!(census.geo %in% c("county", "tract","block_group", "block", "place"))) {
+    stop("census.geo must be either 'county', 'tract', 'block', 'block_group', or 'place'")
+  }
   stopifnot(
-    census.geo %in% c("county", "tract", "block_group", "block", "place"),
     all(!is.na(voter.file$surname))
   )
-  # if (!is.logical(ctrl$me.correct)) {
-  #   stop("me.correct must be Boolean.")
-  # }
   
   orig.names <- names(voter.file)
   orig.state <- voter.file$state
@@ -484,7 +484,8 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   ## Set RNG seed
   set.seed(ctrl$seed)
   if(!(ctrl$usr_seed) & (ctrl$verbose)){
-    message("fBISG relies on MCMC; for reproducibility, I am setting RNG seed and returning it as attribute 'RNGseed'.")
+    message("fBISG relies on MCMC; for reproducibility, I am setting RNG seed and returning it as attribute 'RNGseed'.\n",
+            "To silence this message, you can set a seed explicitly by defining the 'seed' element in the control list.")
   }
   
   ## Initial race

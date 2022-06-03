@@ -35,7 +35,7 @@ predict_race_new(
   census.key = NULL,
   name.dictionaries,
   surname.only = FALSE,
-  census.data,
+  census.data = NULL,
   retry = 0,
   impute.missing = TRUE,
   census.surname = FALSE,

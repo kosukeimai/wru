@@ -71,8 +71,8 @@
 #'
 #' @keywords internal
 
-census_helper <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use.counties = FALSE) {
-  if (is.na(census.data) || (typeof(census.data) != "list")) {
+census_helper <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NULL, retry = 3, use.counties = FALSE) {
+  if (is.null(census.data) || (typeof(census.data) != "list")) {
     toDownload <- TRUE
   } else {
     toDownload <- FALSE

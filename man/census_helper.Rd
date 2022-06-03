@@ -12,7 +12,7 @@ census_helper(
   age = FALSE,
   sex = FALSE,
   year = "2010",
-  census.data = NA,
+  census.data = NULL,
   retry = 3,
   use.counties = FALSE
 )

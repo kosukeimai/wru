@@ -56,7 +56,7 @@
 #'
 #' @keywords internal
 
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use.counties = FALSE) {
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NULL, retry = 3, use.counties = FALSE) {
   
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
@@ -69,7 +69,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     stop("Models using age and sex not currently implemented.")
   }
   
-  if (is.na(census.data) || (typeof(census.data) != "list")) {
+  if (is.null(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
   } else {
     toDownload = FALSE
@@ -218,7 +218,9 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       miss_ind <- which(is.na(voters.census$r_whi))
       stop("The following locations in the voter.file are not available in the census data ",
            paste0("(listed as ", paste0(c("state",geo.merge), collapse="-"),"):\n"),
-           do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]), sep="-")))
+           paste(do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]),
+                                  sep="-")),
+                 collapse = ", "))
     }
       
     # }
