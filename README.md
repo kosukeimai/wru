@@ -20,7 +20,7 @@ Now, here is a simple example that predicts the race/ethnicity of voters based o
 library(wru)
 future::plan(future::multisession)
 data(voters)
-predict_race(voter.file = voters, surname.only = T, use_counties = TRUE)
+predict_race(voter.file = voters, surname.only = T)
 ```
 
 The above produces the following output, where the last five columns are probabilistic race/ethnicity predictions (e.g., 'pred.his' is the probability of being Hispanic/Latino):
@@ -127,4 +127,4 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 ### A related song 
-Watch [this](https://www.youtube.com/watch?v=r5kmCgVhADY)!
+Watch [this](https://www.youtube.com/watch?v=LYb_nqU_43w)!
