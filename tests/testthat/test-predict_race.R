@@ -7,13 +7,10 @@ options("wru_data_wd" = TRUE)
 test_that("Tests surname only predictions", {
   set.seed(42)
   data(voters)
-  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
   # Prediction using surname only
   x <- suppressMessages(predict_race(
-    voter.file = voters, 
-    census.geo = "tract",
-    census.data = census,
-    surname.only = TRUE, census.surname = TRUE))
+    voter.file = voters,
+    surname.only = TRUE))
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)
@@ -24,9 +21,7 @@ test_that("Tests surname only predictions", {
 test_that("Test BISG NJ at county level", {
   set.seed(42)
   data(voters)
-  
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-
   x <- suppressMessages(predict_race(
       voter.file = voters[voters$state == "NJ",],
       census.geo = "county",
@@ -53,7 +48,8 @@ test_that("Test fBISG NJ at tract level", {
     voter.file = voters[voters$state == "NJ",],
     census.geo = "tract",
     census.data = census,
-    model = "fBISG"
+    model = "fBISG",
+    control=list(verbose=FALSE)
   ))
   
   expect_equal(as.character(x$VoterID), as.character(c(1, 2, 4, 5, 6, 8, 9)))

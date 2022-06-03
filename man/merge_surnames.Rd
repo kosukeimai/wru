@@ -43,6 +43,7 @@ Output will be an object of class \code{data.frame}. It will
  \code{\var{p_his}} for Hispanic/Latino, 
  \code{\var{p_asi}} for Asian and Pacific Islander, and 
  \code{\var{p_oth}} for Other/Mixed).
+#'
 }
 \description{
 \code{merge_surnames} merges surnames in user-input dataset with corresponding 
@@ -71,6 +72,7 @@ This function allows users to match surnames in their dataset with the U.S.
 }
 \examples{
 data(voters)
-merge_surnames(voters)
+\dontrun{merge_surnames(voters)}
 
 }
+\keyword{internal}

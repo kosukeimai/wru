@@ -61,15 +61,11 @@
 #'  \code{\var{p_his}} for Hispanic/Latino,
 #'  \code{\var{p_asi}} for Asian and Pacific Islander, and
 #'  \code{\var{p_oth}} for Other/Mixed).
-#'
-#' @import devtools
-#' @import stringr
-#'
+#' @importFrom dplyr coalesce
 #' @examples
 #' data(voters)
-#' merge_names(voters)
-#'
-#' @export
+#' \dontrun{merge_names(voters, namesToUse = "surname", census.surname = TRUE)}
+#' @keywords internal
 merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
 
   # check the names
@@ -89,7 +85,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  path <- ifelse(getOption("wru_data_wd", default=FALSE), getwd(), tempdir())
   
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
@@ -163,7 +159,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   ## Clean names (if specified by user)
   if (clean.names) {
-    for (nameType in str_split(namesToUse, ", ")[[1]]) {
+    for (nameType in strsplit(namesToUse, ", ")[[1]]) {
       if(nameType=="surname"){
         nameType <- "last"
       }
@@ -284,7 +280,6 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
 
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
-  # require(dplyr), now included as Import in package 
   c_miss_last <- mean(is.na(df$c_whi_last))
   if (c_miss_last > 0) {
     message(paste(paste(sum(is.na(df$c_whi_last)), " (", round(100 * mean(is.na(df$c_whi_last)), 1), "%) individuals' last names were not matched.", sep = "")))
@@ -340,6 +335,6 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 #'
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
-  dest <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
 }

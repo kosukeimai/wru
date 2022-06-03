@@ -41,7 +41,7 @@
 #' elements must be \code{FALSE}. This corresponds to the defaults of \code{census_geo_api}.
 #' If \code{\var{census.data}} is missing, Census geographic data will be obtained via Census API. 
 #' @param retry The number of retries at the census website if network interruption occurs.
-#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties 
+#' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
@@ -51,10 +51,12 @@
 #' \dontshow{data(voters)}
 #' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "nj", geo = "block")}
 #' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "tract")}
-#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place", year = "2020")}
+#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place",
+#'  year = "2020")}
 #'
-#' @export
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use_counties = FALSE) {
+#' @keywords internal
+
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NA, retry = 3, use.counties = FALSE) {
   
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
@@ -95,7 +97,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       geo.merge <- c("place")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
         #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use_counties) {
+        if(use.counties) {
           census <- census_geo_api(key, state, geo = "place", age, sex, retry)
         } else {
           census <- census_geo_api(key, state, geo = "place", age, sex, retry)
@@ -118,7 +120,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use_counties) {
+        if(use.counties) {
           census <- census_geo_api(key, state, geo = "tract", age, sex, retry, 
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
@@ -133,7 +135,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     if (geo == "block_group") {
       geo.merge <- c("county", "tract", "block_group")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use_counties) {
+        if(use.counties) {
           census <- census_geo_api(key, state, geo = "block_group", age, sex, retry, 
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
@@ -155,7 +157,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       }
 
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use_counties) {
+        if(use.counties) {
           census <- census_geo_api(key, state, geo = "block", age, sex, retry, 
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
@@ -216,7 +218,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       miss_ind <- which(is.na(voters.census$r_whi))
       stop("The following locations in the voter.file are not available in the census data ",
            paste0("(listed as ", paste0(c("state",geo.merge), collapse="-"),"):\n"),
-           do.call(paste, c(unique(voters[miss_ind, c("state",geo.merge)]), sep="-")))
+           do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]), sep="-")))
     }
       
     # }

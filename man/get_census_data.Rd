@@ -12,7 +12,7 @@ get_census_data(
   year = "2010",
   census.geo = "block",
   retry = 3,
-  counties = NULL
+  county_list = NULL
 )
 }
 \arguments{
@@ -42,7 +42,7 @@ geography to use to merge in U.S. Census 2010 geographic data. Currently
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
-\item{counties}{A character vector of counties present in your \var{voter.file}}
+\item{county_list}{A named list of character vectors of counties present in your \var{voter.file}, per state.}
 }
 \value{
 Output will be an object of class \code{list} indexed by state. 

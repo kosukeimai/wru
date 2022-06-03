@@ -30,8 +30,7 @@
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
 #' @param control See documentation in \code{race_predict}.
-#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
-#' @param ... Additional arguments. Currently only useful for \code{.predict_race_me}.
+#' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #'
 #' @return See documentation in \code{race_predict}.
 #'
@@ -44,10 +43,12 @@ NULL
 #' @importFrom stats rmultinom
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @rdname modfuns
+#' @keywords internal
+
 .predict_race_old <- function(voter.file,
                               census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
                               census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2010",
-                              party, retry = 3, impute.missing = TRUE, use_counties = FALSE, ...) {
+                              party, retry = 3, impute.missing = TRUE, use.counties = FALSE) {
   
   # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
   if ((sex == TRUE || age == TRUE) && (year == "2020")) {
@@ -164,7 +165,7 @@ NULL
       year = year,
       census.data = census.data,
       retry = retry,
-      use_counties = use_counties
+      use.counties = use.counties
     )
   }
   
@@ -182,7 +183,7 @@ NULL
       year = year,
       census.data = census.data,
       retry = retry,
-      use_counties = use_counties
+      use.counties = use.counties
     )
   }
   
@@ -205,7 +206,7 @@ NULL
       year = year,
       census.data = census.data, 
       retry = retry,
-      use_counties = use_counties
+      use.counties = use.counties
     )
   }
   
@@ -263,7 +264,7 @@ NULL
 predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
                              census.data, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                             use_counties = FALSE, ...) {
+                             use.counties = FALSE) {
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -300,7 +301,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Preliminary Data quality checks
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  path <- ifelse(getOption("wru_data_wd", default=FALSE), getwd(), tempdir())
   
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
@@ -374,7 +375,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
       year = year,
       census.data = census.data, 
       retry = retry,
-      use_counties = use_counties
+      use.counties = use.counties
     )
   }
   
@@ -421,7 +422,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
 predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use_counties = FALSE, race.init, control, ...) 
+                            use.counties = FALSE, race.init, control) 
 {
   ## Form control list
   
@@ -451,7 +452,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Preliminary Data quality checks
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd"), getwd(), tempdir())
+  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   
   if(census.surname){
     last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
@@ -494,6 +495,9 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   ## Set RNG seed
   set.seed(ctrl$seed)
+  if(is.null(control$seed) & (ctrl$verbose)){
+    message("fBISG relies on MCMC; for reproducibility, I am setting RNG seed and returning it as attribute 'RNGseed'.")
+  }
   
   ## Initial race
   race_pred_args <- list(
@@ -519,20 +523,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   
   #race_pred_args[names(args_usr)] <- args_usr
   all_states <- unique(voter.file$state)
-  if (is.null(census.data)) {
-    if (is.null(census.key)) {
-      stop("Geographic data is required. When `census.data' is NULL, you must provide a census API Key using `census.key' so I can download the required data.")
-    }
-    census.data <- get_census_data(
-      key = census.key,
-      states = all_states,
-      age = age, sex = sex,
-      census.geo = census.geo,
-      retry = retry, 
-      counties = NULL)
-  } else {
-    census.data <- census.data[all_states]
-  }
+  census.data <- census.data[all_states]
   race.suff <- c("whi", "bla", "his", "asi", "oth")
 
   geo_id <- do.call(paste, voter.file[, geo_id_names])

@@ -3,6 +3,8 @@
 #' @param census.data See documentation in \code{race_predict}.
 #' @param census.geo See documentation in \code{race_predict}.
 #' @param year See documentation in \code{race_predict}.
+#' @keywords internal
+
 census_data_preflight <- function(census.data, census.geo, year) {
   
   if (year != "2020"){

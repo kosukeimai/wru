@@ -45,3 +45,4 @@ get = c("P005003","P005004","P005005", "P005006"), region = "for=county:*&in=sta
 Based on code authored by Nicholas Nagle, which is available 
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
+\keyword{internal}

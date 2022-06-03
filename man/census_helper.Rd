@@ -14,7 +14,7 @@ census_helper(
   year = "2010",
   census.data = NA,
   retry = 3,
-  use_counties = FALSE
+  use.counties = FALSE
 )
 }
 \arguments{
@@ -64,7 +64,7 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
-\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
@@ -101,3 +101,4 @@ census_helper(
 }
 
 }
+\keyword{internal}
