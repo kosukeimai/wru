@@ -48,7 +48,7 @@ Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 Defaults to NULL. If specified, the function will look for an .RData file
 with the same format as the expected output.}
 
-\item{counties}{A vector of counties continaed in your data. If \code{NULL}, all counties are pulled.
+\item{counties}{A vector of counties contained in your data. If \code{NULL}, all counties are pulled.
 Useful for smaller predictions where only a few counties are considered. Must be zero padded.}
 }
 \value{
@@ -66,10 +66,12 @@ at either the county, tract, block, or place level, for a particular state.
 \dontshow{data(voters)}
 \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
 \dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
-\dontrun{census_geo_api(key = "...", states = "MA", geo = "place", age = FALSE, sex = FALSE, year = "2020")}
+\dontrun{census_geo_api(key = "...", states = "MA", geo = "place", age = FALSE, sex = FALSE,
+ year = "2020")}
 
 }
 \references{
 Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
 available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
+\keyword{internal}

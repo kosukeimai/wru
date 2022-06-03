@@ -19,9 +19,11 @@
 #' @import PL94171
 #' 
 #' @examples
-#' gaCensusData <- format_legacy_data('~/Desktop/ga2020.pl')
+#' \dontrun{
+#' gaCensusData <- format_legacy_data('ga2020.pl')
 #' predict_race_new(ga.voter.file, namesToUse = 'last, first, mid', census.geo = 'block',
 #'      census.data = gaCensusData)
+#'}
 
 #'
 #' @export

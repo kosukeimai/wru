@@ -48,3 +48,4 @@ get_census_api(
 Based on code authored by Nicholas Nagle, which is available
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
+\keyword{internal}

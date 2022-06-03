@@ -14,7 +14,7 @@ census_helper_new(
   year = "2010",
   census.data = NA,
   retry = 3,
-  use_counties = FALSE
+  use.counties = FALSE
 )
 }
 \arguments{
@@ -60,7 +60,7 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
-\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
 available in \var{census.data}?}
 }
 \value{
@@ -81,6 +81,8 @@ Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 \dontshow{data(voters)}
 \dontrun{census_helper_new(key = "...", voter.file = voters, states = "nj", geo = "block")}
 \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "tract")}
-\dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place", year = "2020")}
+\dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place",
+ year = "2020")}
 
 }
+\keyword{internal}

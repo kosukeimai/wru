@@ -23,7 +23,7 @@
 #' geography to use to merge in U.S. Census 2010 geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
-#' @param counties A character vector of counties present in your \var{voter.file} 
+#' @param county.list A named list of character vectors of counties present in your \var{voter.file}, per state. 
 #' @return Output will be an object of class \code{list} indexed by state. 
 #' Output will contain a subset of the following elements: 
 #' \code{state}, \code{age}, \code{sex}, 
@@ -34,7 +34,7 @@
 #' @examples 
 #' \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 #' \dontrun{get_census_data(key = "...", states = "MN", age = FALSE, sex = FALSE, year = "2020")}
-get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year = "2010", census.geo = "block", retry = 3, counties = NULL) {
+get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year = "2010", census.geo = "block", retry = 3, county.list = NULL) {
   
   if (is.null(key)) {
     # Matches tidycensus name for env var
@@ -55,17 +55,17 @@ get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year =
       CensusObj[[s]]$place <- place
     }
     if (census.geo == "block") {
-      block <- census_geo_api(key, s, geo = "block", age, sex, year, retry, counties = counties)
+      block <- census_geo_api(key, s, geo = "block", age, sex, year, retry, counties = county.list[[s]])
       CensusObj[[s]]$block <- block
     }
     
     if (census.geo == "block_group") {
-      block_group <- census_geo_api(key, s, geo = "block_group", age, sex, year, retry, counties = counties)
+      block_group <- census_geo_api(key, s, geo = "block_group", age, sex, year, retry, counties = county.list[[s]])
       CensusObj[[s]]$block_group <- block_group
     }
     
     if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "block_group")) {
-      tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry, counties = counties)
+      tract <- census_geo_api(key, s, geo = "tract", age, sex, year, retry, counties = county.list[[s]])
       CensusObj[[s]]$tract <- tract
     }
 

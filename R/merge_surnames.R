@@ -47,14 +47,13 @@
 #'  \code{\var{p_his}} for Hispanic/Latino, 
 #'  \code{\var{p_asi}} for Asian and Pacific Islander, and 
 #'  \code{\var{p_oth}} for Other/Mixed).
-#'
-#' @import devtools
-#'
+#'#'
 #' @examples
 #' data(voters)
-#' merge_surnames(voters)
+#' \dontrun{merge_surnames(voters)}
 #'
-#' @export
+#' @keywords internal
+
 merge_surnames <- function(voter.file, surname.year = 2010, name.data, clean.surname = TRUE, impute.missing = TRUE) {
 
   if ("surname" %in% names(voter.file) == FALSE) {

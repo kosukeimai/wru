@@ -18,7 +18,7 @@ predict_race(
   party = NULL,
   retry = 3,
   impute.missing = TRUE,
-  use_counties = FALSE,
+  use.counties = FALSE,
   model = "BISG",
   race.init = NULL,
   name.dictionaries = NULL,
@@ -109,7 +109,7 @@ it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
-\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
 available in \var{census.data}?}
 
 \item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction, 
@@ -159,16 +159,9 @@ individual-level race/ethnicity, based on surname, geolocation, and party.
 }
 \examples{
 data(voters)
-predict_race(voters, surname.only = TRUE)
 predict_race(voter.file = voters, surname.only = TRUE)
 \dontrun{
 predict_race(voter.file = voters, census.geo = "tract", census.key = "...")
-}
-\dontrun{
-predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)
-}
-\dontrun{
-predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)
 }
 \dontrun{
 predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")

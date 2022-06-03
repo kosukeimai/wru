@@ -22,8 +22,7 @@
   party,
   retry = 3,
   impute.missing = TRUE,
-  use_counties = FALSE,
-  ...
+  use.counties = FALSE
 )
 
 predict_race_new(
@@ -40,8 +39,7 @@ predict_race_new(
   retry = 0,
   impute.missing = TRUE,
   census.surname = FALSE,
-  use_counties = FALSE,
-  ...
+  use.counties = FALSE
 )
 
 predict_race_me(
@@ -58,10 +56,9 @@ predict_race_me(
   retry = 0,
   impute.missing = TRUE,
   census.surname = FALSE,
-  use_counties = FALSE,
+  use.counties = FALSE,
   race.init,
-  control,
-  ...
+  control
 )
 }
 \arguments{
@@ -93,9 +90,7 @@ predict_race_me(
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
-\item{use_counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
-
-\item{...}{Additional arguments. Currently only useful for \code{.predict_race_me}.}
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
 \item{names.to.use}{See documentation in \code{race_predict}.}
 
@@ -140,3 +135,4 @@ error correction, fully Bayesian model) with augmented
 surname dictionary, as well as first and middle name information.
 }
 
+\keyword{internal}

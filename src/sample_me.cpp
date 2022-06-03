@@ -42,7 +42,6 @@ arma::umat sample_me(const arma::uvec& last_name,
   arma::uword max_iter = samples + burnin;
   arma::uword N = last_name.n_elem; // Nr. of vf records 
   arma::uword J = pi_s.n_rows; // Nr. of racial cats
-  arma::uword K = arma::max(last_name) + 1; //Nr. of surnames
   arma::uword L = arma::max(geo) + 1; //Nr. of locations
   arma::uword S_KW = pi_s.n_cols; //Nr, of keyword surnames
   arma::uword F_KW, M_KW;

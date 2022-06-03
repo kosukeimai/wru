@@ -73,7 +73,7 @@
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
-#' @param use_counties A logical, defaulting to FALSE. Should census data be filtered by counties 
+#' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @param model Character string, either "BISG" (default) or "fBISG" (for error-correction, 
 #' fully-Bayesian model).
@@ -108,16 +108,9 @@
 #'
 #' @examples
 #' data(voters)
-#' predict_race(voters, surname.only = TRUE)
 #' predict_race(voter.file = voters, surname.only = TRUE)
 #' \dontrun{
 #' predict_race(voter.file = voters, census.geo = "tract", census.key = "...")
-#' }
-#' \dontrun{
-#' predict_race(voter.file = voters, census.geo = "tract", census.key = "...", age = T)
-#' }
-#' \dontrun{
-#' predict_race(voter.file = voters, census.geo = "place", census.key = "...", sex = T)
 #' }
 #' \dontrun{
 #' predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")
@@ -139,9 +132,9 @@
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
-                         use_counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
+                         use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL, ...) {
-
+  
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
     stop(
@@ -160,18 +153,17 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
         " please filter these from your voter.file data")
     )
   }
-
-  ## Build model calls
+  
   
   # block_group is missing, pull from block
-  if(census.geo == "block_group" & !"block_group" %in% names(voter.file)) {
+  if((surname.only == FALSE) && !(missing(census.geo)) && (census.geo == "block_group") && !("block_group" %in% names(voter.file))) {
     voter.file$block_group <- substring(voter.file$block, 1, 1)
   }
   
   # Adjust voter.file with caseid for ordering at the end
   voter.file$caseid <- 1:nrow(voter.file)
   
-  if(is.null(census.key) & is.null(census.data)) {
+  if((surname.only==FALSE) && is.null(census.key) && is.null(census.data)) {
     k <- Sys.getenv("CENSUS_API_KEY")
     
     if(k == "") 
@@ -183,65 +175,56 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     census.key <- k
   }
   
-  
-  if((model == "BISG")){
-    
-    preds <- predict_race_new(
-      voter.file,
-      names.to.use,
-      year = year,
-      age = age, # not implemented, default to F
-      sex = sex, # not implemented, default to F
-      census.geo,
-      census.key = census.key,
-      name.dictionaries,
-      surname.only = surname.only,
-      census.data,
-      retry = retry,
-      impute.missing = impute.missing,
-      census.surname = census.surname,
-      use_counties = use_counties
+  if(surname.only==FALSE && is.null(census.data)) {
+    # Otherwise predict_race_new and predict_race_me will both
+    # attempt to pull census_data
+    voter.file$state <- toupper(voter.file$state)
+    states <- unique(voter.file$state)
+    county.list <- split(voter.file$county, voter.file$state)
+    census.data <- get_census_data(
+      census.key, states, age, 
+      sex, year, census.geo, 
+      retry, county.list
     )
-    
-    # eval.parent(as.call(cl))
+  }
+  
+  if((model == "BISG") | (surname.only==TRUE)){
+    if((surname.only==TRUE) & (model == "fBISG")){
+      warning("Surname-only model only available with model = BISG.")
+    }
+    preds <- predict_race_new(voter.file = voter.file,
+                              names.to.use = names.to.use,
+                              year = year,
+                              age = age, sex = sex, # not implemented, default to F
+                              census.geo = census.geo,
+                              census.key = census.key,
+                              name.dictionaries = name.dictionaries,
+                              surname.only=surname.only,
+                              census.data = census.data,
+                              retry = retry,
+                              impute.missing = impute.missing,
+                              census.surname = census.surname,
+                              use.counties = use.counties)
   } else {
     if (is.null(race.init)) {
-      message("Using `predict_race` to obtain initial race prediction priors with BISG model")
-      
-      if(is.null(census.data)) {
-        # Otherwise predict_race_new and predict_race_me will both
-        # attempt to pull census_data
-        census.data <- get_census_data(
-          key = census.key, 
-          states = states, 
-          age = age, 
-          sex = sex, 
-          year = year, 
-          census.geo = census.geo, 
-          retry = retry, 
-          counties = counties
-        )
+      if(control$verbose){
+        message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       }
-      
-      race.init <- predict_race_new(
-        voter.file,
-        names.to.use,
-        year = year,
-        age = age,
-        sex = sex,
-        census.geo,
-        census.key = census.key,
-        name.dictionaries,
-        surname.only = surname.only,
-        census.data,
-        retry = retry,
-        impute.missing = impute.missing,
-        census.surname = census.surname,
-        use_counties = use_counties,
-      )
-      
+      race.init <-  predict_race_new(voter.file = voter.file,
+                                     names.to.use = names.to.use,
+                                     year = year,
+                                     age = age, sex = sex, # not implemented, default to F
+                                     census.geo = census.geo,
+                                     census.key = census.key,
+                                     name.dictionaries = name.dictionaries,
+                                     surname.only=surname.only,
+                                     census.data = census.data,
+                                     retry = retry,
+                                     impute.missing = impute.missing,
+                                     census.surname = census.surname,
+                                     use.counties = use.counties)
       race.init <- max.col(
-        race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], 
+        race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
         ties.method = "random"
       )
     }
@@ -250,26 +233,21 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
          If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
-    preds <- predict_race_me(
-      voter.file,
-      names.to.use,
-      year = year,
-      age = age,
-      sex = sex,
-      census.geo,
-      census.key,
-      name.dictionaries,
-      surname.only = surname.only,
-      census.data = census.data,
-      retry = retry,
-      impute.missing = impute.missing,
-      census.surname = census.surname,
-      use_counties = use_counties,
-      race.init,
-      control,
-    )
+    
+    preds <- predict_race_me(voter.file = voter.file,
+                             names.to.use = names.to.use,
+                             year = year, age = age, sex = age, 
+                             census.geo = census.geo,
+                             census.key = census.key,
+                             name.dictionaries = name.dictionaries,
+                             surname.only = surname.only,
+                             census.data = census.data, retry = retry,
+                             impute.missing = impute.missing,
+                             census.surname = census.surname,
+                             use.counties = use.counties, race.init = race.init,
+                             control = control)
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
-  
- 
+
+

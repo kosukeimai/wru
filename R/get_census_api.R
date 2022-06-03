@@ -32,7 +32,7 @@
 #' Based on code authored by Nicholas Nagle, which is available
 #' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
-#' @export
+#' @keywords internal
 get_census_api <- function(data_url, key, var.names, region, retry = 0) {
   if (length(var.names) > 50) {
     var.names <- vec_to_chunk(var.names) # Split variables into a list

@@ -16,3 +16,4 @@ census_data_preflight(census.data, census.geo, year)
 \description{
 Preflight census data
 }
+\keyword{internal}
