@@ -161,10 +161,6 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
 
-  arg_list <- as.list(match.call())[-1]
-  cl <- formals()
-  cl[names(arg_list)] <- arg_list
-  
   ## Build model calls
   
   # block_group is missing, pull from block
@@ -174,7 +170,6 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   
   # Adjust voter.file with caseid for ordering at the end
   voter.file$caseid <- 1:nrow(voter.file)
-  cl$voter.file <- voter.file 
   
   if(is.null(census.key) & is.null(census.data)) {
     k <- Sys.getenv("CENSUS_API_KEY")
@@ -184,45 +179,95 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
         "Please provide a valid Census API key using census.key option.",
         " Or set CENSUS_API_KEY in your .Renviron or .Rprofile"
       )
-    cl$census.key <- k
-  
+    
+    census.key <- k
   }
   
   
   if((model == "BISG")){
-    cl <- c(as.name("predict_race_new"), cl)
-    preds <- eval.parent(as.call(cl))
+    
+    preds <- predict_race_new(
+      voter.file,
+      names.to.use,
+      year = year,
+      age = age, # not implemented, default to F
+      sex = sex, # not implemented, default to F
+      census.geo,
+      census.key = census.key,
+      name.dictionaries,
+      surname.only = surname.only,
+      census.data,
+      retry = retry,
+      impute.missing = impute.missing,
+      census.surname = census.surname,
+      use_counties = use_counties
+    )
+    
+    # eval.parent(as.call(cl))
   } else {
     if (is.null(race.init)) {
       message("Using `predict_race` to obtain initial race prediction priors with BISG model")
-      interim <- cl
-      interim$model <- "BISG"
       
       if(is.null(census.data)) {
         # Otherwise predict_race_new and predict_race_me will both
         # attempt to pull census_data
         census.data <- get_census_data(
-          cl$census.key, cl$states, cl$age, 
-          cl$sex, cl$year, cl$census.geo, 
-          cl$retry, cl$counties
+          key = census.key, 
+          states = states, 
+          age = age, 
+          sex = sex, 
+          year = year, 
+          census.geo = census.geo, 
+          retry = retry, 
+          counties = counties
         )
-        # We also need it for the race.init if it's null
-        interim$census.data <- census$data
-        cl$census.data <- census.data
       }
       
-      interim <- c(as.name("predict_race_new"), interim)
-      race.init <- eval.parent(as.call(interim))
-      race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
+      race.init <- predict_race_new(
+        voter.file,
+        names.to.use,
+        year = year,
+        age = age,
+        sex = sex,
+        census.geo,
+        census.key = census.key,
+        name.dictionaries,
+        surname.only = surname.only,
+        census.data,
+        retry = retry,
+        impute.missing = impute.missing,
+        census.surname = census.surname,
+        use_counties = use_counties,
+      )
+      
+      race.init <- max.col(
+        race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], 
+        ties.method = "random"
+      )
     }
     if (any(is.na(race.init))) {
       stop("Some initial race values are NA.\n
          If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
-    cl$race.init <- race.init
-    cl <- c(as.name("predict_race_me"), cl)
-    preds <- eval.parent(as.call(cl))
+    preds <- predict_race_me(
+      voter.file,
+      names.to.use,
+      year = year,
+      age = age,
+      sex = sex,
+      census.geo,
+      census.key,
+      name.dictionaries,
+      surname.only = surname.only,
+      census.data = census.data,
+      retry = retry,
+      impute.missing = impute.missing,
+      census.surname = census.surname,
+      use_counties = use_counties,
+      race.init,
+      control,
+    )
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
