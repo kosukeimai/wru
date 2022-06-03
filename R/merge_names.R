@@ -85,8 +85,9 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   wru_data_preflight()
-  path <- ifelse(getOption("wru_data_wd", default=FALSE), getwd(), tempdir())
-  
+
+  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
+
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
   if(census.surname){
@@ -336,5 +337,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
-  piggyback::pb_download(repo = "kosukeimai/wru", dest = dest)
+  tryCatch(
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest), 
+    error = function(e) message("There was an error retrieving data", e$message)
+  )
 }

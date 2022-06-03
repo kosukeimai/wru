@@ -134,7 +134,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                          sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
                          use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL, ...) {
-
+  
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {
     stop(
@@ -153,8 +153,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
         " please filter these from your voter.file data")
     )
   }
-
-
+  
+  
   # block_group is missing, pull from block
   if((surname.only == FALSE) && !(missing(census.geo)) && (census.geo == "block_group") && !("block_group" %in% names(voter.file))) {
     voter.file$block_group <- substring(voter.file$block, 1, 1)
@@ -171,8 +171,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
         "Please provide a valid Census API key using census.key option.",
         " Or set CENSUS_API_KEY in your .Renviron or .Rprofile"
       )
+    
     census.key <- k
-  
   }
   
   if(surname.only==FALSE && is.null(census.data)) {
@@ -188,14 +188,14 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     )
   }
   
-  
   if((model == "BISG") | (surname.only==TRUE)){
     if((surname.only==TRUE) & (model == "fBISG")){
       warning("Surname-only model only available with model = BISG.")
     }
     preds <- predict_race_new(voter.file = voter.file,
                               names.to.use = names.to.use,
-                              year = year, age = age, sex = sex, 
+                              year = year,
+                              age = age, sex = sex, # not implemented, default to F
                               census.geo = census.geo,
                               census.key = census.key,
                               name.dictionaries = name.dictionaries,
@@ -207,10 +207,13 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                               use.counties = use.counties)
   } else {
     if (is.null(race.init)) {
-      message("Using `predict_race` to obtain initial race prediction priors with BISG model")
+      if(control$verbose){
+        message("Using `predict_race` to obtain initial race prediction priors with BISG model")
+      }
       race.init <-  predict_race_new(voter.file = voter.file,
                                      names.to.use = names.to.use,
-                                     year = year, age = age, sex = sex, 
+                                     year = year,
+                                     age = age, sex = sex, # not implemented, default to F
                                      census.geo = census.geo,
                                      census.key = census.key,
                                      name.dictionaries = name.dictionaries,
@@ -220,13 +223,17 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                                      impute.missing = impute.missing,
                                      census.surname = census.surname,
                                      use.counties = use.counties)
-      race.init <- max.col(race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))], ties.method = "random")
+      race.init <- max.col(
+        race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
+        ties.method = "random"
+      )
     }
     if (any(is.na(race.init))) {
       stop("Some initial race values are NA.\n
          If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
          The most likely reason for getting a missing race prediction is having a missing geolocation value.")
     }
+    
     preds <- predict_race_me(voter.file = voter.file,
                              names.to.use = names.to.use,
                              year = year, age = age, sex = age, 
@@ -242,5 +249,5 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   }
   preds[order(preds$caseid),setdiff(names(preds), "caseid")]
 }
-  
- 
+
+
