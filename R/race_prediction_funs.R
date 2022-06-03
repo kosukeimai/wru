@@ -565,7 +565,6 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   ## Split data by geographic cluster
   voter.file$state_cluster <- geo_id
   N_rg$state_cluster <- do.call(paste, N_rg[, geo_id_names])
-  #alpha_ <- split(as.data.frame(alpha_), N_rg$state_cluster)
   N_rg <- split(N_rg, N_rg$state_cluster)
   geo_id <- split(geo_id, voter.file$state_cluster)
   r_g_t <- mapply(function(tot_, gid_, g_n_) {
@@ -597,7 +596,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
                      first = first_c,
                      middle = mid_c)
       kw_names <- toupper(ntab[, 1])
-      proc_names_vf <- .name_preproc(voter.file[, ntype], c(kw_names))
+      proc_names_vf <- .name_preproc(voter.file[[ntype]], c(kw_names))
       u_vf_names <- unique(proc_names_vf)
       kw_in_vf <- kw_names %in% proc_names_vf
       u_kw <- kw_names[kw_in_vf]
@@ -657,7 +656,6 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
                              name_data[["middle"]]$record_name_id[[cluster]] - 1L,
                              r_g_t[[cluster]]$geo_ - 1L,
                              r_g_t[[cluster]]$N_rg_,
-                             #r_g_t[[cluster]]$alpha_,
                              name_data[["surname"]]$pi_,
                              name_data[["first"]]$pi_,
                              name_data[["middle"]]$pi_,
@@ -665,7 +663,6 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
                              which.names,
                              ctrl$iter,
                              ctrl$burnin,
-                             #ctrl$me.correct,
                              race.init[[cluster]] - 1L,
                              0
                            )
