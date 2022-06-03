@@ -178,12 +178,13 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
   if(surname.only==FALSE && is.null(census.data)) {
     # Otherwise predict_race_new and predict_race_me will both
     # attempt to pull census_data
+    voter.file$state <- toupper(voter.file$state)
     states <- unique(voter.file$state)
-    county_list <- split(voter.file$county, voter.file$state)
+    county.list <- split(voter.file$county, voter.file$state)
     census.data <- get_census_data(
       census.key, states, age, 
       sex, year, census.geo, 
-      retry, county_list
+      retry, county.list
     )
   }
   

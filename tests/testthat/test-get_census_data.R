@@ -27,7 +27,7 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
       key = NULL,
       state = c("NY"),
       census.geo = "tract",
-      county_list =  list(NY = "061")
+      county.list =  list(NY = "061")
     ))
     expect_named(r$NY, c("state", "age", "sex", "year", "tract", "county"))
     expect_true(all(r$NY$tract$state == "NY"))
@@ -39,7 +39,7 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
       key = NULL, 
       state = "NJ",
       census.geo = "county",
-      county_list = list(NJ = "021")
+      county.list = list(NJ = "021")
     ))
     expect_named(r$NJ, c("state", "age", "sex", "year", "county"))
     expect_true(all(r$NJ$county$state == "NJ"))
