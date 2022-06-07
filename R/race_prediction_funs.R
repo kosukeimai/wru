@@ -396,15 +396,15 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   if (surname.only == TRUE) {
     # Pr(Race | Surname)
-    preds <- voter.file[, grep("_last", names(voter.file))] * race.margin
+    preds <- voter.file[, grep("_last$", names(voter.file))] * race.margin
   } else {
     # Pr(Race | Surname, Geolocation)
-    preds <-  voter.file[, grep("_last", names(voter.file))]  * voter.file[, grep("r_", names(voter.file))]
+    preds <-  voter.file[, grep("_last$", names(voter.file))]  * voter.file[, grep("^r_", names(voter.file))]
     if (grepl("first", names.to.use)) {
-      preds <- preds * voter.file[, grep("_first", names(voter.file))]
+      preds <- preds * voter.file[, grep("_first$", names(voter.file))]
     }
     if (grepl("middle", names.to.use)) {
-      preds <- preds * voter.file[, grep("_middle", names(voter.file))]
+      preds <- preds * voter.file[, grep("_middle$", names(voter.file))]
     }
   }
   
@@ -413,7 +413,9 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   ## Revert to Pr(Race|Surname) for missing predictions
   if(impute.missing){
     miss_ind <- !is.finite(preds$c_whi_last)
-    preds[miss_ind,] <- voter.file[miss_ind, grep("_last", names(voter.file))] * race.margin
+    if(any(miss_ind)){
+      preds[miss_ind,] <- voter.file[miss_ind, grep("_last$", names(voter.file))] * race.margin
+    }
   }
   colnames(preds) <- paste("pred", eth, sep = ".")
   
@@ -552,7 +554,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
       tmp$r_oth <- (tmp[, vars_["pop_aian"]] + tmp[, vars_["pop_other"]] + tmp[, vars_["pop_two"]])
       all_names <- names(tmp)
       ## Totals
-      tmp_la <- tmp[, c(geo_id_names, grep("r_", all_names, value = TRUE))]
+      tmp_la <- tmp[, c(geo_id_names, grep("^r_", all_names, value = TRUE))]
       return(list(tots = tmp_la))
     }
   )
@@ -575,7 +577,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE,
   r_g_t <- mapply(function(tot_, gid_, g_n_) {
     Nrg_geo_new <- do.call(paste, tot_[, g_n_])
     geo_ <- match(gid_, Nrg_geo_new)
-    tot_ <- t(tot_[, grep("r_", colnames(tot_))]) ## Races in rows
+    tot_ <- t(tot_[, grep("^r_", colnames(tot_))]) ## Races in rows
     return(list(
       geo_ = geo_,
       #alpha_ = as.matrix(tab_),
