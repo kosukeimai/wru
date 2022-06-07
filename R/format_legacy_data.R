@@ -20,7 +20,7 @@
 #' 
 #' @examples
 #' \dontrun{
-#' gaCensusData <- format_legacy_data('ga2020.pl')
+#' gaCensusData <- format_legacy_data(PL94171::pl_url('GA', 2020))
 #' predict_race_new(ga.voter.file, namesToUse = 'last, first, mid', census.geo = 'block',
 #'      census.data = gaCensusData)
 #'}
