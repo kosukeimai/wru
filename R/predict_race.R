@@ -229,7 +229,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                                      surname.only=surname.only,
                                      census.data = census.data,
                                      retry = retry,
-                                     impute.missing = impute.missing,
+                                     impute.missing = TRUE,
                                      census.surname = census.surname,
                                      use.counties = use.counties)
       race.init <- max.col(
@@ -240,7 +240,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     if (any(is.na(race.init))) {
       stop("Some initial race values are NA.\n
          If you didn't provide initial values, check the results of calling predict_race() on the voter.file you want me to work on.\n
-         The most likely reason for getting a missing race prediction is having a missing geolocation value.")
+         The most likely reason for getting a missing race prediction is having a geolocation that does not match \n 
+         locations on the census. If this problem persists, try impute.missing = TRUE or model = fBISG.")
     }
     
     preds <- predict_race_me(voter.file = voter.file,

@@ -410,6 +410,11 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   ## Normalize (recycle marginal)
   preds <- preds/rowSums(preds)
+  ## Revert to Pr(Race|Surname) for missing predictions
+  if(impute.missing){
+    miss_ind <- !is.finite(preds$c_whi_last)
+    preds[miss_ind,] <- voter.file[miss_ind, grep("_last", names(voter.file))] * race.margin
+  }
   colnames(preds) <- paste("pred", eth, sep = ".")
   
   return(data.frame(cbind(voter.file[c(vars.orig)], preds)))

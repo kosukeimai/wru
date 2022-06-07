@@ -175,7 +175,6 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       
     ## Calculate Pr(Geolocation | Race)
     if (year != "2020") {
-      geoPopulations <- rowSums(census[,grepl("P00", names(census))])
       vars_ <- c(
         pop_white = 'P005003', pop_black = 'P005004',
         pop_aian = 'P005005', pop_asian = 'P005006',
@@ -184,7 +183,6 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       )
       drop <- c(grep("state", names(census)), grep("P005", names(census)))
     } else {
-      geoPopulations <- rowSums(census[,grepl("P2_", names(census))])
       vars_ <- c(
         pop_white = 'P2_005N', pop_black = 'P2_006N',
         pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
@@ -193,6 +191,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
       )
       drop <- c(grep("state", names(census)), grep("P2_", names(census)))
     }
+    geoPopulations <- rowSums(census[,names(census) %in% vars_])
     
     census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
     census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
