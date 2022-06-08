@@ -15,7 +15,6 @@ predict_race(
   age = FALSE,
   sex = FALSE,
   party,
-  impute.missing = TRUE,
   retry = 0
 )
 }
@@ -93,8 +92,6 @@ If specified, race/ethnicity predictions will be conditioned
 on individual's party registration (in addition to geolocation). 
 Whatever the name of the party registration field in \code{\var{voter.file}}, 
 it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
-
-\item{impute.missing}{See \code{\link[wru]{merge_surnames}}.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 }

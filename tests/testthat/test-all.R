@@ -8,11 +8,11 @@ data(voters)
 
 test_that("Tests surname only predictions", {
   set.seed(12345)
-
+  
   # Prediction using surname only
   x <- suppressWarnings(predict_race(voter.file = voters, surname.only = TRUE))
   # Test and confirm prediction output is as expected
-  expect_equal(dim(x), c(10, 20))
+  expect_equal(dim(x), c(10, 18))
   expect_equal(sum(is.na(x)), 0)
   expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0676)
   expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0236)
@@ -25,10 +25,10 @@ test_that("Tests predictions using the Census object", {
   if (!is.null(k)) {
     # Remove two NY cases from dataset to reduce the amount of the computation in the following test
     voters.dc.nj <- voters[c(-3, -7), ]  
-  
+    
     # Create Census data object covering DC and NJ
     census.dc.nj <- get_census_data(key = k, state = c("DC", "NJ"), census.geo = "tract", age = TRUE, sex = FALSE)  
-  
+    
     # Prediction using the Census object created in the previous step; tract-level statistics used in prediction
     x = predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj, age = TRUE, sex = FALSE, party = "PID")
     # test and comfirm the prediction output as expected
@@ -55,7 +55,7 @@ test_that("Tests predictions using the Census object", {
     expect_equal(sum(x$surname == "Johnson"), 0)
     expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0441)
     expect_equal(round(x[x$surname == "Morse", "pred.his"], 4), 0.0163)
-  
+    
     # Prediction using the Census object built in the previous step; tract-level statistics used in prediction
     x = predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
     # Test and confirm prediction output is as expected
@@ -79,7 +79,7 @@ test_that("Tests predictions using Census API key", {
     expect_equal(sum(x$surname == "Johnson"), 1)
     expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0819)
     expect_equal(round(x[x$surname == "Morse", "pred.his"], 4), 0.0034)
-
+    
     # Prediction using a valid Census API key; place-level statistics used
     x = predict_race(voter.file = voters, census.geo = "place", census.key = k, sex = TRUE)
     # Test and confirm prediction output is as expected
@@ -103,7 +103,7 @@ test_that("Tests predictions using Census API key", {
     expect_equal(round(x[x$surname == "Morse", "pred.his"], 4), 0.0123)
   }
 }) 
-  
+
 test_that("Tests predictions using Census data from a different year", {
   set.seed(12345)
   
@@ -118,4 +118,3 @@ test_that("Tests predictions using Census data from a different year", {
     expect_equal(round(x[x$surname == "Morse", "pred.his"], 4), 0.0023)
   }
 })
-

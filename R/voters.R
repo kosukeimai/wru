@@ -17,12 +17,10 @@
 #'   \item{sex}{0=male, 1=female}
 #'   \item{party}{Party registration (character)}
 #'   \item{PID}{Party registration (numeric)}
-#'   \item{first}{First name}
-#'   \item{last}{Last name}
-#'   }
-#'
+#'   #' }
+#' @docType data
 #' @keywords datasets
 #' @name voters
 #' @examples
 #' data(voters)
-NULL
+"voters"

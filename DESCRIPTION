@@ -1,13 +1,11 @@
 Package: wru
 Version: 0.1-12
 Date: 2021-05-17
-Title: Who are You? Bayesian Prediction of Racial Category Using Surname and
-    Geolocation
+Title: Who are You? Bayesian Prediction of Racial Category Using
+        Surname and Geolocation
 Authors@R: c(
   person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut", "cre")),
-  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut")),
-  person("Evan", "Rosenman", email = "etrrosenman@gmail.com", role = c("aut")),
-  person("Santiago", "Olivella", email = "olivella@unc.edu", role = c("aut"))
+  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
   )
 Description: Predicts individual race/ethnicity using surname, geolocation,
     and other attributes, such as gender and age. The method utilizes the Bayes'
@@ -17,24 +15,13 @@ Description: Predicts individual race/ethnicity using surname, geolocation,
     Registration Records" Political Analysis <DOI:10.1093/pan/mpw001>.
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
-Depends:
-    R (>= 3.5.0),
-    utils
-Imports:
-    devtools (>= 1.10.0),
-    PL94171,
-    stringr,
-    Rcpp,
-    dplyr (>= 1.0.0)
-LinkingTo: 
-    Rcpp,
-    RcppEigen,
-    RcppProgress
-Suggests:
-    testthat
+Depends: R (>= 3.5.0), utils
+Imports: devtools (>= 1.10.0)
+Suggests: testthat
 LazyLoad: yes
 LazyData: yes
 LazyDataCompression: xz
 License: GPL (>= 3)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 Encoding: UTF-8
+NeedsCompilation: no
