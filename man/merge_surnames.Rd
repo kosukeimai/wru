@@ -72,7 +72,7 @@ This function allows users to match surnames in their dataset with the U.S.
 }
 \examples{
 data(voters)
-\dontrun{merge_surnames(voters)}
+\dontrun{try(merge_surnames(voters))}
 
 }
 \keyword{internal}

@@ -156,23 +156,23 @@ individual-level race/ethnicity, based on surname, geolocation, and party.
 }
 \examples{
 data(voters)
-predict_race(voter.file = voters, surname.only = TRUE)
+try(predict_race(voter.file = voters, surname.only = TRUE))
 \dontrun{
-predict_race(voter.file = voters, census.geo = "tract", census.key = "...")
+try(predict_race(voter.file = voters, census.geo = "tract", census.key = "..."))
 }
 \dontrun{
-predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020")
+try(predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020"))
 }
 \dontrun{
-CensusObj <- get_census_data("...", state = c("NY", "DC", "NJ"))
-predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+CensusObj <- try(get_census_data("...", state = c("NY", "DC", "NJ")))
+try(predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID"))
 }
 \dontrun{
-CensusObj2 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T)
-predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T)
+CensusObj2 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T))
+try(predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T))
 }
 \dontrun{
-CensusObj3 <- get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place")
-predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3)
+CensusObj3 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place"))
+try(predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3))
 }
 }

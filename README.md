@@ -105,7 +105,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 
-Or you can also use the census_geo_api() to maually construct a census object. The example below creates a census object with county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
+Or you can also use the census_geo_api() to manually construct a census object. The example below creates a census object with county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
 
 ``` r
 censusObj2  = list()

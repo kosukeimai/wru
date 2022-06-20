@@ -37,8 +37,8 @@ It is used by the \code{get_census_api} function. The user should not need to ca
 function directly.
 }
 \examples{
-\dontrun{get_census_api_2(data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...", 
-get = c("P005003","P005004","P005005", "P005006"), region = "for=county:*&in=state:34")}
+\dontrun{try(get_census_api_2(data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...", 
+get = c("P005003","P005004","P005005", "P005006"), region = "for=county:*&in=state:34"))}
 
 }
 \references{

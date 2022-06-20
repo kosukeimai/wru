@@ -50,7 +50,7 @@
 #'#'
 #' @examples
 #' data(voters)
-#' \dontrun{merge_surnames(voters)}
+#' \dontrun{try(merge_surnames(voters))}
 #'
 #' @keywords internal
 

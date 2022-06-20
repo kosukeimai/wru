@@ -64,7 +64,7 @@
 #' @importFrom dplyr coalesce
 #' @examples
 #' data(voters)
-#' \dontrun{merge_names(voters, namesToUse = "surname", census.surname = TRUE)}
+#' \dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
 #' @keywords internal
 merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
 

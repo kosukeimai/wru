@@ -93,6 +93,6 @@ This function allows users to match names in their dataset with database entries
 }
 \examples{
 data(voters)
-\dontrun{merge_names(voters, namesToUse = "surname", census.surname = TRUE)}
+\dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
 }
 \keyword{internal}
