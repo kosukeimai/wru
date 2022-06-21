@@ -155,7 +155,8 @@ Imai and Khanna (2015). The function produces probabilistic estimates of
 individual-level race/ethnicity, based on surname, geolocation, and party.
 }
 \examples{
-data(voters)
+\donttest{
+#' data(voters)
 try(predict_race(voter.file = voters, surname.only = TRUE))
 \dontrun{
 try(predict_race(voter.file = voters, census.geo = "tract", census.key = "..."))
@@ -178,5 +179,6 @@ try(predict_race(
 \dontrun{
 CensusObj3 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place"))
 try(predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3))
+}
 }
 }
