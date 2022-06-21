@@ -121,6 +121,7 @@ test_that("Fails on territories", {
 }) 
 
 test_that("Fails on missing geolocation", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
