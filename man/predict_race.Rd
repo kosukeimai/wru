@@ -161,15 +161,19 @@ try(predict_race(voter.file = voters, surname.only = TRUE))
 try(predict_race(voter.file = voters, census.geo = "tract", census.key = "..."))
 }
 \dontrun{
-try(predict_race(voter.file = voters, census.geo = "place", census.key = "...", year = "2020"))
+try(predict_race(
+  voter.file = voters, census.geo = "place", census.key = "...", year = "2020"))
 }
 \dontrun{
 CensusObj <- try(get_census_data("...", state = c("NY", "DC", "NJ")))
-try(predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID"))
+try(predict_race(
+  voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+  )
 }
 \dontrun{
 CensusObj2 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T))
-try(predict_race(voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T))
+try(predict_race(
+  voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T))
 }
 \dontrun{
 CensusObj3 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place"))
