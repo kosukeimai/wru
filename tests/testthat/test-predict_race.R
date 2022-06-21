@@ -5,6 +5,7 @@ options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
 test_that("Tests surname only predictions", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   # Prediction using surname only
@@ -19,6 +20,7 @@ test_that("Tests surname only predictions", {
 })
 
 test_that("Test BISG NJ at county level", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
@@ -39,6 +41,7 @@ test_that("Test BISG NJ at county level", {
 })
 
 test_that("Test fBISG NJ at tract level", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   
@@ -61,6 +64,7 @@ test_that("Test fBISG NJ at tract level", {
 })
 
 test_that("BISG NJ at block level", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
@@ -83,6 +87,7 @@ test_that("BISG NJ at block level", {
 })
 
 test_that("BISG NJ at block_group level", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
@@ -116,6 +121,7 @@ test_that("Fails on territories", {
 }) 
 
 test_that("Fails on missing geolocation", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
@@ -131,6 +137,7 @@ test_that("Fails on missing geolocation", {
 })
 
 test_that("Handles zero-pop. geolocations", {
+  skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))

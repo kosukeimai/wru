@@ -106,7 +106,8 @@
 #'  \code{\var{pred.oth}} for Other/Mixed.
 #'
 #' @examples
-#' data(voters)
+#' \donttest{
+#' #' data(voters)
 #' try(predict_race(voter.file = voters, surname.only = TRUE))
 #' \dontrun{
 #' try(predict_race(voter.file = voters, census.geo = "tract", census.key = "..."))
@@ -130,6 +131,8 @@
 #' CensusObj3 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place"))
 #' try(predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3))
 #' }
+#' }
+
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
