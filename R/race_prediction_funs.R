@@ -396,7 +396,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   
   if (surname.only == TRUE) {
     # Pr(Race | Surname)
-    preds <- voter.file[, grep("_last$", names(voter.file))] * race.margin
+    preds <- voter.file[, grep("_last$", names(voter.file))] * 
+      matrix(race.margin, nrow=nrow(voter.file), ncol=length(race.margin), byrow = TRUE)
   } else {
     # Pr(Race | Surname, Geolocation)
     preds <-  voter.file[, grep("_last$", names(voter.file))]  * voter.file[, grep("^r_", names(voter.file))]
@@ -414,7 +415,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
   if(impute.missing){
     miss_ind <- !is.finite(preds$c_whi_last)
     if(any(miss_ind)){
-      preds[miss_ind,] <- voter.file[miss_ind, grep("_last$", names(voter.file))] * race.margin
+      preds[miss_ind,] <- voter.file[miss_ind, grep("_last$", names(voter.file))] * 
+        matrix(race.margin, nrow=nrow(voter.file[miss_ind,]), ncol=length(race.margin), byrow = TRUE)
     }
   }
   colnames(preds) <- paste("pred", eth, sep = ".")
