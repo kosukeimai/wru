@@ -1,6 +1,6 @@
 Package: wru
-Version: 1.0.0
-Date: 2022-06-17
+Version: 1.0.0009
+Date: 2022-07-26
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname, First Name, Middle Name, and
     Geolocation
 Authors@R: c(
@@ -39,6 +39,6 @@ LazyLoad: yes
 LazyData: yes
 LazyDataCompression: xz
 License: GPL (>= 3)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1
 Encoding: UTF-8
 Config/testthat/edition: 3

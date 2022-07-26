@@ -15,8 +15,8 @@ test_that("Tests surname only predictions", {
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.00, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0263, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.045, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0272, tolerance = 0.01)
 })
 
 test_that("Test BISG NJ at county level", {
