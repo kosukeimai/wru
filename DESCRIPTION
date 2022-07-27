@@ -27,7 +27,7 @@ Imports:
     furrr,
     purrr,
     Rcpp,
-    piggyback, 
+    piggyback (>= 0.1.4), 
     PL94171
 Suggests:
     testthat (>= 3.0.0),
