@@ -15,8 +15,8 @@ test_that("Tests surname only predictions", {
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.00, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0263, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.045, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0272, tolerance = 0.01)
 })
 
 test_that("Test BISG NJ at county level", {
@@ -155,4 +155,25 @@ test_that("Handles zero-pop. geolocations", {
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
   expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.99, tolerance = 0.01)
   expect_equal(x[x$surname == "Lopez", "pred.his"], 0.92, tolerance = 0.01)
+})
+
+test_that("Fixes for issue #68 work as expected", {
+  skip_on_cran()
+  set.seed(42)
+  surname <- c("SULLIVAN")
+  one <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  surname <- c("SULLIVAN", "SULLIVAN")
+  two <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  surname <- c("SULLIVAN", "SULLIVAN", "SULLIVAN")
+  three <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  expect_equal(one$pred.whi, 0.8397254)
+  expect_equal(two$pred.whi[1], 0.8397254)
+  expect_equal(two$pred.whi[2], 0.8397254)
+  
+  expect_equal(three$pred.whi[1], 0.8397254)
+  expect_equal(three$pred.whi[2], 0.8397254)
+  expect_equal(three$pred.whi[3], 0.8397254)
 })
