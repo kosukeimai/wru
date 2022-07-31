@@ -187,6 +187,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
     voter.file$state <- toupper(voter.file$state)
     states <- unique(voter.file$state)
     county.list <- split(voter.file$county, voter.file$state)
+    county.list <- lapply(county.list, function(x) unique(x))
     census.data <- get_census_data(
       census.key, states, age, 
       sex, year, census.geo, 
