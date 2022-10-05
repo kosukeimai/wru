@@ -69,7 +69,7 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
   # }
   
   # assign variable values based on the year of the census data
-  if (year != "2020"){
+  if (as.character(year) != "2020"){
     vars_ <- c(
       pop_white = 'P005003', pop_black = 'P005004',
       pop_aian = 'P005005', pop_asian = 'P005006',
@@ -110,7 +110,7 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
   }
   
   # set the census data url links
-  if (year != "2020") {
+  if (as.character(year) != "2020") {
     census_data_url = "https://api.census.gov/data/2010/dec/sf1?"
   }
   else {
@@ -199,7 +199,7 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
           blockgroup <- paste("for=block+group:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
   
           # message(region_tract)
-          blockgroup_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = blockgroup, retry)
+          blockgroup_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = blockgroup, retry)
           names(blockgroup_df)[4] <- "block_group" # Fix name, it comes in with a space from api. 
           blockgroup_df
         }
@@ -243,14 +243,14 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
           
           region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
           # message(region_tract)
-          tract_df <- get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = region_tract, retry)
+          tract_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_tract, retry)
           tract_list <- tract_df$tract
           
           furrr::future_map_dfr(1:length(tract_list), function(tract) {
             message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
-            get_census_api("https://api.census.gov/data/2010/dec/sf1?", key = key, var.names = vars_, region = region_block, retry)
+            get_census_api(census_data_url, key = key, var.names = vars_, region = region_block, retry)
           })
         }
       )
