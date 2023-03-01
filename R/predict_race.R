@@ -265,7 +265,10 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                              use.counties = use.counties, race.init = race.init,
                              ctrl = ctrl)
   }
-  preds[order(preds$caseid),setdiff(names(preds), "caseid")]
+  seed_attr <- attr(preds, "RNGseed")
+  preds <- preds[order(preds$caseid),setdiff(names(preds), "caseid")]
+  attr(preds, "RNGseed") <- seed_attr
+  preds
 }
 
 
