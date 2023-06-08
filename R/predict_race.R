@@ -29,7 +29,7 @@
 #'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 #' @param surname.year A number to specify the year of the census surname statistics.
 #' These surname statistics is stored in the data, and will be automatically loaded.
-#' The default value is \code{2010}, which means the surname statistics from the
+#' The default value is \code{2020}, which means the surname statistics from the
 #' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
 #' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census geographic data. Currently
@@ -137,7 +137,7 @@
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
                          surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
-                         sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
+                         sex = FALSE, year = "2020", party = NULL, retry = 3, impute.missing = TRUE,
                          use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL) {
   

@@ -47,7 +47,7 @@ NULL
 
 .predict_race_old <- function(voter.file,
                               census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
-                              census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2010",
+                              census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2020",
                               party, retry = 3, impute.missing = TRUE, use.counties = FALSE) {
   
   # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
@@ -261,7 +261,7 @@ NULL
 #' New race prediction function, implementing classical BISG with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
-predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
+predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
                              census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                              use.counties = FALSE) {
@@ -430,7 +430,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2010",age = FALSE
 #' error correction, fully Bayesian model) with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
-predict_race_me <- function(voter.file, names.to.use, year = "2010",age = FALSE, sex = FALSE, 
+predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
                             use.counties = FALSE, race.init, ctrl) 
