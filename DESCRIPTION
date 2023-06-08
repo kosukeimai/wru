@@ -15,7 +15,10 @@ Description: Predicts individual race/ethnicity using surname, first name, middl
     Rule (with optional measurement error correction) to compute the posterior probability of each racial category for any given
     individual. The package implements methods described in Imai and Khanna (2016)
     "Improving Ecological Inference by Predicting Individual Ethnicity from Voter
-    Registration Records" Political Analysis <DOI:10.1093/pan/mpw001>.
+    Registration Records" Political Analysis <DOI:10.1093/pan/mpw001> and Imai, Olivella, and Rosenman (2022) 
+    "Addressing census data problems in race imputation via fully Bayesian Improved Surname Geocoding and name supplements" 
+    <DOI:10.1126/sciadv.adc9824>.  The package also incorporates the data described in Rosenman, Olivella, and Imai (2023) 
+    "Race and ethnicity data for first, middle, and surnames" <DOI:10.1038/s41597-023-02202-2>.
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
