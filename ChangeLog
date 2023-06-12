@@ -15,3 +15,4 @@ Date        Version  Comment
 2020-05-17  0.1-12   Some Census API improvements (thanks to Silvia Kim)
 2022-06-17  1.0.0    Updates to BISG, inclusion of fBISG and other package improvements
 2022-10-04  1.0.1    Bug fixes for census url and census year
+2023-06-12  2.0.0    Updated defaults to 2020 data, specifiy as next major version 2.0.
