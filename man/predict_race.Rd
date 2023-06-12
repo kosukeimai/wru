@@ -8,13 +8,13 @@ predict_race(
   voter.file,
   census.surname = TRUE,
   surname.only = FALSE,
-  surname.year = 2010,
+  surname.year = 2020,
   census.geo,
   census.key = NULL,
   census.data = NULL,
   age = FALSE,
   sex = FALSE,
-  year = "2010",
+  year = "2020",
   party = NULL,
   retry = 3,
   impute.missing = TRUE,
@@ -54,7 +54,7 @@ only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 
 \item{surname.year}{A number to specify the year of the census surname statistics.
 These surname statistics is stored in the data, and will be automatically loaded.
-The default value is \code{2010}, which means the surname statistics from the
+The default value is \code{2020}, which means the surname statistics from the
 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.}
 
 \item{census.geo}{An optional character vector specifying what level of
@@ -95,7 +95,7 @@ If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \cod
 where \code{\var{sex}} is coded as 0 for males and 1 for females.}
 
 \item{year}{An optional character vector specifying the year of U.S. Census geographic
-data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.}
+data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
 
 \item{party}{An optional character object specifying party registration field
 in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.

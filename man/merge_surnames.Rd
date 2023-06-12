@@ -6,7 +6,7 @@
 \usage{
 merge_surnames(
   voter.file,
-  surname.year = 2010,
+  surname.year = 2020,
   name.data,
   clean.surname = TRUE,
   impute.missing = TRUE
@@ -18,7 +18,7 @@ named 'surname' containing list of surnames to be merged with Census lists.}
 
 \item{surname.year}{An object of class \code{numeric} indicating which year 
 Census Surname List is from. Accepted values are \code{2010} and \code{2000}. 
-Default is \code{2010}.}
+Default is \code{2020}.}
 
 \item{name.data}{An object of class \code{data.frame}. Must contain a leading 
 column of surnames, and 5 subsequent columns, with Pr(Race | Surname) for each 

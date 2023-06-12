@@ -7,8 +7,8 @@
 get_census_api_2(data_url, key, get, region, retry = 3)
 }
 \arguments{
-\item{data_url}{URL root of the API, including the question mark, 
-e.g., \code{"https://api.census.gov/data/2010/dec/sf1?"}.}
+\item{data_url}{URL root of the API,
+e.g., \code{"https://api.census.gov/data/2020/dec/dhc"}.}
 
 \item{key}{A required character object containing user's Census API key, 
 which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}

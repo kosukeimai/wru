@@ -11,7 +11,7 @@ census_helper(
   geo = "tract",
   age = FALSE,
   sex = FALSE,
-  year = "2010",
+  year = "2020",
   census.data = NULL,
   retry = 3,
   use.counties = FALSE
@@ -47,7 +47,7 @@ If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{year}{A character object specifying the year of U.S. Census data to be downloaded.
-Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 \code{\var{sex}} are both \code{FALSE}.}
 

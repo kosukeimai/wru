@@ -9,7 +9,7 @@ get_census_data(
   states,
   age = FALSE,
   sex = FALSE,
-  year = "2010",
+  year = "2020",
   census.geo = "block",
   retry = 3,
   county.list = NULL
@@ -32,7 +32,7 @@ If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{year}{A character object specifying the year of U.S. Census data to be downloaded.
-Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and 
 \code{\var{sex}} are both \code{FALSE}.}
 
