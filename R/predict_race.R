@@ -64,7 +64,7 @@
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
 #' @param year An optional character vector specifying the year of U.S. Census geographic
-#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 #' @param party An optional character object specifying party registration field
 #' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
 #' If specified, race/ethnicity predictions will be conditioned
@@ -136,7 +136,7 @@
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
-                         surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
+                         surname.year = 2020, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2020", party = NULL, retry = 3, impute.missing = TRUE,
                          use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL) {

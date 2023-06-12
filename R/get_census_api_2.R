@@ -6,8 +6,8 @@
 #' It is used by the \code{get_census_api} function. The user should not need to call this 
 #' function directly.
 #'
-#' @param data_url URL root of the API, including the question mark, 
-#'  e.g., \code{"api.census.gov/data/2020/dec/dhc"}.
+#' @param data_url URL root of the API,
+#'  e.g., \code{"https://api.census.gov/data/2020/dec/dhc"}.
 #' @param key A required character object containing user's Census API key, 
 #'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param get A character vector of variables to get, 

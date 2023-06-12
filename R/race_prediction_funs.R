@@ -46,7 +46,7 @@ NULL
 #' @keywords internal
 
 .predict_race_old <- function(voter.file,
-                              census.surname = TRUE, surname.only = FALSE, surname.year = 2010, name.dictionaries = NULL,
+                              census.surname = TRUE, surname.only = FALSE, surname.year = 2020, name.dictionaries = NULL,
                               census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2020",
                               party, retry = 3, impute.missing = TRUE, use.counties = FALSE) {
   
@@ -101,7 +101,7 @@ NULL
   ## Merge in Pr(Race | Surname) if necessary
   if (census.surname) {
     if (!(surname.year %in% c(2000, 2010, 2020))) {
-      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 (default) or 2020."))
+      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 or 2020 (default)."))
     }
     voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = NULL, impute.missing = impute.missing)
   } else {
@@ -268,7 +268,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
-    stop("Year should be one of 2000, 2010, or 2020.")
+    stop("Year should be one of 2000, 2010, or 2020 (default).")
   }
   # Define 2020 race marginal
   race.margin <- c(r_whi=0.5783619, r_bla=0.1205021, r_his=0.1872988,

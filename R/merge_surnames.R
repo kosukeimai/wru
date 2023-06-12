@@ -27,7 +27,7 @@
 #'  named 'surname' containing list of surnames to be merged with Census lists.
 #' @param surname.year An object of class \code{numeric} indicating which year 
 #'  Census Surname List is from. Accepted values are \code{2010} and \code{2000}. 
-#'  Default is \code{2010}.
+#'  Default is \code{2020}.
 #' @param name.data An object of class \code{data.frame}. Must contain a leading 
 #' column of surnames, and 5 subsequent columns, with Pr(Race | Surname) for each 
 #' of the five major racial categories.      
@@ -54,7 +54,7 @@
 #'
 #' @keywords internal
 
-merge_surnames <- function(voter.file, surname.year = 2010, name.data, clean.surname = TRUE, impute.missing = TRUE) {
+merge_surnames <- function(voter.file, surname.year = 2020, name.data, clean.surname = TRUE, impute.missing = TRUE) {
 
   if ("surname" %in% names(voter.file) == FALSE) {
     stop('Data does not contain surname field.')
