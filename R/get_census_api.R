@@ -5,8 +5,8 @@
 #' This function obtains U.S. Census data via the public API. User
 #' can specify the variables and region(s) for which to obtain data.
 #'
-#' @param data_url URL root of the API, including the question mark,
-#'  e.g., \code{"https://api.census.gov/data/2010/dec/dec/sf1?"}.
+#' @param data_url URL root of the API,
+#'  e.g., \code{"https://api.census.gov/data/2020/dec/dhc"}.
 #' @param key A required character object containing user's Census API key,
 #'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param var.names A character vector of variables to get,

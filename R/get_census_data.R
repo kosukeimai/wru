@@ -47,6 +47,8 @@ get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year =
   
   states <- toupper(states)
   
+  message("Collecting ", year, " Census data...")
+  
   CensusObj <- NULL
   for (s in states) {
     CensusObj[[s]] <- list(state = s, age = age, sex = sex, year = year)
