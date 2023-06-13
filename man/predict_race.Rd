@@ -8,7 +8,6 @@ predict_race(
   voter.file,
   census.surname = TRUE,
   surname.only = FALSE,
-  surname.year = 2020,
   census.geo,
   census.key = NULL,
   census.data = NULL,
@@ -51,11 +50,6 @@ Default is \code{TRUE}.}
 
 \item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.}
-
-\item{surname.year}{A number to specify the year of the census surname statistics.
-These surname statistics is stored in the data, and will be automatically loaded.
-The default value is \code{2020}, which means the surname statistics from the
-2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.}
 
 \item{census.geo}{An optional character vector specifying what level of
 geography to use to merge in U.S. Census geographic data. Currently
