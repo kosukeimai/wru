@@ -17,3 +17,8 @@ vignettes/*.pdf
 # the local check files
 ..Rcheck
 
+# local build files
+src/RcppExports.o
+src/aux_funs.o
+src/sample_me.o
+src/wru.so
