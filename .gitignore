@@ -18,6 +18,7 @@ vignettes/*.pdf
 ..Rcheck
 
 # local build files
+src/RccpExports.cpp
 src/RcppExports.o
 src/aux_funs.o
 src/sample_me.o
