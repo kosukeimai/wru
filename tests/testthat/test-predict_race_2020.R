@@ -68,7 +68,7 @@ test_that("BISG NJ at block level", {
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
-  voters <- mutate(voters, block = case_when(block == 1025 ~ "3001", TRUE ~ block))
+  voters <- dplyr::mutate(voters, block = dplyr::case_when(block == 1025 ~ "3001", TRUE ~ block))
   
   x <- suppressMessages(predict_race(
     voter.file = voters[voters$state == "NJ", ], 
