@@ -8,7 +8,7 @@ get_census_api_2(data_url, key, get, region, retry = 3)
 }
 \arguments{
 \item{data_url}{URL root of the API,
-e.g., \code{"https://api.census.gov/data/2020/dec/dhc"}.}
+e.g., \code{"https://api.census.gov/data/2020/dec/pl"}.}
 
 \item{key}{A required character object containing user's Census API key, 
 which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
@@ -37,7 +37,7 @@ It is used by the \code{get_census_api} function. The user should not need to ca
 function directly.
 }
 \examples{
-\dontrun{try(get_census_api_2(data_url = "https://api.census.gov/data/2020/dec/dhc", key = "...", 
+\dontrun{try(get_census_api_2(data_url = "https://api.census.gov/data/2020/dec/pl", key = "...", 
 get = c("P2_005N", "P2_006N", "P2_007N", "P2_008N"), region = "for=county:*&in=state:34"))}
 
 }
