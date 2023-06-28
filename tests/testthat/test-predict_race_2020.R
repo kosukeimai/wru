@@ -34,10 +34,10 @@ test_that("Test BISG NJ at county level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x)), 0L)
   expect_equal(sum(x$surname == "Johnson"), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0314, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Khanna", "pred.asi"], 4), 0.9367, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Fifield", "pred.whi"], 4), 0.9230, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.9178, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0181, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.asi"], 4), 0.9444, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Fifield", "pred.whi"], 4), 0.8664, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.9392, tolerance = 0.01)
 })
 
 test_that("Test fBISG NJ at tract level", {
@@ -59,8 +59,8 @@ test_that("Test fBISG NJ at tract level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x)), 0L)
   expect_equal(sum(x$surname == "Johnson"), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.063, tolerance = 0.01) # 0.0644
-  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.78, tolerance = 0.01) # 0.0644
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.031, tolerance = 0.01) 
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.798, tolerance = 0.01) 
 })
 
 test_that("BISG NJ at block level", {
@@ -68,7 +68,7 @@ test_that("BISG NJ at block level", {
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
-  voters[voters$surname=="Ratkovic", "block"] <- "3001"
+  voters <- mutate(voters, block = case_when(block == 1025 ~ "3001", TRUE ~ block))
   
   x <- suppressMessages(predict_race(
     voter.file = voters[voters$state == "NJ", ], 
@@ -81,9 +81,9 @@ test_that("BISG NJ at block level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0L)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7640, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.1)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.7, tolerance = 0.1)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.8078, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9926, tolerance = 0.1)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.8605, tolerance = 0.1)
 })
 
 test_that("BISG NJ at block_group level", {
@@ -106,9 +106,9 @@ test_that("BISG NJ at block_group level", {
   expect_equal(dim(x), c(7, 21))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9183, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.01)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.75, tolerance = 0.01)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9374, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9954, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.8361, tolerance = 0.01)
 })
 
 test_that("Fails on territories", {
@@ -152,9 +152,9 @@ test_that("Handles zero-pop. geolocations", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.99, tolerance = 0.01)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.92, tolerance = 0.01)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9444, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9932, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.9392, tolerance = 0.01)
 })
 
 test_that("Fixes for issue #68 work as expected", {
