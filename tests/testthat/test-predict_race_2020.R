@@ -1,0 +1,179 @@
+# Note: must provide a valid U.S. Census API key for test cases that use U.S. Census statistics
+# > usethis::edit_r_profile
+# Sys.setenv("CENSUS_API_KEY" = "yourkey")
+options("piggyback.verbose" = FALSE)
+options("wru_data_wd" = TRUE)
+
+test_that("Tests surname only predictions", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  # Prediction using surname only
+  x <- suppressMessages(predict_race(
+    voter.file = voters,
+    surname.only = TRUE))
+  # Test and confirm prediction output is as expected
+  expect_equal(dim(x), c(10, 20))
+  expect_equal(sum(is.na(x)), 0)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.045, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0272, tolerance = 0.01)
+})
+
+test_that("Test BISG NJ at county level", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  x <- suppressMessages(predict_race(
+      voter.file = voters[voters$state == "NJ",],
+      census.geo = "county",
+      census.data = census
+    ))
+
+  expect_equal(as.character(x$VoterID), as.character(c(1, 2, 4, 5, 6, 8, 9)))
+  expect_equal(dim(x), c(7, 20))
+  expect_equal(sum(is.na(x)), 0L)
+  expect_equal(sum(x$surname == "Johnson"), 0)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0181, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.asi"], 4), 0.9444, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Fifield", "pred.whi"], 4), 0.8664, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.9392, tolerance = 0.01)
+})
+
+test_that("Test fBISG NJ at tract level", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+
+  x <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ",],
+    census.geo = "tract",
+    census.data = census,
+    model = "fBISG",
+    control=list(verbose=FALSE)
+  ))
+  
+  expect_equal(as.character(x$VoterID), as.character(c(1, 2, 4, 5, 6, 8, 9)))
+  expect_equal(dim(x), c(7, 20))
+  expect_equal(sum(is.na(x)), 0L)
+  expect_equal(sum(x$surname == "Johnson"), 0)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.031, tolerance = 0.01) 
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.798, tolerance = 0.01) 
+})
+
+test_that("BISG NJ at block level", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  voters <- dplyr::mutate(voters, block = dplyr::case_when(block == 1025 ~ "3001", TRUE ~ block))
+  
+  x <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "block", 
+    census.key = NULL, 
+    census.data = census, 
+    use.counties = TRUE)
+  )
+  
+  expect_equal(dim(x), c(7, 20))
+  expect_equal(sum(is.na(x$pred.asi)), 0L)
+  expect_true(!any(duplicated(x$surname)))
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.8078, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9926, tolerance = 0.1)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.8605, tolerance = 0.1)
+})
+
+test_that("BISG NJ at block_group level", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  
+  voters <- voters[voters$state == "NJ", ]
+  voters$block_group <- "1"
+  
+  x <- suppressMessages(predict_race(
+    voter.file = voters, 
+    census.geo = "block_group", 
+    census.key = NULL, 
+    census.data = census, 
+    use.counties = TRUE)
+  )
+  
+  expect_equal(dim(x), c(7, 21))
+  expect_equal(sum(is.na(x$pred.asi)), 0)
+  expect_true(!any(duplicated(x$surname)))
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9374, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9954, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.8361, tolerance = 0.01)
+})
+
+test_that("Fails on territories", {
+  data(voters)
+  voters$state <- "GU"
+  expect_error(
+    predict_race(voter.file = voters),
+    "The wru package does not support US territories"
+  )
+}) 
+
+test_that("Fails on missing geolocation", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  expect_error(suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "block", 
+    census.key = NULL, 
+    census.data = census, 
+    use.counties = TRUE)
+  ),
+  "The following locations in the voter\\.file are not available"
+  )
+})
+
+test_that("Handles zero-pop. geolocations", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  census$NJ$county[6,grep("P005",colnames(census$NJ$county))] <- 0
+  x <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "county", 
+    census.key = NULL, 
+    census.data = census, 
+    use.counties = TRUE)
+  )
+  expect_equal(dim(x), c(7, 20))
+  expect_equal(sum(is.na(x$pred.asi)), 0)
+  expect_true(!any(duplicated(x$surname)))
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9444, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9932, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.9392, tolerance = 0.01)
+})
+
+test_that("Fixes for issue #68 work as expected", {
+  skip_on_cran()
+  set.seed(42)
+  surname <- c("SULLIVAN")
+  one <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  surname <- c("SULLIVAN", "SULLIVAN")
+  two <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  surname <- c("SULLIVAN", "SULLIVAN", "SULLIVAN")
+  three <- predict_race(voter.file=data.frame(surname), surname.only=TRUE)
+  
+  expect_equal(one$pred.whi, 0.8397254)
+  expect_equal(two$pred.whi[1], 0.8397254)
+  expect_equal(two$pred.whi[2], 0.8397254)
+  
+  expect_equal(three$pred.whi[1], 0.8397254)
+  expect_equal(three$pred.whi[2], 0.8397254)
+  expect_equal(three$pred.whi[3], 0.8397254)
+})

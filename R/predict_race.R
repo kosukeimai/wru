@@ -27,10 +27,6 @@
 #'  Default is \code{TRUE}.
 #' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 #'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
-#' @param surname.year A number to specify the year of the census surname statistics.
-#' These surname statistics is stored in the data, and will be automatically loaded.
-#' The default value is \code{2010}, which means the surname statistics from the
-#' 2010 census will be used. Currently, the other available choices are \code{2000} and \code{2020}.
 #' @param census.geo An optional character vector specifying what level of
 #' geography to use to merge in U.S. Census geographic data. Currently
 #' \code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"} 
@@ -64,7 +60,7 @@
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
 #' @param year An optional character vector specifying the year of U.S. Census geographic
-#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+#' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 #' @param party An optional character object specifying party registration field
 #' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
 #' If specified, race/ethnicity predictions will be conditioned
@@ -136,10 +132,12 @@
 #' @export
 
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
-                         surname.year = 2010, census.geo, census.key = NULL, census.data = NULL, age = FALSE,
-                         sex = FALSE, year = "2010", party = NULL, retry = 3, impute.missing = TRUE,
+                         census.geo, census.key = NULL, census.data = NULL, age = FALSE,
+                         sex = FALSE, year = "2020", party = NULL, retry = 3, impute.missing = TRUE,
                          use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
                          names.to.use = "surname", control = NULL) {
+  
+  message("Predicting race for ", year)
   
   ## Check model type
   if (!(model %in% c("BISG", "fBISG"))) {

@@ -7,14 +7,14 @@
 get_census_api(data_url, key, var.names, region, retry = 0)
 }
 \arguments{
-\item{data_url}{URL root of the API, including the question mark,
-e.g., \code{"https://api.census.gov/data/2010/dec/dec/sf1?"}.}
+\item{data_url}{URL root of the API,
+e.g., \code{"https://api.census.gov/data/2020/dec/pl"}.}
 
 \item{key}{A required character object containing user's Census API key,
 which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
 
 \item{var.names}{A character vector of variables to get,
-e.g., \code{c("P005003","P005004","P005005", "P005006")}.
+e.g., \code{c("P2_005N", "P2_006N", "P2_007N", "P2_008N")}.
 If there are more than 50 variables, then function will automatically
 split variables into separate queries.}
 
@@ -38,8 +38,8 @@ can specify the variables and region(s) for which to obtain data.
 \examples{
 \dontrun{
 get_census_api(
-  data_url = "https://api.census.gov/data/2010/dec/sf1?", key = "...",
-  var.names = c("P005003", "P005004", "P005005", "P005006"), region = "for=county:*&in=state:34"
+  data_url = "https://api.census.gov/data/2020/dec/pl", key = "...",
+  var.names = c("P2_005N", "P2_006N", "P2_007N", "P2_008N"), region = "for=county:*&in=state:34"
 )
 }
 

@@ -31,7 +31,7 @@
 #'  If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 #'  If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).
 #' @param year A character object specifying the year of U.S. Census data to be downloaded.
-#'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2010"}.
+#'  Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 #' @param census.data A optional census object of class \code{list} containing 
 #' pre-saved Census geographic data. Can be created using \code{get_census_data} function.
 #' If \code{\var{census.data}} is provided, the \code{\var{year}} element must 
@@ -56,7 +56,7 @@
 #'
 #' @keywords internal
 
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2010", census.data = NULL, retry = 3, use.counties = FALSE) {
+census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2020", census.data = NULL, retry = 3, use.counties = FALSE) {
   
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
