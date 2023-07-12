@@ -27,6 +27,7 @@ Depends:
 Imports:
     dplyr,
     furrr,
+    future,
     purrr,
     Rcpp,
     piggyback (>= 0.1.4), 
