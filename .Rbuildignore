@@ -7,4 +7,8 @@ inst
 .travis.yml
 ChangeLog
 .gitignore
+.Rhistory
 
+
+^cran-comments\.md$
+^CRAN-SUBMISSION$
