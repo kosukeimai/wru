@@ -58,7 +58,7 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
   state <- toupper(state)
   
   df.out <- NULL
-  
+  # Building fips table (previously loaded via .rda)
   fips.codes <- structure(list(State = structure(1:55, levels = c("AK", "AL", 
                                                                   "AR", "AS", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", 
                                                                   "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", 
