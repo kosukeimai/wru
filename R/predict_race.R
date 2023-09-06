@@ -238,7 +238,8 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                                  impute.missing = TRUE,
                                  census.surname = census.surname,
                                  use.counties = use.counties,
-                                 model = "BISG")
+                                 model = "BISG",
+                                 control = list(verbose=FALSE))
       race.init <- max.col(
         race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
         ties.method = "random"
