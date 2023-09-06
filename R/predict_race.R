@@ -225,19 +225,20 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       if(ctrl$verbose){
         message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       }
-      race.init <-  predict_race_new(voter.file = voter.file,
-                                     names.to.use = names.to.use,
-                                     year = year,
-                                     age = age, sex = sex, # not implemented, default to F
-                                     census.geo = census.geo,
-                                     census.key = census.key,
-                                     name.dictionaries = name.dictionaries,
-                                     surname.only=surname.only,
-                                     census.data = census.data,
-                                     retry = retry,
-                                     impute.missing = TRUE,
-                                     census.surname = census.surname,
-                                     use.counties = use.counties)
+      race.init <-  predict_race(voter.file = voter.file,
+                                 names.to.use = names.to.use,
+                                 year = year,
+                                 age = age, sex = sex, # not implemented, default to F
+                                 census.geo = census.geo,
+                                 census.key = census.key,
+                                 name.dictionaries = name.dictionaries,
+                                 surname.only=surname.only,
+                                 census.data = census.data,
+                                 retry = retry,
+                                 impute.missing = TRUE,
+                                 census.surname = census.surname,
+                                 use.counties = use.counties,
+                                 model = "BISG")
       race.init <- max.col(
         race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
         ties.method = "random"
