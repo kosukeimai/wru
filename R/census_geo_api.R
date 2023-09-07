@@ -58,8 +58,19 @@ census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = 
   state <- toupper(state)
   
   df.out <- NULL
-  
-  fips.codes <- get("State.FIPS")
+  # Building fips table (previously loaded via .rda)
+  fips.codes <- structure(list(State = structure(1:55, levels = c("AK", "AL", 
+                                                                  "AR", "AS", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "GU", 
+                                                                  "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", 
+                                                                  "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", 
+                                                                  "NV", "NY", "OH", "OK", "OR", "PA", "PR", "RI", "SC", "SD", "TN", 
+                                                                  "TX", "UT", "VA", "VI", "VT", "WA", "WI", "WV", "WY"), class = "factor"), 
+                               FIPS = c(2L, 1L, 5L, 60L, 4L, 6L, 8L, 9L, 11L, 10L, 12L, 
+                                        13L, 66L, 15L, 19L, 16L, 17L, 18L, 20L, 21L, 22L, 25L, 24L, 
+                                        23L, 26L, 27L, 29L, 28L, 30L, 37L, 38L, 31L, 33L, 34L, 35L, 
+                                        32L, 36L, 39L, 40L, 41L, 42L, 72L, 44L, 45L, 46L, 47L, 48L, 
+                                        49L, 51L, 78L, 50L, 53L, 55L, 54L, 56L)), class = "data.frame", row.names = c(NA, 
+                                                                                                                      -55L))
   state.fips <- fips.codes[fips.codes$State == state, "FIPS"]
   state.fips <- ifelse(nchar(state.fips) == 1, paste0("0", state.fips), state.fips)
   
