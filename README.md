@@ -214,4 +214,5 @@ Retrieved from
 
 ### A related song
 
-Watch [this](https://www.youtube.com/watch?v=LYb_nqU_43w)!
+[![Thumbnail of the music video for “Who Are You” by The
+Who](https://img.youtube.com/vi/PNbBDrceCy8/maxresdefault.jpg)](https://www.youtube.com/watch?v=PNbBDrceCy8)
