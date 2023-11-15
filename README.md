@@ -31,18 +31,9 @@ Or you can install the development version of **wru** from
 pak::pkg_install("kosukeimai/wru")
 ```
 
-### Using wru
+## Using wru
 
-First, you should save your census key to your `.Rprofile` or
-`.Renviron`. Below is an example procedure:
-
-    > usethis::edit_r_profile()
-    # edit the file with the following
-    Sys.setenv("CENSUS_API_KEY" = "Your Key")
-    # save and close the file
-    # Restart your R session
-
-Now, here is a simple example that predicts the race/ethnicity of voters
+Here is a simple example that predicts the race/ethnicity of voters
 based only on their surnames.
 
 ``` r
@@ -69,13 +60,24 @@ probability of being Hispanic/Latino):
           9 Wantchekon    NJ 12    021 004501  1025           50   0   Rep   2 60900 0.6665000 0.08530000 0.13670000 0.07970000 0.03180000
          10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.9054000 0.04310000 0.02060000 0.00720000 0.02370000
 
-In order to predict race/ethnicity based on surnames AND geolocation, a
-user needs to provide a valid U.S. Census API key to access the census
-statistics. You may request a U.S. Census API key
-[here](http://api.census.gov/data/key_signup.html). Once you have an API
-key, you can use the package to download relevant Census geographic data
-on demand and condition race/ethnicity predictions on geolocation
-(county, tract, block, or place).
+### Using geolocation
+
+In order to predict race/ethnicity based on surnames *and* geolocation,
+a user needs to provide a valid U.S. Census API key to access the census
+statistics. You can request a U.S. Census API key from [the U.S. Census
+API key signup page](http://api.census.gov/data/key_signup.html). Once
+you have an API key, you can use the package to download relevant Census
+geographic data on demand and condition race/ethnicity predictions on
+geolocation (county, tract, block, or place).
+
+First, you should save your census key to your `.Rprofile` or
+`.Renviron`. Below is an example procedure:
+
+    usethis::edit_r_environ()
+    # Edit the file with the following:
+    CENSUS_API_KEY=YourKey
+    # Save and close the file
+    # Restart your R session
 
 The following example predicts the race/ethnicity of voters based on
 their surnames, Census tract of residence (census.geo = “tract”), and
@@ -85,11 +87,8 @@ function to download the relevant tract-level data.
 
 ``` r
 library(wru)
-data(voters)
 predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")
 ```
-
-The above returns the following output.
 
     VoterID    surname state CD county  tract block precinct age sex party PID place    pred.whi     pred.bla     pred.his    pred.asi    pred.oth
           1     Khanna    NJ 12    021 004000  3001        6  29   0   Ind   0 74000 0.081856291 0.0021396565 0.0110451405 0.828313291 0.076645621
@@ -205,7 +204,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 
-## Notes about process design
+### Notes about process design
 
 For larger scale imputations garbage-collection can become a problem and
 your machine(s) can quickly run out of memory (RAM). It is recommended
@@ -230,7 +229,7 @@ U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov.
 Retrieved from
 <https://www.census.gov/data/developers/data-sets/decennial-census.html>
 
-### A related song
+## A related song
 
 [![Thumbnail of the music video for “Who Are You” by The
 Who](https://img.youtube.com/vi/PNbBDrceCy8/maxresdefault.jpg)](https://www.youtube.com/watch?v=PNbBDrceCy8)

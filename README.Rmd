@@ -34,17 +34,9 @@ Or you can install the development version of **wru** from [GitHub](https://gith
 pak::pkg_install("kosukeimai/wru")
 ```
 
-### Using wru
+## Using wru
 
-First, you should save your census key to your `.Rprofile` or `.Renviron`. Below is an example procedure:
-
-    > usethis::edit_r_profile()
-    # edit the file with the following
-    Sys.setenv("CENSUS_API_KEY" = "Your Key")
-    # save and close the file
-    # Restart your R session
-
-Now, here is a simple example that predicts the race/ethnicity of voters based only on their surnames.
+Here is a simple example that predicts the race/ethnicity of voters based only on their surnames.
 
 ``` r
 library(wru)
@@ -68,30 +60,41 @@ The above produces the following output, where the last five columns are probabi
           9 Wantchekon    NJ 12    021 004501  1025           50   0   Rep   2 60900 0.6665000 0.08530000 0.13670000 0.07970000 0.03180000
          10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.9054000 0.04310000 0.02060000 0.00720000 0.02370000
 
-In order to predict race/ethnicity based on surnames AND geolocation, a user needs to provide a valid U.S. Census API key to access the census statistics. You may request a U.S. Census API key [here](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, block, or place).
+### Using geolocation
+
+In order to predict race/ethnicity based on surnames *and* geolocation, a user needs to provide a valid U.S. Census API key to access the census statistics.
+You can request a U.S. Census API key from [the U.S. Census API key signup page](http://api.census.gov/data/key_signup.html).
+Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, block, or place).
+
+First, you should save your census key to your `.Rprofile` or `.Renviron`. Below is an example procedure:
+
+```
+usethis::edit_r_environ()
+# Edit the file with the following:
+CENSUS_API_KEY=YourKey
+# Save and close the file
+# Restart your R session
+```
 
 The following example predicts the race/ethnicity of voters based on their surnames, Census tract of residence (census.geo = "tract"), and which party registration (party = "PID"). Note that a valid API key must be provided in the input parameter 'census.key' in order for the function to download the relevant tract-level data.
 
 ``` r
 library(wru)
-data(voters)
 predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")
 ```
-
-The above returns the following output.
-
-    VoterID    surname state CD county  tract block precinct age sex party PID place    pred.whi     pred.bla     pred.his    pred.asi    pred.oth
-          1     Khanna    NJ 12    021 004000  3001        6  29   0   Ind   0 74000 0.081856291 0.0021396565 0.0110451405 0.828313291 0.076645621
-          6   Ratkovic    NJ 12    021 004000  1025           35   0   Ind   0 60900 0.916936771 0.0044432219 0.0120276229 0.008532929 0.058059455
-          4    Fifield    NJ 12    021 004501  1025           27   0   Dem   1 60900 0.895620643 0.0022078678 0.0139457411 0.023345853 0.064879895
-          5       Zhou    NJ 12    021 004501  1025           28   1   Dem   1 60900 0.003164229 0.0006092345 0.0001072684 0.991261466 0.004857802
-          2       Imai    NJ 12    021 004501  1025           40   0   Dem   1 60900 0.029936354 0.0009275220 0.0129831039 0.850040743 0.106112277
-          8      Lopez    NJ 12    021 004501  1025           33   0   Rep   2 60900 0.231046860 0.0016485574 0.6813780115 0.053180270 0.032746301
-          9 Wantchekon    NJ 12    021 004501  1025           50   0   Rep   2 60900 0.817841573 0.0063677130 0.0258733496 0.107254103 0.042663261
-          3    Velasco    NY 12    061 004800  6001           33   0   Rep   2 51000 0.223924118 0.0002913000 0.4451163607 0.313431417 0.017236805
-          7    Johnson    NY  9    061 015100  4000           25   0   Dem   1 51000 0.241417483 0.6900686166 0.0293556870 0.011105140 0.028053073
-         10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.983300770 0.0006116706 0.0034070782 0.004823439 0.007857042
-
+```
+VoterID    surname state CD county  tract block precinct age sex party PID place    pred.whi     pred.bla     pred.his    pred.asi    pred.oth
+      1     Khanna    NJ 12    021 004000  3001        6  29   0   Ind   0 74000 0.081856291 0.0021396565 0.0110451405 0.828313291 0.076645621
+      6   Ratkovic    NJ 12    021 004000  1025           35   0   Ind   0 60900 0.916936771 0.0044432219 0.0120276229 0.008532929 0.058059455
+      4    Fifield    NJ 12    021 004501  1025           27   0   Dem   1 60900 0.895620643 0.0022078678 0.0139457411 0.023345853 0.064879895
+      5       Zhou    NJ 12    021 004501  1025           28   1   Dem   1 60900 0.003164229 0.0006092345 0.0001072684 0.991261466 0.004857802
+      2       Imai    NJ 12    021 004501  1025           40   0   Dem   1 60900 0.029936354 0.0009275220 0.0129831039 0.850040743 0.106112277
+      8      Lopez    NJ 12    021 004501  1025           33   0   Rep   2 60900 0.231046860 0.0016485574 0.6813780115 0.053180270 0.032746301
+      9 Wantchekon    NJ 12    021 004501  1025           50   0   Rep   2 60900 0.817841573 0.0063677130 0.0258733496 0.107254103 0.042663261
+      3    Velasco    NY 12    061 004800  6001           33   0   Rep   2 51000 0.223924118 0.0002913000 0.4451163607 0.313431417 0.017236805
+      7    Johnson    NY  9    061 015100  4000           25   0   Dem   1 51000 0.241417483 0.6900686166 0.0293556870 0.011105140 0.028053073
+     10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.983300770 0.0006116706 0.0034070782 0.004823439 0.007857042
+```
 In predict_race, the census.geo options are "county", "tract", "block" and "place". Here is an example of prediction based on census statistics collected at the level of "place":
 
 ``` r
@@ -162,7 +165,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = censusObj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 
-## Notes about process design
+### Notes about process design
 
 For larger scale imputations garbage-collection can become a problem and your machine(s) can quickly run out of memory (RAM). It is recommended to use the `future.callr::callr` plan instead of `future::multisession`. The `callr` plan instantiates a new session at every iteration of your parallel loop or map. This simultaneously has the effect of creating more overhead, but also clearing the often sticky memory elements that would be left over to grow to eventual system failure when using `multisession`. You end up with a process that is more stable, but slightly slower.
 
@@ -176,6 +179,6 @@ This package uses the Census Bureau Data API but is not endorsed or certified by
 
 U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov. Retrieved from <https://www.census.gov/data/developers/data-sets/decennial-census.html>
 
-### A related song
+## A related song
 
 [![Thumbnail of the music video for "Who Are You" by The Who](https://img.youtube.com/vi/PNbBDrceCy8/maxresdefault.jpg)](https://www.youtube.com/watch?v=PNbBDrceCy8)
