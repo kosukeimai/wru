@@ -8,7 +8,7 @@ format_legacy_data(legacyFilePath, state, outFile = NULL)
 }
 \arguments{
 \item{legacyFilePath}{A character vector giving the location of a legacy census data folder,
-sourced from https://www2.census.gov/programs-surveys/decennial/2020/data/01-Redistricting_File--PL_94-171/. 
+sourced from https://www2.census.gov/programs-surveys/decennial/2020/data/01-Redistricting_File--PL_94-171/.
 These file names should end in ".pl".}
 
 \item{state}{The two letter state postal code.}
@@ -21,10 +21,10 @@ filepath should end in ".RData".}
 for Bayesian name geocoding.
 }
 \details{
-This function allows users to construct datasets for analysis using the census legacy data format. 
-These data are available for the 2020 census at 
-https://www2.census.gov/programs-surveys/decennial/2020/data/01-Redistricting_File--PL_94-171/. 
-This function returns data structured analogously to data from the Census API, which is not yet 
+This function allows users to construct datasets for analysis using the census legacy data format.
+These data are available for the 2020 census at
+https://www2.census.gov/programs-surveys/decennial/2020/data/01-Redistricting_File--PL_94-171/.
+This function returns data structured analogously to data from the Census API, which is not yet
 available for the 2020 Census as of September 2021.
 }
 \examples{

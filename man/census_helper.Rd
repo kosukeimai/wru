@@ -68,8 +68,8 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
- consist of the original user-input data with additional columns of
- Census data.
+consist of the original user-input data with additional columns of
+Census data.
 }
 \description{
 \code{census_helper} links user-input dataset with Census geographic data.

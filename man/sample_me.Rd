@@ -32,9 +32,9 @@ sample_me(
 
 \item{pi_s}{Numeric matrix of race | surname prior probabilities.}
 
-\item{pi_f}{Same as `pi_s`, but for first names.}
+\item{pi_f}{Same as \code{pi_s}, but for first names.}
 
-\item{pi_m}{Same as `pi_s`, but for middle names.}
+\item{pi_m}{Same as \code{pi_s}, but for middle names.}
 
 \item{pi_nr}{Matrix of marginal probability distribution over missing names; non-keyword names default to this distribution.}
 
@@ -52,9 +52,9 @@ sample_me(
 
 \item{M_rs}{Integer matrix of race | surname counts in dictionary (surnames in columns).}
 
-\item{M_rf}{Same as `M_rs`, but for first names (can be empty matrix for surname only models).}
+\item{M_rf}{Same as \code{M_rs}, but for first names (can be empty matrix for surname only models).}
 
-\item{M_rm}{Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).}
+\item{M_rm}{Same as \code{M_rs}, but for middle names (can be empty matrix for surname, or surname and first name only models).}
 
 \item{alpha}{Numeric matrix of race | geography prior probabilities.}
 

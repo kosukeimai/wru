@@ -26,7 +26,7 @@ e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.}
 }
 \value{
 If successful, output will be an object of class \code{data.frame}.
- If unsuccessful, function prints the URL query that caused the error.
+If unsuccessful, function prints the URL query that caused the error.
 }
 \description{
 \code{get_census_api} obtains U.S. Census data via the public API.
