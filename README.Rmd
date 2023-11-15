@@ -1,18 +1,25 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
 # wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![R-CMD-check](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml) [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru) ![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
 
-This R package implements the methods proposed in Imai, K. and Khanna,
-K. (2016). “[Improving Ecological Inference by Predicting Individual
-Ethnicity from Voter Registration
-Record.](http://imai.princeton.edu/research/race.html)” Political
-Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
+This R package implements the methods proposed in Imai, K. and Khanna, K. (2016). "[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record.](http://imai.princeton.edu/research/race.html)" Political Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
 
 ### Using wru
 
-First, you should save your census key to your `.Rprofile` or
-`.Renviron`. Below is an example procedure:
+First, you should save your census key to your `.Rprofile` or `.Renviron`. Below is an example procedure:
 
     > usethis::edit_r_profile()
     # edit the file with the following
@@ -20,8 +27,7 @@ First, you should save your census key to your `.Rprofile` or
     # save and close the file
     # Restart your R session
 
-Now, here is a simple example that predicts the race/ethnicity of voters
-based only on their surnames.
+Now, here is a simple example that predicts the race/ethnicity of voters based only on their surnames.
 
 ``` r
 library(wru)
@@ -30,9 +36,7 @@ data(voters)
 predict_race(voter.file = voters, surname.only = T)
 ```
 
-The above produces the following output, where the last five columns are
-probabilistic race/ethnicity predictions (e.g., ‘pred.his’ is the
-probability of being Hispanic/Latino):
+The above produces the following output, where the last five columns are probabilistic race/ethnicity predictions (e.g., 'pred.his' is the probability of being Hispanic/Latino):
 
     "Proceeding with surname-only predictions ..."
     VoterID    surname state CD county  tract block precinct age sex party PID place  pred.whi   pred.bla   pred.his   pred.asi   pred.oth
@@ -47,19 +51,9 @@ probability of being Hispanic/Latino):
           9 Wantchekon    NJ 12    021 004501  1025           50   0   Rep   2 60900 0.6665000 0.08530000 0.13670000 0.07970000 0.03180000
          10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.9054000 0.04310000 0.02060000 0.00720000 0.02370000
 
-In order to predict race/ethnicity based on surnames AND geolocation, a
-user needs to provide a valid U.S. Census API key to access the census
-statistics. You may request a U.S. Census API key
-[here](http://api.census.gov/data/key_signup.html). Once you have an API
-key, you can use the package to download relevant Census geographic data
-on demand and condition race/ethnicity predictions on geolocation
-(county, tract, block, or place).
+In order to predict race/ethnicity based on surnames AND geolocation, a user needs to provide a valid U.S. Census API key to access the census statistics. You may request a U.S. Census API key [here](http://api.census.gov/data/key_signup.html). Once you have an API key, you can use the package to download relevant Census geographic data on demand and condition race/ethnicity predictions on geolocation (county, tract, block, or place).
 
-The following example predicts the race/ethnicity of voters based on
-their surnames, Census tract of residence (census.geo = “tract”), and
-which party registration (party = “PID”). Note that a valid API key must
-be provided in the input parameter ‘census.key’ in order for the
-function to download the relevant tract-level data.
+The following example predicts the race/ethnicity of voters based on their surnames, Census tract of residence (census.geo = "tract"), and which party registration (party = "PID"). Note that a valid API key must be provided in the input parameter 'census.key' in order for the function to download the relevant tract-level data.
 
 ``` r
 library(wru)
@@ -81,32 +75,16 @@ The above returns the following output.
           7    Johnson    NY  9    061 015100  4000           25   0   Dem   1 51000 0.241417483 0.6900686166 0.0293556870 0.011105140 0.028053073
          10      Morse    DC  0    001 001301  3005           29   1   Rep   2 50000 0.983300770 0.0006116706 0.0034070782 0.004823439 0.007857042
 
-In predict_race, the census.geo options are “county”, “tract”, “block”
-and “place”. Here is an example of prediction based on census statistics
-collected at the level of “place”:
+In predict_race, the census.geo options are "county", "tract", "block" and "place". Here is an example of prediction based on census statistics collected at the level of "place":
 
 ``` r
 data(voters)
 predict_race(voter.file = voters, census.geo = "place", census.key = "...", party = "PID")
 ```
 
-It is also possible to pre-download Census geographic data, which can
-save time when running predict_race(). The example dataset ‘voters’
-includes people in DC, NJ, and NY. The following example subsets voters
-in DC and NJ, and then uses get_census_data() to download Census
-geographic data in these two states (input parameter ‘key’ requires
-valid API key). Census data is assigned to an object named census.dc.nj.
-The predict_race() statement predicts the race/ethnicity of voters in DC
-and NJ using the pre-saved Census data (census.data = census.dc.nj).
-This example conditions race/ethnicity predictions on voters’ surnames,
-block of residence (census.geo = “block”), age (age = TRUE), and party
-registration (party = “PID”).
+It is also possible to pre-download Census geographic data, which can save time when running predict_race(). The example dataset 'voters' includes people in DC, NJ, and NY. The following example subsets voters in DC and NJ, and then uses get_census_data() to download Census geographic data in these two states (input parameter 'key' requires valid API key). Census data is assigned to an object named census.dc.nj. The predict_race() statement predicts the race/ethnicity of voters in DC and NJ using the pre-saved Census data (census.data = census.dc.nj). This example conditions race/ethnicity predictions on voters' surnames, block of residence (census.geo = "block"), age (age = TRUE), and party registration (party = "PID").
 
-Please note that the input parameters ‘age’ and ‘sex’ must have the same
-values in get_census_data() and predict_race(), i.e., TRUE in both or
-FALSE in both. In this case, predictions are conditioned on age but not
-sex, so age = TRUE and sex = FALSE in both the get_census_data() and
-predict_race() statements.
+Please note that the input parameters 'age' and 'sex' must have the same values in get_census_data() and predict_race(), i.e., TRUE in both or FALSE in both. In this case, predictions are conditioned on age but not sex, so age = TRUE and sex = FALSE in both the get_census_data() and predict_race() statements.
 
 ``` r
 library(wru)
@@ -122,20 +100,13 @@ The last two lines above are equivalent to the following:
 predict_race(voter.file = voters.dc.nj, census.geo = "block", census.key = "...", age = TRUE, sex = FALSE, party = "PID")
 ```
 
-Using pre-downloaded Census data may be useful for the following
-reasons:
+Using pre-downloaded Census data may be useful for the following reasons:
 
-- You can save a lot of time in future runs of predict_race() if the
-  relevant Census data has already been saved;
-- The machines used to run predict_race() may not have internet access;
-- You can obtain timely snapshots of Census geographic data that match
-  your voter file.
+-   You can save a lot of time in future runs of predict_race() if the relevant Census data has already been saved;
+-   The machines used to run predict_race() may not have internet access;
+-   You can obtain timely snapshots of Census geographic data that match your voter file.
 
-Downloading data using get_census_data() may take a long time,
-especially at the block level or in large states. If block-level Census
-data is not required, downloading Census data at the tract level will
-save time. Similarly, if tract-level Census data is not required,
-county-level data may be specified in order to save time.
+Downloading data using get_census_data() may take a long time, especially at the block level or in large states. If block-level Census data is not required, downloading Census data at the tract level will save time. Similarly, if tract-level Census data is not required, county-level data may be specified in order to save time.
 
 ``` r
 library(wru)
@@ -149,11 +120,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = cen
 predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = census.dc.nj2, party = "PID", age = TRUE, sex = FALSE)  # Pr(Race | Surname, Tract, Party)
 ```
 
-Or you can also use the census_geo_api() to manually construct a census
-object. The example below creates a census object with county-level and
-tract-level data in DC and NJ, while avoiding downloading block-level
-data. Note that this function has the input parameter ‘state’ that
-requires a two-letter state abbreviation to proceed.
+Or you can also use the census_geo_api() to manually construct a census object. The example below creates a census object with county-level and tract-level data in DC and NJ, while avoiding downloading block-level data. Note that this function has the input parameter 'state' that requires a two-letter state abbreviation to proceed.
 
 ``` r
 censusObj2  = list()
@@ -167,14 +134,9 @@ county.nj <- census_geo_api(key = "...", state = "NJ", geo = "county", age = TRU
 censusObj2[["NJ"]] <- list(state = "NJ", county = county.nj, tract = tract.nj, age = TRUE, sex = FALSE)
 ```
 
-Note: The age and sex parameters must be consistent when creating the
-Census object and using that Census object in the predict_race function.
-If one of these parameters is TRUE in the Census object, it must also be
-TRUE in the predict_race function.
+Note: The age and sex parameters must be consistent when creating the Census object and using that Census object in the predict_race function. If one of these parameters is TRUE in the Census object, it must also be TRUE in the predict_race function.
 
-After saving the data in censusObj2 above, we can condition
-race/ethnicity predictions on different combinations of input variables,
-without having to re-download the relevant Census data.
+After saving the data in censusObj2 above, we can condition race/ethnicity predictions on different combinations of input variables, without having to re-download the relevant Census data.
 
 ``` r
 predict_race(voter.file = voters.dc.nj, census.geo = "county", census.data = censusObj2, age = TRUE, sex = FALSE)  # Pr(Race | Surname, County)
@@ -185,15 +147,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "tract", census.data = cens
 
 ## Notes about process design
 
-For larger scale imputations garbage-collection can become a problem and
-your machine(s) can quickly run out of memory (RAM). It is recommended
-to use the `future.callr::callr` plan instead of `future::multisession`.
-The `callr` plan instantiates a new session at every iteration of your
-parallel loop or map. This simultaneously has the effect of creating
-more overhead, but also clearing the often sticky memory elements that
-would be left over to grow to eventual system failure when using
-`multisession`. You end up with a process that is more stable, but
-slightly slower.
+For larger scale imputations garbage-collection can become a problem and your machine(s) can quickly run out of memory (RAM). It is recommended to use the `future.callr::callr` plan instead of `future::multisession`. The `callr` plan instantiates a new session at every iteration of your parallel loop or map. This simultaneously has the effect of creating more overhead, but also clearing the often sticky memory elements that would be left over to grow to eventual system failure when using `multisession`. You end up with a process that is more stable, but slightly slower.
 
     library(wru)
     future::plan(future.callr::callr)
@@ -201,12 +155,9 @@ slightly slower.
 
 ## Census Data
 
-This package uses the Census Bureau Data API but is not endorsed or
-certified by the Census Bureau.
+This package uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.
 
-U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov.
-Retrieved from
-<https://www.census.gov/data/developers/data-sets/decennial-census.html>
+U.S. Census Bureau (2021, October 8). Decennial Census API. Census.gov. Retrieved from <https://www.census.gov/data/developers/data-sets/decennial-census.html>
 
 ### A related song
 
