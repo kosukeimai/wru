@@ -16,8 +16,12 @@ get_census_data(
 )
 }
 \arguments{
-\item{key}{A required character object containing a valid Census API key,
-which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
+\item{key}{A character string containing a valid U.S. Census API key,
+which can be requested from the
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
+
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{states}{which states to extract Census data for, e.g., \code{c("NJ", "NY")}.}
 
