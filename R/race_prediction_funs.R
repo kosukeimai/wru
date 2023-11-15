@@ -1,7 +1,7 @@
 #' Internal model fitting functions
 #'
 #' These functions are intended for internal use only. Users should use the
-#' \code{race_predict} interface rather any of these functions directly.
+#' [predict_race()] interface rather any of these functions directly.
 #'
 #' These functions fit different versions of WRU. \code{.predict_race_old} fits
 #' the original WRU model, also known as BISG with census-based surname dictionary.
@@ -13,26 +13,11 @@
 #' the augmented surname dictionary, and the first and middle name
 #' dictionaries when making predictions.
 #'
-#' @param voter.file See documentation in \code{race_predict}.
-#' @param census.surname See documentation in \code{race_predict}.
-#' @param surname.only See documentation in \code{race_predict}.
-#' @param surname.year See documentation in \code{race_predict}.
-#' @param census.geo See documentation in \code{race_predict}.
-#' @param census.key See documentation in \code{race_predict}.
-#' @param census.data See documentation in \code{race_predict}.
-#' @param age See documentation in \code{race_predict}.
-#' @param sex See documentation in \code{race_predict}.
-#' @param year See documentation in \code{race_predict}.
-#' @param party See documentation in \code{race_predict}.
-#' @param retry See documentation in \code{race_predict}.
-#' @param impute.missing See documentation in \code{race_predict}.
-#' @param names.to.use See documentation in \code{race_predict}.
-#' @param race.init See documentation in \code{race_predict}.
-#' @param name.dictionaries See documentation in \code{race_predict}.
-#' @param ctrl See \code{control} in documentation for \code{race_predict}.
+#' @inheritParams predict_race
+#' @param ctrl See `control` in documentation for [predict_race()].
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #'
-#' @return See documentation in \code{race_predict}.
+#' @inherit predict_race return
 #'
 #' @name modfuns
 NULL
