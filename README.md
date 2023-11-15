@@ -13,6 +13,23 @@ Ethnicity from Voter Registration
 Record.](http://imai.princeton.edu/research/race.html)” Political
 Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
 
+## Installation
+
+You can install the released version of **wru** from
+[CRAN](https://cran.r-project.org/package=wru) with:
+
+``` r
+install.packages("wru")
+```
+
+Or you can install the development version of **wru** from
+[GitHub](https://github.com/kosukeimai/wru) with:
+
+``` r
+# install.packages("pak")
+pak::pkg_install("kosukeimai/wru")
+```
+
 ### Using wru
 
 First, you should save your census key to your `.Rprofile` or
