@@ -1,7 +1,11 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation [![R-CMD-check](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml) [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru) ![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
+# wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation
+
+[![R-CMD-check](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml)
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru)
+![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
 
 This R package implements the methods proposed in Imai, K. and Khanna,
 K. (2016). “[Improving Ecological Inference by Predicting Individual
