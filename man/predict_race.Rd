@@ -67,9 +67,12 @@ must have column named \code{place}.
 Specifying \code{\var{census.geo}} will call \code{census_helper} function
 to merge Census geographic data at specified level of geography.}
 
-\item{census.key}{A character object specifying user's Census API
-key. Required if \code{\var{census.geo}} is specified, because
-a valid Census API key is required to download Census geographic data.}
+\item{census.key}{A character object specifying user's Census API key.
+Required if \code{census.geo} is specified, because a valid Census API key is
+required to download Census geographic data.
+
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{census.data}{A list indexed by two-letter state abbreviations,
 which contains pre-saved Census geographic data.
