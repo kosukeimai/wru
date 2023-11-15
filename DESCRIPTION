@@ -31,13 +31,15 @@ Depends:
     R (>= 4.1.0),
     utils
 Imports:
+    cli,
     dplyr,
     furrr,
     future,
     piggyback (>= 0.1.4),
     PL94171,
     purrr,
-    Rcpp
+    Rcpp,
+    rlang
 Suggests:
     covr,
     testthat (>= 3.0.0)
