@@ -10,8 +10,9 @@
 This R package implements the methods proposed in Imai, K. and Khanna,
 K. (2016). “[Improving Ecological Inference by Predicting Individual
 Ethnicity from Voter Registration
-Record.](http://imai.princeton.edu/research/race.html)” Political
-Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. doi: 10.1093/pan/mpw001.
+Record](http://imai.princeton.edu/research/race.html).” Political
+Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. [doi:
+10.1093/pan/mpw001](https://dx.doi.org/10.1093/pan/mpw001).
 
 ## Installation
 
