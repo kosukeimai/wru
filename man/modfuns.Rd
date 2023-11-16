@@ -14,7 +14,7 @@
   surname.year = 2020,
   name.dictionaries = NULL,
   census.geo,
-  census.key,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   census.data = NULL,
   age = FALSE,
   sex = FALSE,
@@ -32,7 +32,7 @@ predict_race_new(
   age = FALSE,
   sex = FALSE,
   census.geo,
-  census.key = NULL,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -49,7 +49,7 @@ predict_race_me(
   age = FALSE,
   sex = FALSE,
   census.geo,
-  census.key,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -74,7 +74,12 @@ predict_race_me(
 
 \item{census.geo}{See documentation in \code{race_predict}.}
 
-\item{census.key}{See documentation in \code{race_predict}.}
+\item{census.key}{A character object specifying user's Census API key.
+Required if `census.geo` is specified, because a valid Census API key is
+required to download Census geographic data.
+
+If [`NULL`], the default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
 \item{census.data}{See documentation in \code{race_predict}.}
 

@@ -9,7 +9,7 @@ predict_race(
   census.surname = TRUE,
   surname.only = FALSE,
   census.geo,
-  census.key = NULL,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   census.data = NULL,
   age = FALSE,
   sex = FALSE,
@@ -67,9 +67,12 @@ must have column named \code{place}.
 Specifying \code{\var{census.geo}} will call \code{census_helper} function
 to merge Census geographic data at specified level of geography.}
 
-\item{census.key}{A character object specifying user's Census API
-key. Required if \code{\var{census.geo}} is specified, because
-a valid Census API key is required to download Census geographic data.}
+\item{census.key}{A character object specifying user's Census API key.
+Required if `census.geo` is specified, because a valid Census API key is
+required to download Census geographic data.
+
+If [`NULL`], the default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
 \item{census.data}{A list indexed by two-letter state abbreviations,
 which contains pre-saved Census geographic data.
@@ -153,25 +156,25 @@ individual-level race/ethnicity, based on surname, geolocation, and party.
 #' data(voters)
 try(predict_race(voter.file = voters, surname.only = TRUE))
 \dontrun{
-try(predict_race(voter.file = voters, census.geo = "tract", census.key = "..."))
+try(predict_race(voter.file = voters, census.geo = "tract"))
 }
 \dontrun{
 try(predict_race(
-  voter.file = voters, census.geo = "place", census.key = "...", year = "2020"))
+  voter.file = voters, census.geo = "place", year = "2020"))
 }
 \dontrun{
-CensusObj <- try(get_census_data("...", state = c("NY", "DC", "NJ")))
+CensusObj <- try(get_census_data(state = c("NY", "DC", "NJ")))
 try(predict_race(
   voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
   )
 }
 \dontrun{
-CensusObj2 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), age = T, sex = T))
+CensusObj2 <- try(get_census_data(state = c("NY", "DC", "NJ"), age = T, sex = T))
 try(predict_race(
   voter.file = voters, census.geo = "tract", census.data = CensusObj2, age = T, sex = T))
 }
 \dontrun{
-CensusObj3 <- try(get_census_data(key = "...", state = c("NY", "DC", "NJ"), census.geo = "place"))
+CensusObj3 <- try(get_census_data(state = c("NY", "DC", "NJ"), census.geo = "place"))
 try(predict_race(voter.file = voters, census.geo = "place", census.data = CensusObj3))
 }
 }

@@ -5,7 +5,7 @@
 \title{Census Data download function.}
 \usage{
 census_geo_api(
-  key = NULL,
+  key = Sys.getenv("CENSUS_API_KEY"),
   state,
   geo = "tract",
   age = FALSE,
@@ -17,8 +17,12 @@ census_geo_api(
 )
 }
 \arguments{
-\item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
+\item{key}{A character string containing a valid Census API key, 
+which can be requested from the
+[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+
+By default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
 \item{state}{A required character object specifying which state to extract Census data for, 
 e.g., \code{"NJ"}.}
@@ -64,14 +68,14 @@ at either the county, tract, block, or place level, for a particular state.
 }
 \examples{
 \dontshow{data(voters)}
-\dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
-\dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
-\dontrun{census_geo_api(key = "...", states = "MA", geo = "place", age = FALSE, sex = FALSE,
+\dontrun{census_geo_api(states = c("NJ", "DE"), geo = "block")}
+\dontrun{census_geo_api(states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
+\dontrun{census_geo_api(states = "MA", geo = "place", age = FALSE, sex = FALSE,
  year = "2020")}
 
 }
 \references{
-Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
-available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+Relies on `get_census_api()`, `get_census_api_2()`, and `vec_to_chunk()` functions authored by Nicholas Nagle, 
+available [here](https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html).
 }
 \keyword{internal}
