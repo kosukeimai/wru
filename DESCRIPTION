@@ -42,7 +42,8 @@ Imports:
     rlang
 Suggests:
     covr,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    tidycensus
 LinkingTo:
     Rcpp,
     RcppArmadillo
