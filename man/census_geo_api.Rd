@@ -7,7 +7,7 @@
 census_geo_api(
   key = NULL,
   state,
-  geo = "tract",
+  geo = c("tract", "block", "block_group", "county", "place"),
   age = FALSE,
   sex = FALSE,
   year = "2020",

@@ -48,11 +48,23 @@
 #' @importFrom purrr map_dfr
 #' @keywords internal
 
-census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = FALSE, year = "2020", retry = 3, save_temp = NULL, counties = NULL) {
+census_geo_api <- function(
+    key = NULL,
+    state,
+    geo = c("tract", "block", "block_group", "county", "place"),
+    age = FALSE,
+    sex = FALSE,
+    year = "2020",
+    retry = 3,
+    save_temp = NULL,
+    counties = NULL
+) {
   
   if (missing(key)) {
     stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
+  
+  geo <- rlang::arg_match(geo)
   
   census <- NULL
   state <- toupper(state)
