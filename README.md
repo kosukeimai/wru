@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation
+# wru: Who Are You? Bayesian Prediction of Racial Category Using Surname and Geolocation <img src="man/figures/logo.png?raw=TRUE" align="right" height="138" alt="Package logo" />
 
 [![R-CMD-check](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/kosukeimai/wru/actions/workflows/R-CMD-check.yaml)
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru)
