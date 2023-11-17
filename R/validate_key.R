@@ -1,8 +1,8 @@
-validate_key <- function(key, argument_name = NULL, call = rlang::caller_call()) {
-  if (is.null(argument_name)) {
-    argument_name <- rlang::expr_text(rlang::enexpr(key))
-  }
-  
+validate_key <- function(
+    key,
+    argument_name = rlang::caller_arg(key),
+    call = rlang::caller_call()
+) {
   if (length(key) != 1) {
     cli::cli_abort(
       c(
