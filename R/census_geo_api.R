@@ -9,7 +9,7 @@
 #' @param state A required character object specifying which state to extract Census data for, 
 #'  e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
-#'  Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}. 
+#'  Use `"block"`, `"block_group"`, `"county"`, `"place"`, `"tract"`, or `"zcta"`. 
 #'  Default is \code{"tract"}. Warning: extracting block-level data takes very long.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
@@ -50,7 +50,7 @@
 census_geo_api <- function(
     key = Sys.getenv("CENSUS_API_KEY"),
     state,
-    geo = c("tract", "block", "block_group", "county", "place"),
+    geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     age = FALSE,
     sex = FALSE,
     year = c("2020", "2010"),
@@ -60,7 +60,21 @@ census_geo_api <- function(
 ) {
   validate_key(key)
   
+  geo <- tolower(geo)
   geo <- rlang::arg_match(geo)
+  
+  if (geo == "zcta") {
+    return(
+      census_geo_api_zcta(
+        state = state,
+        age = age,
+        sex = sex,
+        year = year,
+        retry = retry,
+        key = key
+      )
+    )
+  }
   
   year <- as.character(year)
   year <- rlang::arg_match(year)
