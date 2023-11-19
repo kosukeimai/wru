@@ -10,11 +10,10 @@ census_geo_api(
   geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   age = FALSE,
   sex = FALSE,
-  year = c(2020, 2010),
+  year = c("2020", "2010"),
   retry = 3,
   save_temp = NULL,
-  counties = NULL,
-  zctas = NULL
+  counties = NULL
 )
 }
 \arguments{
@@ -25,7 +24,7 @@ key, which can be requested \href{https://api.census.gov/data/key_signup.html}{h
 e.g., \code{"NJ"}.}
 
 \item{geo}{A character object specifying what aggregation level to use.
-Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}.
+Use \code{"block"}, \code{"block_group"}, \code{"county"}, \code{"place"}, \code{"tract"}, or \code{"zcta"}.
 Default is \code{"tract"}. Warning: extracting block-level data takes very long.}
 
 \item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
