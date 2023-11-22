@@ -54,7 +54,7 @@ census_geo_api <- function(
     geo = c("tract", "block", "block_group", "county", "place"),
     age = FALSE,
     sex = FALSE,
-    year = "2020",
+    year = c("2020", "2010"),
     retry = 3,
     save_temp = NULL,
     counties = NULL
@@ -65,6 +65,9 @@ census_geo_api <- function(
   }
   
   geo <- rlang::arg_match(geo)
+  
+  year <- as.character(year)
+  year <- rlang::arg_match(year)
   
   census <- NULL
   state <- toupper(state)
@@ -119,12 +122,11 @@ census_geo_api <- function(
   }
   
   # set the census data url links
-  if (as.character(year) != "2020") {
-    census_data_url = "https://api.census.gov/data/2010/dec/sf1?"
-  }
-  else {
-    census_data_url = "https://api.census.gov/data/2020/dec/pl?"
-  }
+  census_data_url <- switch(
+    as.character(year),
+    "2010" = "https://api.census.gov/data/2010/dec/sf1?",
+    "2020" = "https://api.census.gov/data/2020/dec/pl?"
+  )
   
   if (geo == "place") {
     geo.merge <- c("state", "place")
