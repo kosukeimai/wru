@@ -7,13 +7,14 @@
 census_geo_api(
   key = Sys.getenv("CENSUS_API_KEY"),
   state,
-  geo = c("tract", "block", "block_group", "county", "place"),
+  geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   age = FALSE,
   sex = FALSE,
-  year = "2020",
+  year = c(2020, 2010),
   retry = 3,
   save_temp = NULL,
-  counties = NULL
+  counties = NULL,
+  zctas = NULL
 )
 }
 \arguments{
