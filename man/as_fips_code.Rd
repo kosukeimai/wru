@@ -2,9 +2,12 @@
 % Please edit documentation in R/state_fips.R
 \name{as_fips_code}
 \alias{as_fips_code}
-\title{Get the standardized FIPS code associated with a state}
+\alias{as_state_abbreviation}
+\title{Convert between state names, postal abbreviations, and FIPS codes}
 \usage{
 as_fips_code(x)
+
+as_state_abbreviation(x)
 }
 \arguments{
 \item{x}{A \link{numeric} or \link{character} vector of state names,
@@ -14,25 +17,37 @@ FIPS codes may be matched from numeric or character vectors,
 with or without leading zeroes.}
 }
 \value{
+\describe{
+\item{\code{as_state_fips_code()}}{
 A \link{character} vector of two-digit FIPS codes.
 One-digit FIPS codes are prefixed with a leading zero,
 e.g., \code{"06"} for California.
 }
+\item{\code{as_state_abbreviation()}}{
+A \link{character} vector of two-letter postal abbreviations,
+e.g., \code{"CA"} for California.
+}
+}
+}
 \description{
-Get the standardized FIPS code associated with a state
+Convert between state names, postal abbreviations, and FIPS codes
 }
 \examples{
 as_fips_code("california")
+as_state_abbreviation("california")
 
 # Character vector matches ignore case
 as_fips_code(c("DC", "Md", "va"))
+as_state_abbreviation(c("district of columbia", "Maryland", "VIRGINIA"))
 
 # Note that `3` and `7` are standardized to `NA`,
 # because no state is assigned those FIPS codes
 as_fips_code(1:10)
+as_state_abbreviation(1:10)
 
 # You can even mix methods in the same vector
 as_fips_code(c("utah", "NM", 8, "04"))
+as_state_abbreviation(c("utah", "NM", 8, "04"))
 
 }
 \keyword{internal}
