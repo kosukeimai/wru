@@ -10,7 +10,7 @@ get_census_data(
   age = FALSE,
   sex = FALSE,
   year = "2020",
-  census.geo = "block",
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   retry = 3,
   county.list = NULL
 )

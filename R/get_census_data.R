@@ -34,7 +34,16 @@
 #' @examples 
 #' \dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 #' \dontrun{get_census_data(key = "...", states = "MN", age = FALSE, sex = FALSE, year = "2020")}
-get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year = "2020", census.geo = "block", retry = 3, county.list = NULL) {
+get_census_data <- function(
+    key = NULL,
+    states,
+    age = FALSE,
+    sex = FALSE,
+    year = "2020",
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+    retry = 3,
+    county.list = NULL
+) {
   
   if (is.null(key)) {
     # Matches tidycensus name for env var
@@ -44,6 +53,9 @@ get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year =
   if (missing(key) | key == "") {
     stop('Must enter valid Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
   }
+  
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
   
   states <- toupper(states)
   
@@ -74,6 +86,18 @@ get_census_data <- function(key = NULL, states, age = FALSE, sex = FALSE, year =
     if ((census.geo == "block") || (census.geo == "tract") || (census.geo == "county") || (census.geo == "block_group")) {
       county <- census_geo_api(key, s, geo = "county", age, sex, year, retry)
       CensusObj[[s]]$county <- county
+    }
+    
+    if (census.geo == "zcta") {
+      if (!is.null(county.list)) {
+        cli::cli_abort(c(
+          "The {.arg county.list} argument must be set to {.code NULL}
+          when {.arg census_geo} is {.val zcta},
+          because the Census Bureau does release data that divides ZCTAs by county."
+        ))
+      }
+      
+      CensusObj[[s]]$zcta <- census_geo_api(key, s, geo = "zcta", age, sex, year, retry)
     }
   }
   return(CensusObj)
