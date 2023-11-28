@@ -37,8 +37,12 @@ Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
-\item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
+\item{key}{A character string containing a valid Census API key,
+which can be requested from the
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
+
+By default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 }
 \value{
 A \link{data.frame} with columns

@@ -17,12 +17,12 @@ census_geo_api(
 )
 }
 \arguments{
-\item{key}{A character string containing a valid Census API key, 
+\item{key}{A character string containing a valid Census API key,
 which can be requested from the
-[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
 
 By default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{state}{A required character object specifying which state to extract Census data for,
 e.g., \code{"NJ"}.}
@@ -75,7 +75,7 @@ at either the county, tract, block, or place level, for a particular state.
 
 }
 \references{
-Relies on `get_census_api()`, `get_census_api_2()`, and `vec_to_chunk()` functions authored by Nicholas Nagle, 
-available [here](https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html).
+Relies on \code{get_census_api()}, \code{get_census_api_2()}, and \code{vec_to_chunk()} functions authored by Nicholas Nagle,
+available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
 \keyword{internal}
