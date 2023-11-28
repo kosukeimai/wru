@@ -8,7 +8,7 @@ census_helper_new(
   key = Sys.getenv("CENSUS_API_KEY"),
   voter.file,
   states = "all",
-  geo = "tract",
+  geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   age = FALSE,
   sex = FALSE,
   year = "2020",

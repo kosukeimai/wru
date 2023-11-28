@@ -59,7 +59,7 @@ census_helper_new <- function(
     key = Sys.getenv("CENSUS_API_KEY"),
     voter.file,
     states = "all",
-    geo = "tract",
+    geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     age = FALSE,
     sex = FALSE,
     year = "2020",
@@ -70,6 +70,9 @@ census_helper_new <- function(
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
+  
+  geo <- tolower(geo)
+  geo <- rlang::arg_match(geo)
   
   if(!(year %in% c("2000","2010","2020"))){
     stop("Interface only implemented for census years '2000', '2010', or '2020'.")
@@ -88,10 +91,10 @@ census_helper_new <- function(
     validate_key(key)
   } 
   
-  states <- toupper(states)
-  if (states == "ALL") {
+  if (toupper(states) == "ALL") {
     states <- toupper(as.character(unique(voter.file$state)))
   }
+  states <- as_state_abbreviation(states)
   
   df.out <- NULL
   
@@ -163,32 +166,21 @@ census_helper_new <- function(
     }
     
     census$state <- state
-      
-    ## Calculate Pr(Geolocation | Race)
-    if (year != "2020") {
-      vars_ <- c(
-        pop_white = 'P005003', pop_black = 'P005004',
-        pop_aian = 'P005005', pop_asian = 'P005006',
-        pop_nhpi = 'P005007', pop_other = 'P005008', 
-        pop_two = 'P005009', pop_hisp = 'P005010'
-      )
-      drop <- c(grep("state", names(census)), grep("P005", names(census)))
-    } else {
-      vars_ <- c(
-        pop_white = 'P2_005N', pop_black = 'P2_006N',
-        pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
-        pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
-        pop_two = 'P2_011N', pop_hisp = 'P2_002N'
-      )
-      drop <- c(grep("state", names(census)), grep("P2_", names(census)))
-    }
-    geoPopulations <- rowSums(census[,names(census) %in% vars_])
     
-    census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
-    census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
-    census$r_his <- (census[, vars_["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
-    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
-    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
+    ## Calculate Pr(Geolocation | Race)
+    if (any(c("P2_005N", "P005003") %in% names(census))) {
+      vars_ <- census_geo_api_names_legacy(year = year)
+    } else {
+      vars_ <- census_geo_api_names(year)
+    }
+    drop <- match(c("state", unlist(vars_)), names(census))
+    
+    geoPopulations <- rowSums(census[,names(census) %in% vars_])
+      
+    for (i in seq_along(vars_)) {
+      census[[names(vars_)[[i]]]] <- 
+        rowSums(census[, vars_[[i]], drop = FALSE]) / geoPopulations
+    }
     
     # check locations with zero people
     # get average without places with zero people, and assign that to zero locs.
