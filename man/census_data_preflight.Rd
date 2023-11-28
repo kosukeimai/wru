@@ -7,11 +7,28 @@
 census_data_preflight(census.data, census.geo, year)
 }
 \arguments{
-\item{census.data}{See documentation in \code{race_predict}.}
+\item{census.data}{A list indexed by two-letter state abbreviations,
+which contains pre-saved Census geographic data.
+Can be generated using \code{get_census_data} function.}
 
-\item{census.geo}{See documentation in \code{race_predict}.}
+\item{census.geo}{An optional character vector specifying what level of
+geography to use to merge in U.S. Census geographic data. Currently
+\code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"}
+are supported.
+Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
+If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
+must have column named \code{county}.
+If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}}
+must have columns named \code{county} and \code{tract}.
+And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}}
+must have columns named \code{county}, \code{tract}, and \code{block}.
+If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
+must have column named \code{place}.
+Specifying \code{\var{census.geo}} will call \code{census_helper} function
+to merge Census geographic data at specified level of geography.}
 
-\item{year}{See documentation in \code{race_predict}.}
+\item{year}{An optional character vector specifying the year of U.S. Census geographic
+data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
 }
 \description{
 Preflight census data
