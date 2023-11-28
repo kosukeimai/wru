@@ -4,8 +4,13 @@
 #' for specified state(s). Using this function to download Census data in advance 
 #' can save considerable time when running \code{predict_race} and \code{census_helper}.
 #' 
-#' @param key A required character object containing a valid Census API key, 
-#' which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
+#' @param key A character string containing a valid U.S. Census API key, 
+#'   which can be requested from the
+#'   [U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+#'   
+#'   If [`NULL`], the default, attempts to find a census key stored in an
+#'   [environment variable][Sys.getenv] named `CENSUS_API_KEY`.
+#' 
 #' @param states which states to extract Census data for, e.g., \code{c("NJ", "NY")}.
 #' @param age A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
 #'  age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).

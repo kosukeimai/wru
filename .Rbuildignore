@@ -12,4 +12,5 @@ ChangeLog
 
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^README\.Rmd$
 ^data-raw$

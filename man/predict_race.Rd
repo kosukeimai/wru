@@ -34,12 +34,12 @@ If using geolocation in predictions, \code{\var{voter.file}} must contain a fiel
 state of residence (e.g., \code{"nj"} for New Jersey).
 If using Census geographic data in race/ethnicity predictions,
 \code{\var{voter.file}} must also contain at least one of the following fields:
-\code{\var{county}}, \code{\var{tract}}, \code{\var{block_group}}, \code{\var{block}}, 
+\code{\var{county}}, \code{\var{tract}}, \code{\var{block_group}}, \code{\var{block}},
 and/or \code{\var{place}}.
 These fields should contain character strings matching U.S. Census categories.
 County is three characters (e.g., \code{"031"} not \code{"31"}),
 tract is six characters, block group is usually a single character and block
- is four characters. Place is five characters.
+is four characters. Place is five characters.
 See below for other optional fields.}
 
 \item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
@@ -53,7 +53,7 @@ only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 
 \item{census.geo}{An optional character vector specifying what level of
 geography to use to merge in U.S. Census geographic data. Currently
-\code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"} 
+\code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"}
 are supported.
 Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
 If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
@@ -67,9 +67,12 @@ must have column named \code{place}.
 Specifying \code{\var{census.geo}} will call \code{census_helper} function
 to merge Census geographic data at specified level of geography.}
 
-\item{census.key}{A character object specifying user's Census API
-key. Required if \code{\var{census.geo}} is specified, because
-a valid Census API key is required to download Census geographic data.}
+\item{census.key}{A character object specifying user's Census API key.
+Required if \code{census.geo} is specified, because a valid Census API key is
+required to download Census geographic data.
+
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{census.data}{A list indexed by two-letter state abbreviations,
 which contains pre-saved Census geographic data.
@@ -102,19 +105,19 @@ it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
-\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties
 available in \var{census.data}?}
 
-\item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction, 
+\item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction,
 fully-Bayesian model).}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
-Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
+Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
 5=other. Defaults to values obtained using \code{model="BISG_surname"}.}
 
-\item{name.dictionaries}{Optional named list of \code{data.frame}'s 
-containing counts of names by race. Any of the following named elements 
-are allowed: "surname", "first", "middle". When present, the objects must 
+\item{name.dictionaries}{Optional named list of \code{data.frame}'s
+containing counts of names by race. Any of the following named elements
+are allowed: "surname", "first", "middle". When present, the objects must
 follow the same structure as \code{last_c}, \code{first_c},
 \code{mid_c}, respectively.}
 
@@ -123,22 +126,22 @@ middle'. Defaults to 'surname'.}
 
 \item{control}{List of control arguments only used when \code{model="fBISG"}, including
 \itemize{
- \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
- \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
- \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
- \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
- \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
+\item{iter}{ Number of MCMC iterations. Defaults to 1000.}
+\item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+\item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
+\item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
+\item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
- consist of the original user-input \code{voter.file} with additional columns with
- predicted probabilities for each of the five major racial categories:
- \code{\var{pred.whi}} for White,
- \code{\var{pred.bla}} for Black,
- \code{\var{pred.his}} for Hispanic/Latino,
- \code{\var{pred.asi}} for Asian/Pacific Islander, and
- \code{\var{pred.oth}} for Other/Mixed.
+consist of the original user-input \code{voter.file} with additional columns with
+predicted probabilities for each of the five major racial categories:
+\code{\var{pred.whi}} for White,
+\code{\var{pred.bla}} for Black,
+\code{\var{pred.his}} for Hispanic/Latino,
+\code{\var{pred.asi}} for Asian/Pacific Islander, and
+\code{\var{pred.oth}} for Other/Mixed.
 }
 \description{
 \code{predict_race} makes probabilistic estimates of individual-level race/ethnicity.

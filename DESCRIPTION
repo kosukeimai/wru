@@ -1,24 +1,30 @@
 Package: wru
+Title: Who are You? Bayesian Prediction of Racial Category Using Surname,
+    First Name, Middle Name, and Geolocation
 Version: 2.0.0
 Date: 2023-07-12
-Title: Who are You? Bayesian Prediction of Racial Category Using Surname, First Name, Middle Name, and
-    Geolocation
 Authors@R: c(
-  person("Kabir", "Khanna", email = "kabirkhanna@gmail.com", role = c("aut")),
-  person("Brandon", "Bertelsen", email = "brandon@bertelsen.ca", role = c("aut","cre")),
-  person("Santiago", "Olivella", email = "olivella@unc.edu", role = c("aut")),
-  person("Evan", "Rosenman", email = "etrrosenman@gmail.com", role = c("aut")),
-  person("Kosuke", "Imai", email = "imai@harvard.edu", role = c("aut"))
+    person("Kabir", "Khanna", , "kabirkhanna@gmail.com", role = "aut"),
+    person("Brandon", "Bertelsen", , "brandon@bertelsen.ca", role = c("aut", "cre")),
+    person("Santiago", "Olivella", , "olivella@unc.edu", role = "aut"),
+    person("Evan", "Rosenman", , "etrrosenman@gmail.com", role = "aut"),
+    person("Kosuke", "Imai", , "imai@harvard.edu", role = "aut")
   )
-Description: Predicts individual race/ethnicity using surname, first name, middle name, geolocation,
-    and other attributes, such as gender and age. The method utilizes Bayes'
-    Rule (with optional measurement error correction) to compute the posterior probability of each racial category for any given
-    individual. The package implements methods described in Imai and Khanna (2016)
-    "Improving Ecological Inference by Predicting Individual Ethnicity from Voter
-    Registration Records" Political Analysis <DOI:10.1093/pan/mpw001> and Imai, Olivella, and Rosenman (2022) 
-    "Addressing census data problems in race imputation via fully Bayesian Improved Surname Geocoding and name supplements" 
-    <DOI:10.1126/sciadv.adc9824>.  The package also incorporates the data described in Rosenman, Olivella, and Imai (2023) 
-    "Race and ethnicity data for first, middle, and surnames" <DOI:10.1038/s41597-023-02202-2>.
+Description: Predicts individual race/ethnicity using surname, first name,
+    middle name, geolocation, and other attributes, such as gender and
+    age. The method utilizes Bayes' Rule (with optional measurement error
+    correction) to compute the posterior probability of each racial
+    category for any given individual. The package implements methods
+    described in Imai and Khanna (2016) "Improving Ecological Inference by
+    Predicting Individual Ethnicity from Voter Registration Records"
+    Political Analysis <DOI:10.1093/pan/mpw001> and Imai, Olivella, and
+    Rosenman (2022) "Addressing census data problems in race imputation
+    via fully Bayesian Improved Surname Geocoding and name supplements"
+    <DOI:10.1126/sciadv.adc9824>.  The package also incorporates the data
+    described in Rosenman, Olivella, and Imai (2023) "Race and ethnicity
+    data for first, middle, and surnames"
+    <DOI:10.1038/s41597-023-02202-2>.
+License: GPL (>= 3)
 URL: https://github.com/kosukeimai/wru
 BugReports: https://github.com/kosukeimai/wru/issues
 Depends:
@@ -28,20 +34,20 @@ Imports:
     dplyr,
     furrr,
     future,
+    piggyback (>= 0.1.4),
+    PL94171,
     purrr,
-    Rcpp,
-    piggyback (>= 0.1.4), 
-    PL94171
+    Rcpp
 Suggests:
-    testthat (>= 3.0.0),
-    covr
+    covr,
+    testthat (>= 3.0.0)
 LinkingTo:
     Rcpp,
     RcppArmadillo
-LazyLoad: yes
+Config/testthat/edition: 3
+Encoding: UTF-8
 LazyData: yes
 LazyDataCompression: xz
-License: GPL (>= 3)
+LazyLoad: yes
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-Encoding: UTF-8
-Config/testthat/edition: 3

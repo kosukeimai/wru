@@ -42,9 +42,14 @@
 #' must have column named \code{place}.
 #' Specifying \code{\var{census.geo}} will call \code{census_helper} function
 #' to merge Census geographic data at specified level of geography.
-#' @param census.key A character object specifying user's Census API
-#'  key. Required if \code{\var{census.geo}} is specified, because
-#'  a valid Census API key is required to download Census geographic data.
+#' 
+#' @param census.key A character object specifying user's Census API key.
+#'   Required if `census.geo` is specified, because a valid Census API key is
+#'   required to download Census geographic data.
+#'   
+#'   If [`NULL`], the default, attempts to find a census key stored in an
+#'   [environment variable][Sys.getenv] named `CENSUS_API_KEY`.
+#'   
 #' @param census.data A list indexed by two-letter state abbreviations,
 #' which contains pre-saved Census geographic data.
 #' Can be generated using \code{get_census_data} function.
@@ -225,19 +230,21 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
       if(ctrl$verbose){
         message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       }
-      race.init <-  predict_race_new(voter.file = voter.file,
-                                     names.to.use = names.to.use,
-                                     year = year,
-                                     age = age, sex = sex, # not implemented, default to F
-                                     census.geo = census.geo,
-                                     census.key = census.key,
-                                     name.dictionaries = name.dictionaries,
-                                     surname.only=surname.only,
-                                     census.data = census.data,
-                                     retry = retry,
-                                     impute.missing = TRUE,
-                                     census.surname = census.surname,
-                                     use.counties = use.counties)
+      race.init <-  predict_race(voter.file = voter.file,
+                                 names.to.use = names.to.use,
+                                 year = year,
+                                 age = age, sex = sex, # not implemented, default to F
+                                 census.geo = census.geo,
+                                 census.key = census.key,
+                                 name.dictionaries = name.dictionaries,
+                                 surname.only=surname.only,
+                                 census.data = census.data,
+                                 retry = retry,
+                                 impute.missing = TRUE,
+                                 census.surname = census.surname,
+                                 use.counties = use.counties,
+                                 model = "BISG",
+                                 control = list(verbose=FALSE))
       race.init <- max.col(
         race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
         ties.method = "random"
