@@ -261,6 +261,7 @@ NULL
 #' New race prediction function, implementing classical BISG with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
+#' @keywords internal
 predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
                              census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
@@ -429,7 +430,9 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
 #' New race prediction function, implementing fBISG (i.e. measurement
 #' error correction, fully Bayesian model) with augmented
 #' surname dictionary, as well as first and middle name information.
+#' @importFrom dplyr pull
 #' @rdname modfuns
+#' @keywords internal
 predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
@@ -604,7 +607,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE,
                      surname = last_c,
                      first = first_c,
                      middle = mid_c)
-      kw_names <- toupper(ntab[, 1])
+      kw_names <- toupper(dplyr::pull(ntab, 1))
       proc_names_vf <- .name_preproc(voter.file[[ntype]], c(kw_names))
       u_vf_names <- unique(proc_names_vf)
       kw_in_vf <- kw_names %in% proc_names_vf
