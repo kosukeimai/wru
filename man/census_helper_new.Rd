@@ -5,7 +5,7 @@
 \title{Census helper function.}
 \usage{
 census_helper_new(
-  key,
+  key = Sys.getenv("CENSUS_API_KEY"),
   voter.file,
   states = "all",
   geo = "tract",
@@ -18,8 +18,12 @@ census_helper_new(
 )
 }
 \arguments{
-\item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
+\item{key}{A character string containing a valid Census API key, 
+which can be requested from the
+[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+
+By default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
 \item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named
 \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}
@@ -79,9 +83,9 @@ Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 }
 \examples{
 \dontshow{data(voters)}
-\dontrun{census_helper_new(key = "...", voter.file = voters, states = "nj", geo = "block")}
-\dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "tract")}
-\dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place",
+\dontrun{census_helper_new(voter.file = voters, states = "nj", geo = "block")}
+\dontrun{census_helper_new(voter.file = voters, states = "all", geo = "tract")}
+\dontrun{census_helper_new(voter.file = voters, states = "all", geo = "place",
  year = "2020")}
 
 }

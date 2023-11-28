@@ -8,8 +8,7 @@
 #' at the county, tract, block, or place level. Census data calculated are 
 #' Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 #'
-#' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
+#' @inheritParams get_census_data
 #' @param voter.file An object of class \code{data.frame}. Must contain field(s) named 
 #'  \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}
 #'  specifying geolocation. These should be character variables that match up with 
@@ -49,15 +48,25 @@
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "nj", geo = "block")}
-#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "tract")}
-#' \dontrun{census_helper_new(key = "...", voter.file = voters, states = "all", geo = "place",
+#' \dontrun{census_helper_new(voter.file = voters, states = "nj", geo = "block")}
+#' \dontrun{census_helper_new(voter.file = voters, states = "all", geo = "tract")}
+#' \dontrun{census_helper_new(voter.file = voters, states = "all", geo = "place",
 #'  year = "2020")}
 #'
 #' @keywords internal
 
-census_helper_new <- function(key, voter.file, states = "all", geo = "tract", age = FALSE, sex = FALSE, year = "2020", census.data = NULL, retry = 3, use.counties = FALSE) {
-  
+census_helper_new <- function(
+    key = Sys.getenv("CENSUS_API_KEY"),
+    voter.file,
+    states = "all",
+    geo = "tract",
+    age = FALSE,
+    sex = FALSE,
+    year = "2020",
+    census.data = NULL,
+    retry = 3,
+    use.counties = FALSE
+) {
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
@@ -76,9 +85,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
   }
   
   if (toDownload) {
-    if (missing(key)) {
-      stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
-    }
+    validate_key(key)
   } 
   
   states <- toupper(states)

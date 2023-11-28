@@ -5,8 +5,7 @@
 #' This function allows users to download U.S. Census geographic data (2010 or 2020), 
 #' at either the county, tract, block, or place level, for a particular state. 
 #'
-#' @param key A required character object. Must contain user's Census API
-#'  key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
+#' @inheritParams get_census_data
 #' @param state A required character object specifying which state to extract Census data for, 
 #'  e.g., \code{"NJ"}.
 #' @param geo A character object specifying what aggregation level to use. 
@@ -35,24 +34,31 @@
 #'
 #' @examples
 #' \dontshow{data(voters)}
-#' \dontrun{census_geo_api(key = "...", states = c("NJ", "DE"), geo = "block")}
-#' \dontrun{census_geo_api(key = "...", states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
-#' \dontrun{census_geo_api(key = "...", states = "MA", geo = "place", age = FALSE, sex = FALSE,
+#' \dontrun{census_geo_api(states = c("NJ", "DE"), geo = "block")}
+#' \dontrun{census_geo_api(states = "FL", geo = "tract", age = TRUE, sex = TRUE)}
+#' \dontrun{census_geo_api(states = "MA", geo = "place", age = FALSE, sex = FALSE,
 #'  year = "2020")}
 #'
 #' @references
-#' Relies on get_census_api, get_census_api_2, and vec_to_chunk functions authored by Nicholas Nagle, 
-#' available \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
+#' Relies on `get_census_api()`, `get_census_api_2()`, and `vec_to_chunk()` functions authored by Nicholas Nagle, 
+#' available [here](https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html).
 #' 
 #' @importFrom furrr future_map_dfr
 #' @importFrom purrr map_dfr
 #' @keywords internal
 
-census_geo_api <- function(key = NULL, state, geo = "tract", age = FALSE, sex = FALSE, year = "2020", retry = 3, save_temp = NULL, counties = NULL) {
-  
-  if (missing(key)) {
-    stop('Must enter U.S. Census API key, which can be requested at https://api.census.gov/data/key_signup.html.')
-  }
+census_geo_api <- function(
+    key = Sys.getenv("CENSUS_API_KEY"),
+    state,
+    geo = "tract",
+    age = FALSE,
+    sex = FALSE,
+    year = "2020",
+    retry = 3,
+    save_temp = NULL,
+    counties = NULL
+) {
+  validate_key(key)
   
   census <- NULL
   state <- toupper(state)

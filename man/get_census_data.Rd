@@ -5,7 +5,7 @@
 \title{Multilevel Census data download function.}
 \usage{
 get_census_data(
-  key = NULL,
+  key = Sys.getenv("CENSUS_API_KEY"),
   states,
   age = FALSE,
   sex = FALSE,
@@ -16,12 +16,12 @@ get_census_data(
 )
 }
 \arguments{
-\item{key}{A character string containing a valid U.S. Census API key,
+\item{key}{A character string containing a valid Census API key, 
 which can be requested from the
-\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
+[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
 
-If \code{\link{NULL}}, the default, attempts to find a census key stored in an
-\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
+By default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
 \item{states}{which states to extract Census data for, e.g., \code{c("NJ", "NY")}.}
 
@@ -60,6 +60,6 @@ for specified state(s). Using this function to download Census data in advance
 can save considerable time when running \code{predict_race} and \code{census_helper}.
 }
 \examples{
-\dontrun{get_census_data(key = "...", states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
-\dontrun{get_census_data(key = "...", states = "MN", age = FALSE, sex = FALSE, year = "2020")}
+\dontrun{get_census_data(states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
+\dontrun{get_census_data(states = "MN", age = FALSE, sex = FALSE, year = "2020")}
 }

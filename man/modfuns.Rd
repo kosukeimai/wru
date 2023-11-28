@@ -14,7 +14,7 @@
   surname.year = 2020,
   name.dictionaries = NULL,
   census.geo,
-  census.key,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   census.data = NULL,
   age = FALSE,
   sex = FALSE,
@@ -32,7 +32,7 @@ predict_race_new(
   age = FALSE,
   sex = FALSE,
   census.geo,
-  census.key = NULL,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -49,7 +49,7 @@ predict_race_me(
   age = FALSE,
   sex = FALSE,
   census.geo,
-  census.key,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -62,90 +62,39 @@ predict_race_me(
 )
 }
 \arguments{
-\item{voter.file}{An object of class \code{data.frame}.
-Must contain a row for each individual being predicted,
-as well as a field named \code{\var{surname}} containing each individual's surname.
-If using geolocation in predictions, \code{\var{voter.file}} must contain a field named
-\code{\var{state}}, which contains the two-character abbreviation for each individual's
-state of residence (e.g., \code{"nj"} for New Jersey).
-If using Census geographic data in race/ethnicity predictions,
-\code{\var{voter.file}} must also contain at least one of the following fields:
-\code{\var{county}}, \code{\var{tract}}, \code{\var{block_group}}, \code{\var{block}},
-and/or \code{\var{place}}.
-These fields should contain character strings matching U.S. Census categories.
-County is three characters (e.g., \code{"031"} not \code{"31"}),
-tract is six characters, block group is usually a single character and block
-is four characters. Place is five characters.
-See below for other optional fields.}
+\item{voter.file}{See documentation in \code{race_predict}.}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-Default is \code{TRUE}.}
+\item{census.surname}{See documentation in \code{race_predict}.}
 
-\item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
-only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.}
+\item{surname.only}{See documentation in \code{race_predict}.}
 
-\item{name.dictionaries}{Optional named list of \code{data.frame}'s
-containing counts of names by race. Any of the following named elements
-are allowed: "surname", "first", "middle". When present, the objects must
-follow the same structure as \code{last_c}, \code{first_c},
-\code{mid_c}, respectively.}
+\item{surname.year}{See documentation in \code{race_predict}.}
 
-\item{census.geo}{An optional character vector specifying what level of
-geography to use to merge in U.S. Census geographic data. Currently
-\code{"county"}, \code{"tract"}, \code{"block_group"}, \code{"block"}, and \code{"place"}
-are supported.
-Note: sufficient information must be in user-defined \code{\var{voter.file}} object.
-If \code{\var{census.geo} = "county"}, then \code{\var{voter.file}}
-must have column named \code{county}.
-If \code{\var{census.geo} = "tract"}, then \code{\var{voter.file}}
-must have columns named \code{county} and \code{tract}.
-And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}}
-must have columns named \code{county}, \code{tract}, and \code{block}.
-If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
-must have column named \code{place}.
-Specifying \code{\var{census.geo}} will call \code{census_helper} function
-to merge Census geographic data at specified level of geography.}
+\item{name.dictionaries}{See documentation in \code{race_predict}.}
+
+\item{census.geo}{See documentation in \code{race_predict}.}
 
 \item{census.key}{A character object specifying user's Census API key.
-Required if \code{census.geo} is specified, because a valid Census API key is
+Required if `census.geo` is specified, because a valid Census API key is
 required to download Census geographic data.
 
-If \code{\link{NULL}}, the default, attempts to find a census key stored in an
-\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
+If [`NULL`], the default, attempts to find a census key stored in an
+[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
-\item{census.data}{A list indexed by two-letter state abbreviations,
-which contains pre-saved Census geographic data.
-Can be generated using \code{get_census_data} function.}
+\item{census.data}{See documentation in \code{race_predict}.}
 
-\item{age}{An optional \code{TRUE}/\code{FALSE} object specifying whether to
-condition race predictions on age (in addition to surname and geolocation).
-Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
-May only be set to \code{TRUE} if \code{census.geo} option is specified.
-If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.}
+\item{age}{See documentation in \code{race_predict}.}
 
-\item{sex}{optional \code{TRUE}/\code{FALSE} object specifying whether to
-condition race predictions on sex (in addition to surname and geolocation).
-Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
-May only be set to \code{TRUE} if \code{census.geo} option is specified.
-If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
-where \code{\var{sex}} is coded as 0 for males and 1 for females.}
+\item{sex}{See documentation in \code{race_predict}.}
 
-\item{year}{An optional character vector specifying the year of U.S. Census geographic
-data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
+\item{year}{See documentation in \code{race_predict}.}
 
-\item{party}{An optional character object specifying party registration field
-in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
-If specified, race/ethnicity predictions will be conditioned
-on individual's party registration (in addition to geolocation).
-Whatever the name of the party registration field in \code{\var{voter.file}},
-it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
+\item{party}{See documentation in \code{race_predict}.}
 
-\item{retry}{The number of retries at the census website if network interruption occurs.}
+\item{retry}{See documentation in \code{race_predict}.}
 
-\item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
+\item{impute.missing}{See documentation in \code{race_predict}.}
+
 
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
