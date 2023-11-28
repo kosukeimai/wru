@@ -100,30 +100,6 @@ census_helper_new <- function(
     message(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
     
-    if (geo == "place") {
-      geo.merge <- c("place")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
-        #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use.counties) {
-          census <- census_geo_api(key, state, geo = "place", age, sex, retry)
-        } else {
-          census <- census_geo_api(key, state, geo = "place", age, sex, retry)
-        }
-      } else {
-        census <- census.data[[toupper(state)]]$place
-      }
-    }
-    
-    if (geo == "county") {
-      geo.merge <- c("county")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
-        #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "county", age, sex, retry)
-      } else {
-        census <- census.data[[toupper(state)]]$county
-      }
-    }
-    
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
@@ -137,9 +113,7 @@ census_helper_new <- function(
       } else {
         census <- census.data[[toupper(state)]]$tract
       }
-    }
-    
-    if (geo == "block_group") {
+    } else if (geo == "block_group") {
       geo.merge <- c("county", "tract", "block_group")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use.counties) {
@@ -153,10 +127,7 @@ census_helper_new <- function(
       } else {
         census <- census.data[[toupper(state)]]$block_group
       }
-    }
-    
-    
-    if (geo == "block") {
+    } else if (geo == "block") {
       if(any(names(census.data) == "block_group")) {
         geo.merge <- c("county", "tract", "block_group", "block")
       } else {
@@ -175,10 +146,23 @@ census_helper_new <- function(
       } else {
         census <- census.data[[toupper(state)]]$block
       }
+    } else {
+      geo.merge <- geo
+      
+      state_must_be_downloaded <- toDownload ||
+        is.null(census.data[[state]]) ||
+        census.data[[state]]$year != year ||
+        census.data[[state]]$age != FALSE ||
+        census.data[[state]]$sex != FALSE
+      
+      if (state_must_be_downloaded) {
+        census <- census_geo_api(key, state, geo = geo, age, sex, retry)
+      } else {
+        census <- census.data[[state]][[geo]]
+      }
     }
     
     census$state <- state
-    
       
     ## Calculate Pr(Geolocation | Race)
     if (year != "2020") {
