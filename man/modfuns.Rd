@@ -95,20 +95,31 @@ If [`NULL`], the default, attempts to find a census key stored in an
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
+
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
-\item{names.to.use}{See documentation in \code{race_predict}.}
+\item{names.to.use}{One of 'surname', 'surname, first', or  'surname, first,
+middle'. Defaults to 'surname'.}
 
-\item{race.init}{See documentation in \code{race_predict}.}
+\item{race.init}{Vector of initial race for each observation in voter.file.
+Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
+5=other. Defaults to values obtained using \code{model="BISG_surname"}.}
 
-\item{ctrl}{See \code{control} in documentation for \code{race_predict}.}
+\item{ctrl}{See \code{control} in documentation for \code{\link[=predict_race]{predict_race()}}.}
 }
 \value{
-See documentation in \code{race_predict}.
+Output will be an object of class \code{data.frame}. It will
+consist of the original user-input \code{voter.file} with additional columns with
+predicted probabilities for each of the five major racial categories:
+\code{\var{pred.whi}} for White,
+\code{\var{pred.bla}} for Black,
+\code{\var{pred.his}} for Hispanic/Latino,
+\code{\var{pred.asi}} for Asian/Pacific Islander, and
+\code{\var{pred.oth}} for Other/Mixed.
 }
 \description{
 These functions are intended for internal use only. Users should use the
-\code{race_predict} interface rather any of these functions directly.
+\code{\link[=predict_race]{predict_race()}} interface rather any of these functions directly.
 }
 \details{
 These functions fit different versions of WRU. \code{.predict_race_old} fits

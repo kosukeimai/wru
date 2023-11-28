@@ -23,27 +23,28 @@ which can be requested from the
 By default, attempts to find a census key stored in an
 [environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
-\item{get}{A character vector of variables to get, 
+
+\item{get}{A character vector of variables to get,
 e.g., \code{c("P2_005N", "P2_006N", "P2_007N", "P2_008N")}.
-If there are more than 50 variables, then function will automatically 
+If there are more than 50 variables, then function will automatically
 split variables into separate queries.}
 
 \item{region}{Character object specifying which region to obtain data for.
-Must contain "for" and possibly "in", 
+Must contain "for" and possibly "in",
 e.g., \code{"for=block:1213&in=state:47+county:015+tract:*"}.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 }
 \value{
-If successful, output will be an object of class \code{data.frame}. 
- If unsuccessful, function prints the URL query that was constructed.
+If successful, output will be an object of class \code{data.frame}.
+If unsuccessful, function prints the URL query that was constructed.
 }
 \description{
 \code{get_census_api_2} assembles URL components for \code{get_census_api}.
 }
 \details{
-This function assembles the URL components and sends the request to the Census server. 
-It is used by the \code{get_census_api} function. The user should not need to call this 
+This function assembles the URL components and sends the request to the Census server.
+It is used by the \code{get_census_api} function. The user should not need to call this
 function directly.
 }
 \examples{
@@ -52,7 +53,7 @@ get = c("P2_005N", "P2_006N", "P2_007N", "P2_008N"), region = "for=county:*&in=s
 
 }
 \references{
-Based on code authored by Nicholas Nagle, which is available 
+Based on code authored by Nicholas Nagle, which is available
 \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 }
 \keyword{internal}

@@ -1,0 +1,13 @@
+bibentry(
+  bibtype = "Manual",
+  title = "wru: Who are You? Bayesian Prediction of Racial Category Using Surname, First Name, Middle Name, and Geolocation",
+  author = c(
+    person("Kabir", "Khanna", , "kabirkhanna@gmail.com", role = "aut"),
+    person("Brandon", "Bertelsen", , "brandon@bertelsen.ca", role = c("aut", "cre")),
+    person("Santiago", "Olivella", , "olivella@unc.edu", role = "aut"),
+    person("Evan", "Rosenman", , "etrrosenman@gmail.com", role = "aut"),
+    person("Kosuke", "Imai", , "imai@harvard.edu", role = "aut")
+  ),
+  year = 2023,
+  url = "https://CRAN.R-project.org/package=wru"
+)

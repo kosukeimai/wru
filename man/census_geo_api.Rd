@@ -24,31 +24,31 @@ which can be requested from the
 By default, attempts to find a census key stored in an
 [environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
 
-\item{state}{A required character object specifying which state to extract Census data for, 
+\item{state}{A required character object specifying which state to extract Census data for,
 e.g., \code{"NJ"}.}
 
-\item{geo}{A character object specifying what aggregation level to use. 
-Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}. 
+\item{geo}{A character object specifying what aggregation level to use.
+Use \code{"county"}, \code{"tract"},\code{"block_group"}, \code{"block"}, or \code{"place"}.
 Default is \code{"tract"}. Warning: extracting block-level data takes very long.}
 
-\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
+\item{age}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
 age or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
-If \code{TRUE}, function will return Pr(Geolocation, Age | Race). 
+If \code{TRUE}, function will return Pr(Geolocation, Age | Race).
 If \code{\var{sex}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
-\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on 
-sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race). 
-If \code{TRUE}, function will return Pr(Geolocation, Sex | Race). 
+\item{sex}{A \code{TRUE}/\code{FALSE} object indicating whether to condition on
+sex or not. If \code{FALSE} (default), function will return Pr(Geolocation | Race).
+If \code{TRUE}, function will return Pr(Geolocation, Sex | Race).
 If \code{\var{age}} is also \code{TRUE}, function will return Pr(Geolocation, Age, Sex | Race).}
 
 \item{year}{A character object specifying the year of U.S. Census data to be downloaded.
 Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
-Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and 
+Warning: 2020 U.S. Census data is downloaded only when \code{\var{age}} and
 \code{\var{sex}} are both \code{FALSE}.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
-\item{save_temp}{File indicating where to save the temporary outputs. 
+\item{save_temp}{File indicating where to save the temporary outputs.
 Defaults to NULL. If specified, the function will look for an .RData file
 with the same format as the expected output.}
 
@@ -56,14 +56,14 @@ with the same format as the expected output.}
 Useful for smaller predictions where only a few counties are considered. Must be zero padded.}
 }
 \value{
-Output will be an object of class \code{list}, indexed by state names. It will 
- consist of the original user-input data with additional columns of Census geographic data.
+Output will be an object of class \code{list}, indexed by state names. It will
+consist of the original user-input data with additional columns of Census geographic data.
 }
 \description{
 \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
 }
 \details{
-This function allows users to download U.S. Census geographic data (2010 or 2020), 
+This function allows users to download U.S. Census geographic data (2010 or 2020),
 at either the county, tract, block, or place level, for a particular state.
 }
 \examples{

@@ -1,7 +1,7 @@
 #' Internal model fitting functions
 #'
 #' These functions are intended for internal use only. Users should use the
-#' \code{race_predict} interface rather any of these functions directly.
+#' [predict_race()] interface rather any of these functions directly.
 #'
 #' These functions fit different versions of WRU. \code{.predict_race_old} fits
 #' the original WRU model, also known as BISG with census-based surname dictionary.
@@ -29,10 +29,10 @@
 #' @param names.to.use See documentation in \code{race_predict}.
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
-#' @param ctrl See \code{control} in documentation for \code{race_predict}.
+#' @param ctrl See `control` in documentation for [predict_race()].
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #'
-#' @return See documentation in \code{race_predict}.
+#' @inherit predict_race return
 #'
 #' @name modfuns
 NULL
@@ -284,6 +284,7 @@ predict_race_new <- function(
     census.surname = FALSE,
     use.counties = FALSE
 ) {
+
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -442,6 +443,7 @@ predict_race_new <- function(
 #' New race prediction function, implementing fBISG (i.e. measurement
 #' error correction, fully Bayesian model) with augmented
 #' surname dictionary, as well as first and middle name information.
+#' @importFrom dplyr pull
 #' @rdname modfuns
 predict_race_me <- function(
     voter.file,
@@ -461,6 +463,7 @@ predict_race_me <- function(
     race.init,
     ctrl
 ) {
+
   if(!is.null(census.data)) {
     census_data_preflight(census.data, census.geo, year)
   }
@@ -630,7 +633,7 @@ predict_race_me <- function(
                      surname = last_c,
                      first = first_c,
                      middle = mid_c)
-      kw_names <- toupper(ntab[, 1])
+      kw_names <- toupper(dplyr::pull(ntab, 1))
       proc_names_vf <- .name_preproc(voter.file[[ntype]], c(kw_names))
       u_vf_names <- unique(proc_names_vf)
       kw_in_vf <- kw_names %in% proc_names_vf
