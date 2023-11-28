@@ -8,7 +8,7 @@ predict_race(
   voter.file,
   census.surname = TRUE,
   surname.only = FALSE,
-  census.geo,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
   census.data = NULL,
   age = FALSE,
@@ -64,15 +64,16 @@ And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}}
 must have columns named \code{county}, \code{tract}, and \code{block}.
 If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
 must have column named \code{place}.
+If \code{census.geo = "zcta"}, then \code{voter.file} must have column named \code{zcta}.
 Specifying \code{\var{census.geo}} will call \code{census_helper} function
 to merge Census geographic data at specified level of geography.}
 
 \item{census.key}{A character object specifying user's Census API key.
-Required if `census.geo` is specified, because a valid Census API key is
+Required if \code{census.geo} is specified, because a valid Census API key is
 required to download Census geographic data.
 
-If [`NULL`], the default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{census.data}{A list indexed by two-letter state abbreviations,
 which contains pre-saved Census geographic data.
