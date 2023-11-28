@@ -7,7 +7,7 @@
 census_geo_api(
   key = Sys.getenv("CENSUS_API_KEY"),
   state,
-  geo = "tract",
+  geo = c("tract", "block", "block_group", "county", "place"),
   age = FALSE,
   sex = FALSE,
   year = "2020",

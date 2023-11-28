@@ -50,7 +50,7 @@
 census_geo_api <- function(
     key = Sys.getenv("CENSUS_API_KEY"),
     state,
-    geo = "tract",
+    geo = c("tract", "block", "block_group", "county", "place"),
     age = FALSE,
     sex = FALSE,
     year = "2020",
@@ -59,6 +59,8 @@ census_geo_api <- function(
     counties = NULL
 ) {
   validate_key(key)
+  
+  geo <- rlang::arg_match(geo)
   
   census <- NULL
   state <- toupper(state)
