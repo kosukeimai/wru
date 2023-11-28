@@ -274,7 +274,7 @@ predict_race_new <- function(
     year = "2020",
     age = FALSE,
     sex = FALSE,
-    census.geo,
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
     name.dictionaries,
     surname.only=FALSE,
@@ -284,7 +284,6 @@ predict_race_new <- function(
     census.surname = FALSE,
     use.counties = FALSE
 ) {
-
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -293,10 +292,9 @@ predict_race_new <- function(
   # Define 2020 race marginal
   race.margin <- c(r_whi=0.5783619, r_bla=0.1205021, r_his=0.1872988,
                    r_asi=0.06106737, r_oth=0.05276981)
-  # check the geography
-  if (!missing(census.geo) && (census.geo == "precinct")) {
-    stop("Error: census_helper function does not currently support merging precinct-level data.")
-  }
+  
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
   
   vars.orig <- names(voter.file)
   
@@ -345,11 +343,8 @@ predict_race_new <- function(
   
   # check the geographies
   if (surname.only == FALSE) {
-    if (!(census.geo %in% c("county", "tract","block_group", "block", "place"))) {
-      stop("census.geo must be either 'county', 'tract', 'block', 'block_group', or 'place'")
-    } else {
-      message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
-    }
+    message("Proceeding with Census geographic data at ", census.geo, " level...")
+
     if (is.null(census.data)) {
       validate_key(census.key)
       message("Downloading Census geographic data using provided API key...")
@@ -369,11 +364,11 @@ predict_race_new <- function(
     
     geo_id_names <- switch(
       census.geo,
-      "county" = c("county"),
       "tract" = c("county", "tract"),
       "block_group" = c("county", "tract", "block_group"),
       "block" = c("county", "tract", "block"),
-      "place" = c("place")
+      # Return `census.geo` unchanged for county, place, and zcta
+      census.geo
     )
     
     if (!all(geo_id_names %in% names(voter.file))) {

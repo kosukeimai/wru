@@ -31,7 +31,7 @@ predict_race_new(
   year = "2020",
   age = FALSE,
   sex = FALSE,
-  census.geo,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
