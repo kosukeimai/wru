@@ -192,10 +192,10 @@ census_helper_new <- function(
     
     # check locations with zero people
     # get average without places with zero people, and assign that to zero locs.
-    if(any((geoPopulations - 0.0) < .Machine$double.eps)){
-      zero_ind <- which((geoPopulations - 0.0) < .Machine$double.eps)
-      for(rcat in c("r_whi","r_bla","r_his","r_asi","r_oth") ){
-        census[[rcat]][zero_ind] <- mean(census[[rcat]], na.rm=TRUE)
+    zero_ind <- which((geoPopulations - 0.0) < .Machine$double.eps)
+    if (length(zero_ind)) {
+      for (rcat in c("r_whi","r_bla","r_his","r_asi","r_oth")) {
+        census[[rcat]][zero_ind] <- mean(census[[rcat]], na.rm = TRUE)
       }
     }
     
