@@ -1,6 +1,3 @@
-# @staticimports pkg:stringstatic
-#   str_pad
-
 #' Census download function for state-ZCTA-level data
 #'
 #' @inheritParams census_geo_api
@@ -32,48 +29,8 @@ census_geo_api_zcta <- function(
   year <- as.character(year)
   year <- rlang::arg_match(year)
   
-  if (year == "2020") {
-    census_data_url <- "https://api.census.gov/data/2020/dec/dhc?"
-    prefix <- "P12"
-    separator <- "_"
-    suffix <- "N"
-  } else if (year %in% c("2010", "2000")) {
-    census_data_url <- paste0("https://api.census.gov/data/", year, "/dec/sf1?")
-    prefix <- "P012"
-    separator <- ""
-    suffix <- ""
-  }
-  
-  race_codes <- list(
-    "whi" = "I",
-    "bla" = "B",
-    "his" = "H",
-    "asi" = c("D", "E"),
-    "oth" = c("C", "F", "G")
-  )
-  
-  sex_codes <- c("mal" = 2, "fem" = 26)
-  
-  age_codes <- 1:23
-  
-  numeric_codes <- if (age) {
-    unlist(purrr::map(sex_codes, function(x) x + age_codes))
-  } else if (sex) {
-    sex_codes
-  } else {
-    1
-  }
-  numeric_codes <- str_pad(numeric_codes, width = 3, side = "left", pad = "0")
-  
-  vars <- expand.grid(
-    prefix,
-    unlist(race_codes),
-    separator,
-    numeric_codes,
-    suffix,
-    stringsAsFactors = FALSE
-  )
-  vars <- apply(vars, 1, paste, collapse = "")
+  census_data_url <- census_geo_api_url(year = year)
+  vars <- census_geo_api_names(year = year, age = age, sex = sex)
   
   region <- paste0(
     "for=zip%20code%20tabulation%20area%20(or%20part):*&in=state:",
@@ -83,104 +40,33 @@ census_geo_api_zcta <- function(
   census <- get_census_api(
     census_data_url,
     key = key,
-    var.names = vars,
+    var.names = unlist(vars),
     region = region,
     retry
   )
   
-  if (!age && !sex) {
-    ## Calculate Pr(Geolocation | Race)
-    
-    for (i in seq_along(race_codes)) {
-      var_name <- paste("r", names(race_codes)[[i]], sep = "_")
-      
-      code <- paste0(prefix, race_codes[[i]], separator, "001", suffix)
-      
-      census[var_name] <- rowSums(census[code])
-    }
-  } else if (!age && sex) {
-    ## Calculate Pr(Geolocation, Sex | Race)
-    
-    for (race in seq_along(race_codes)) {
-      for (sex in seq_along(sex_codes)) {
-        var_name <- paste(
-          "r",
-          names(sex_codes)[[sex]],
-          names(race_codes)[[race]],
-          sep = "_"
-        )
-        
-        code <- paste0(
-          prefix,
-          race_codes[[race]],
-          separator,
-          str_pad(sex_codes[[sex]], width = 3, pad = "0"),
-          suffix
-        )
-        
-        census[var_name] <- rowSums(census[code])
-      }
-    }
-  } else if (age && !sex) {
-    ## Calculate Pr(Geolocation, Age Category | Race)
-    
-    for (race in seq_along(race_codes)) {
-      for (age_category in age_codes) {
-        var_name <- paste(
-          "r",
-          age_category,
-          names(race_codes)[[race]],
-          sep = "_"
-        )
-        
-        code <- paste0(
-          prefix,
-          race_codes[[race]],
-          separator,
-          str_pad(sex_codes + age_category, width = 3, pad = "0"),
-          suffix
-        )
-        
-        census[var_name] <- rowSums(census[code])
-      }
-    }
-  } else if (age && sex) {
-    ## Calculate Pr(Geolocation, Sex, Age Category | Race)
-    
-    for (race in seq_along(race_codes)) {
-      for (age_category in age_codes) {
-        for (sex in seq_along(sex_codes)) {
-          var_name <- paste(
-            "r",
-            names(sex_codes)[[sex]],
-            age_category,
-            names(race_codes)[[race]],
-            sep = "_"
-          )
-          
-          code <- paste0(
-            prefix,
-            race_codes[[race]],
-            separator,
-            str_pad(sex_codes[[sex]] + age_category, width = 3, pad = "0"),
-            suffix
-          )
-          
-          census[var_name] <- rowSums(census[code])
-        }
-      }
-    }
-  }
+  census <- dplyr::mutate(census, state = as_state_abbreviation(state))
+  names(census)[[2]] <- "zcta"
   
+  r_columns <- purrr::map(vars, function(vars) rowSums(census[vars]))
+  
+  census <- dplyr::bind_cols(census, r_columns)
   census <- dplyr::group_by(census, dplyr::across(dplyr::any_of("state")))
   census <- dplyr::mutate(
     census,
-    state = as_state_abbreviation(state),
-    dplyr::across(dplyr::starts_with("r_"), function(x) x / sum(x))
+    dplyr::across(
+      # Divide all r_columns by the total population of the corresponding race
+      dplyr::all_of(names(r_columns)),
+      function(x) {
+        x / sum(
+          dplyr::pick(
+            sub("^.+_(.{3})$", "r_\\1", dplyr::cur_column(), perl = TRUE)
+          )
+        )
+      }
+    )
   )
   census <- dplyr::ungroup(census)
-  
-  names(census)[[2]] <- "zcta"
   
   census
 }
