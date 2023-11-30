@@ -80,68 +80,18 @@ census_geo_api <- function(
   year <- rlang::arg_match(year)
   
   census <- NULL
-  state <- toupper(state)
+  state <- as_state_abbreviation(state)
   
   df.out <- NULL
   state.fips <- as_fips_code(state)
   
-  # if (age == F & sex == F) {
-  #   num <- ifelse(3:10 != 10, paste("0", 3:10, sep = ""), "10")
-  #   vars <- paste("P0050", num, sep = "")
-  # }
-  
-  # assign variable values based on the year of the census data
-  if (as.character(year) != "2020"){
-    vars_ <- c(
-      pop_white = 'P005003', pop_black = 'P005004',
-      pop_aian = 'P005005', pop_asian = 'P005006',
-      pop_nhpi = 'P005007', pop_other = 'P005008', 
-      pop_two = 'P005009', pop_hisp = 'P005010'
-    )
-  } else {
-    vars_ <- c(
-      pop_white = 'P2_005N', pop_black = 'P2_006N',
-      pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
-      pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
-      pop_two = 'P2_011N', pop_hisp = 'P2_002N'
-    )
-  }
-  
-  if (age == F & sex == T) {
-    eth.let <- c("I", "B", "H", "D", "E", "F", "C")
-    num <- as.character(c("01", "02", "26"))
-    for (e in 1:length(eth.let)) {
-      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
-    }
-  }
-  
-  if (age == T & sex == F) {
-    eth.let <- c("I", "B", "H", "D", "E", "F", "C")
-    num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    for (e in 1:length(eth.let)) {
-      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
-    }
-  }
-  
-  if (age == T & sex == T) {
-    eth.let <- c("I", "B", "H", "D", "E", "F", "C")
-    num <- as.character(c(c("01", "03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    for (e in 1:length(eth.let)) {
-      vars_ <- c(vars_, paste("P012", eth.let[e], "0", num, sep = ""))
-    }
-  }
-  
-  # set the census data url links
-  census_data_url <- switch(
-    as.character(year),
-    "2010" = "https://api.census.gov/data/2010/dec/sf1?",
-    "2020" = "https://api.census.gov/data/2020/dec/pl?"
-  )
+  vars <- census_geo_api_names(year = year, age = age, sex = sex)
+  census_data_url <- census_geo_api_url(year = year)
   
   if (geo == "place") {
     geo.merge <- c("state", "place")
     region <- paste("for=place:*&in=state:", state.fips, sep = "")
-    census <- get_census_api(census_data_url, key = key, var.names = vars_, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region, retry)
   }
   
   if (geo == "county") {
@@ -154,7 +104,7 @@ census_geo_api <- function(
       region <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
 
-    census <- get_census_api(census_data_url, key = key, var.names = vars_, region = region, retry)
+    census <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region, retry)
   }
   
   if (geo == "tract") {
@@ -168,7 +118,7 @@ census_geo_api <- function(
       region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
     
     if(is.null(counties)) {
       county_list <- county_df$county
@@ -180,7 +130,7 @@ census_geo_api <- function(
       census_tracts <- furrr::future_map_dfr(seq_along(county_list), function(county) {
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
-        get_census_api(data_url = census_data_url, key = key, var.names = vars_, region = region_county, retry)
+        get_census_api(data_url = census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
       })
       
       census <- rbind(census, census_tracts)
@@ -200,7 +150,7 @@ census_geo_api <- function(
       region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
     
     if(is.null(counties)) {
       county_list <- county_df$county
@@ -220,7 +170,7 @@ census_geo_api <- function(
           blockgroup <- paste("for=block+group:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
   
           # message(region_tract)
-          blockgroup_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = blockgroup, retry)
+          blockgroup_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = blockgroup, retry)
           names(blockgroup_df)[4] <- "block_group" # Fix name, it comes in with a space from api. 
           blockgroup_df
         }
@@ -245,7 +195,7 @@ census_geo_api <- function(
       region_county <- paste("for=county:",counties_paste,"&in=state:", state.fips, sep = "")
     }
     
-    county_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_county, retry)
+    county_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
     
     if(is.null(counties)) {
       county_list <- county_df$county
@@ -264,14 +214,14 @@ census_geo_api <- function(
           
           region_tract <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
           # message(region_tract)
-          tract_df <- get_census_api(census_data_url, key = key, var.names = vars_, region = region_tract, retry)
+          tract_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_tract, retry)
           tract_list <- tract_df$tract
           
           furrr::future_map_dfr(1:length(tract_list), function(tract) {
             message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
-            get_census_api(census_data_url, key = key, var.names = vars_, region = region_block, retry)
+            get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_block, retry)
           })
         }
       )
@@ -284,97 +234,27 @@ census_geo_api <- function(
     } 
   }
   
-  census$state <- state
+  census <- dplyr::mutate(census, state = as_state_abbreviation(state))
   
-  if (age == F & sex == F) {
-    
-    ## Calculate Pr(Geolocation | Race)
-    census$r_whi <- census[, vars_["pop_white"]] / sum(census[, vars_["pop_white"]]) #Pr(Geo|White)
-    census$r_bla <- census[, vars_["pop_black"]] / sum(census[, vars_["pop_black"]]) #Pr(Geo|Black)
-    census$r_his <- census[, vars_["pop_hisp"]] / sum(census[, vars_["pop_hisp"]]) #Pr(Geo|Latino)
-    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (sum(census[, vars_["pop_asian"]]) + sum(census[, vars_["pop_nhpi"]])) #Pr(Geo | Asian or NH/PI)
-    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (sum(census[, vars_["pop_aian"]]) + sum(census[, vars_["pop_other"]]) + sum(census[, vars_["pop_two"]])) #Pr(Geo | AI/AN, Other, or Mixed)
-    
-  }
+  r_columns <- purrr::map(vars, function(vars) rowSums(census[vars]))
   
-  if (age == F & sex == T) {
-    
-    ## Calculate Pr(Geolocation, Sex | Race)
-    eth.cen <- c("whi", "bla", "his", "asi", "oth")
-    eth.let <- c("I", "B", "H", "D", "F")
-    
-    for (i in 1:length(eth.cen)) {
-      if (i != 4 & i != 5) {
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "002", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "026", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
+  census <- dplyr::bind_cols(census, r_columns)
+  census <- dplyr::group_by(census, dplyr::across(dplyr::any_of("state")))
+  census <- dplyr::mutate(
+    census,
+    dplyr::across(
+      # Divide all r_columns by the total population of the corresponding race
+      dplyr::all_of(names(r_columns)),
+      function(x) {
+        x / sum(
+          dplyr::pick(
+            sub("^.+_(.{3})$", "r_\\1", dplyr::cur_column(), perl = TRUE)
+          )
+        )
       }
-      if (i == 4) {
-        ## Combine Asian and Native Hawaiian/Pacific Islander
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012D002 + census$P012E002) / sum(census$P012D001 + census$P012E001)
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012D026 + census$P012E026) / sum(census$P012D001 + census$P012E001)
-      }
-      if (i == 5) {
-        ## Combine American India/Alaska Native and Other
-        census[paste("r_mal", eth.cen[i], sep = "_")] <- (census$P012C002 + census$P012F002) / sum(census$P012C001 + census$P012F001)
-        census[paste("r_fem", eth.cen[i], sep = "_")] <- (census$P012C026 + census$P012F026) / sum(census$P012C001 + census$P012F001)
-      }
-    }
-  }
+    )
+  )
+  census <- dplyr::ungroup(census)
   
-  if (age == T & sex == F) {
-    
-    ## Calculate Pr(Geolocation, Age Category | Race)
-    eth.cen <- c("whi", "bla", "his", "asi", "oth")
-    eth.let <- c("I", "B", "H", "D", "F")
-    age.cat <- c(seq(1, 23), seq(1, 23))
-    age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    
-    for (i in 1:length(eth.cen)) {
-      for (j in 1:23) {
-        if (i != 4 & i != 5) {
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] + census[paste("P012", eth.let[i], "0", age.cen[j + 23], sep = "")]) / sum(census[paste("P012", eth.let[i], "001", sep = "")])
-        }
-        if (i == 4) {
-          ## Combine Asian and Native Hawaiian/Pacific Islander
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012D0", age.cen[j], sep = "")] + census[paste("P012D0", age.cen[j + 23], sep = "")] + census[paste("P012E0", age.cen[j], sep = "")] + census[paste("P012E0", age.cen[j + 23], sep = "")]) / sum(census$P012D001 + census$P012E001)
-        }
-        if (i == 5) {
-          ## Combine American India/Alaska Native and Other
-          census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012C0", age.cen[j], sep = "")] + census[paste("P012C0", age.cen[j + 23], sep = "")] + census[paste("P012F0", age.cen[j], sep = "")] + census[paste("P012F0", age.cen[j + 23], sep = "")]) / sum(census$P012C001 + census$P012F001)
-        }
-      }
-    }
-  }
-  
-  if (age == T & sex == T) {
-    
-    ## Calculate Pr(Geolocation, Sex, Age Category | Race)
-    eth.cen <- c("whi", "bla", "his", "asi", "oth")
-    eth.let <- c("I", "B", "H", "D", "F")
-    sex.let <- c("mal", "fem")
-    age.cat <- c(seq(1, 23), seq(1, 23))
-    age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
-    
-    for (i in 1:length(eth.cen)) {
-      for (k in 1:length(sex.let)) {
-        for (j in 1:23) {
-          if (k == 2) {
-            j <- j + 23
-          }
-          if (i != 4 & i != 5) {
-            census[paste("r", sex.let[k], age.cat[j], eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
-          }
-          if (i == 4) {
-            ## Combine Asian and Native Hawaiian/Pacific Islander
-            census[paste("r", sex.let[k], age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012D0", age.cen[j], sep = "")] + census[paste("P012E0", age.cen[j], sep = "")]) / sum(census$P012D001 + census$P012E001)
-          }
-          if (i == 5) {
-            ## Combine American India/Alaska Native and Other
-            census[paste("r", sex.let[k], age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012C0", age.cen[j], sep = "")] + census[paste("P012F0", age.cen[j], sep = "")]) / sum(census$P012C001 + census$P012F001)
-          }
-        }
-      }
-    }
-  }
-  return(census)
+  census
 }
