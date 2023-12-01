@@ -362,14 +362,7 @@ predict_race_new <- function(
       }
     }
     
-    geo_id_names <- switch(
-      census.geo,
-      "tract" = c("county", "tract"),
-      "block_group" = c("county", "tract", "block_group"),
-      "block" = c("county", "tract", "block"),
-      # Return `census.geo` unchanged for county, place, and zcta
-      census.geo
-    )
+    geo_id_names <- determine_geo_id_names(census.geo)
     
     if (!all(geo_id_names %in% names(voter.file))) {
       stop(message("To use",census.geo,"as census.geo, voter.file needs to include the following column(s):",
