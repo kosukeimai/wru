@@ -111,7 +111,7 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "tract", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry)
         }
       } else {
         census <- census.data[[toupper(state)]]$tract
@@ -124,7 +124,7 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "block_group", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry)
         }
         
       } else {
@@ -143,7 +143,7 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "block", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "block", age, sex, year, retry)
         }
         
       } else {
@@ -159,7 +159,7 @@ census_helper_new <- function(
         census.data[[state]]$sex != FALSE
       
       if (state_must_be_downloaded) {
-        census <- census_geo_api(key, state, geo = geo, age, sex, retry)
+        census <- census_geo_api(key, state, geo = geo, age, sex, year, retry)
       } else {
         census <- census.data[[state]][[geo]]
       }
