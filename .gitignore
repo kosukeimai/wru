@@ -10,6 +10,7 @@
 # RStudio files
 .Rproj.user/
 .Rproj
+.lazytest
 
 # produced vignettes
 vignettes/*.html
