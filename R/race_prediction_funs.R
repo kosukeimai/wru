@@ -87,7 +87,7 @@ NULL
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
     if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
-      validate_key(census.key)
+      census.key <- validate_key(census.key)
       message("Downloading Census geographic data using provided API key...")
     } else {
       if (!("state" %in% names(voter.file))) {
@@ -95,7 +95,7 @@ NULL
       }
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
         message("census.data object does not include all states in voter.file object.")
-        validate_key(census.key)
+        census.key <- validate_key(census.key)
         message("Downloading Census geographic data for states not included in census.data object...")
       } else {
         message("Using Census geographic data from provided census.data object...")
@@ -346,7 +346,7 @@ predict_race_new <- function(
     message("Proceeding with Census geographic data at ", census.geo, " level...")
 
     if (is.null(census.data)) {
-      validate_key(census.key)
+      census.key <- validate_key(census.key)
       message("Downloading Census geographic data using provided API key...")
     } else {
       if (!("state" %in% names(voter.file))) {
@@ -355,7 +355,7 @@ predict_race_new <- function(
       census_data_preflight(census.data, census.geo, year)
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
         message("census.data object does not include all states in voter.file object.")
-        validate_key(census.key)
+        census.key <- validate_key(census.key)
         message("Downloading Census geographic data for states not included in census.data object...")
       } else {
         message("Using Census geographic data from provided census.data object...")

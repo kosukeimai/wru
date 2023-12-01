@@ -88,7 +88,7 @@ census_helper_new <- function(
   }
   
   if (toDownload) {
-    validate_key(key)
+    key <- validate_key(key)
   } 
   
   if (toupper(states) == "ALL") {

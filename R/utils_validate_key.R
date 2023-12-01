@@ -1,8 +1,11 @@
+#' @importFrom rlang %||%
 validate_key <- function(
     key,
     argument_name = rlang::caller_arg(key),
     call = rlang::caller_call()
 ) {
+  key <- key %||% Sys.getenv("CENSUS_API_KEY")
+  
   if (length(key) != 1) {
     cli::cli_abort(
       c(

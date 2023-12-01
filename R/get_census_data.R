@@ -49,7 +49,7 @@ get_census_data <- function(
     retry = 3,
     county.list = NULL
 ) {
-  validate_key(key)
+  key <- validate_key(key)
   
   census.geo <- tolower(census.geo)
   census.geo <- rlang::arg_match(census.geo)

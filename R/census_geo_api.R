@@ -58,7 +58,7 @@ census_geo_api <- function(
     save_temp = NULL,
     counties = NULL
 ) {
-  validate_key(key)
+  key <- validate_key(key)
   
   geo <- tolower(geo)
   geo <- rlang::arg_match(geo)

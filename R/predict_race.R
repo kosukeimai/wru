@@ -193,7 +193,7 @@ predict_race <- function(
   if (surname.only == FALSE && is.null(census.data)) {
     # Otherwise predict_race_new and predict_race_me will both
     # attempt to pull census_data
-    validate_key(census.key)
+    census.key <- validate_key(census.key)
     voter.file$state <- toupper(voter.file$state)
     states <- unique(voter.file$state)
     county.list <- split(voter.file$county, voter.file$state)
