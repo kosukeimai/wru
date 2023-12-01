@@ -89,14 +89,11 @@ census_geo_api <- function(
   census_data_url <- census_geo_api_url(year = year)
   
   if (geo == "place") {
-    geo.merge <- c("state", "place")
     region <- paste("for=place:*&in=state:", state.fips, sep = "")
     census <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region, retry)
   }
   
   if (geo == "county") {
-    geo.merge <- c("state", "county")
-    
     if (is.null(counties)) {
       region <- paste("for=county:*&in=state:", state.fips, sep = "")
     } else {
@@ -108,9 +105,6 @@ census_geo_api <- function(
   }
   
   if (geo == "tract") {
-    
-    geo.merge <- c("state", "county", "tract")
-    
     if (is.null(counties)) {
       region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     } else {
@@ -127,22 +121,17 @@ census_geo_api <- function(
     }
     
     if(length(county_list) > 0) {
-      census_tracts <- furrr::future_map_dfr(seq_along(county_list), function(county) {
+      census <- furrr::future_map_dfr(seq_along(county_list), function(county) {
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
         get_census_api(data_url = census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
       })
-      
-      census <- rbind(census, census_tracts)
-      rm(census_tracts)
     } else {
       message('There were no intersecting counties in your voter.file data (tract)')
     } 
   }
   
   if (geo == "block_group") {
-    geo.merge <- c("state", "county", "tract", "block_group")
-    
     if (is.null(counties)) {
       region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     } else {
@@ -161,7 +150,7 @@ census_geo_api <- function(
     if(length(county_list) > 0) {
       message('Running block_group by county...')
       
-      census_blockgroup <- purrr::map_dfr(
+      census <- purrr::map_dfr(
         1:length(county_list), 
         function(county) {
           # too verbose, commenting out
@@ -176,18 +165,12 @@ census_geo_api <- function(
         }
       )
       message("\n") # new line for progress bar
-      
-      census <- rbind(census, census_blockgroup)
-      rm(census_blockgroup)
     } else {
       message('There were no intersecting counties in your voter.file data (block)')
     }
   }
   
   if (geo == "block") {
-    
-    geo.merge <- c("state", "county", "tract", "block")
-    
     if (is.null(counties)) {
       region_county <- paste("for=county:*&in=state:", state.fips, sep = "")
     } else {
@@ -206,7 +189,7 @@ census_geo_api <- function(
     if(length(county_list) > 0) {
       message('Running block by county...')
       
-      census_blocks <- purrr::map_dfr(
+      census <- purrr::map_dfr(
         1:length(county_list), 
         function(county) {
           # too verbose, commenting out
@@ -226,9 +209,6 @@ census_geo_api <- function(
         }
       )
       message("\n") # new line for progress bar
-      
-      census <- rbind(census, census_blocks)
-      rm(census_blocks)
     } else {
       message('There were no intersecting counties in your voter.file data (block)')
     } 
