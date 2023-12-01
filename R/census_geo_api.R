@@ -63,19 +63,6 @@ census_geo_api <- function(
   geo <- tolower(geo)
   geo <- rlang::arg_match(geo)
   
-  if (geo == "zcta") {
-    return(
-      census_geo_api_zcta(
-        state = state,
-        age = age,
-        sex = sex,
-        year = year,
-        retry = retry,
-        key = key
-      )
-    )
-  }
-  
   year <- as.character(year)
   year <- rlang::arg_match(year)
   
@@ -212,6 +199,17 @@ census_geo_api <- function(
     } else {
       message('There were no intersecting counties in your voter.file data (block)')
     } 
+  }
+  
+  if (geo == "zcta") {
+    census <- census_geo_api_zcta(
+      census_data_url = census_data_url,
+      key = key,
+      vars = vars,
+      state = state,
+      counties = counties,
+      retry = retry
+    )
   }
   
   census <- dplyr::mutate(census, state = as_state_abbreviation(state))
