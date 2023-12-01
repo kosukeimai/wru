@@ -55,4 +55,13 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     expect_true(all(r$RI$place$state == "RI"))
   })
   
+  test_that("Census ZCTA download works", {
+    r <- suppressMessages(get_census_data(
+      key = NULL,
+      state = "DC",
+      census.geo = "zcta"
+    ))
+    expect_named(r$DC, c("state", "age", "sex", "year", "zcta"))
+    expect_true(all(r$DC$zcta$state == "DC"))
+  })
 }
