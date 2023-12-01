@@ -107,6 +107,28 @@ census_geo_api_names <- function(
   vars
 }
 
+census_geo_api_names_legacy <- function(year) {
+  if (year == 2020) {
+    return(
+      list(
+        r_whi = 'P2_005N',
+        r_bla = 'P2_006N',
+        r_his = 'P2_002N',
+        r_asi = c('P2_008N', 'P2_009N'),
+        r_oth = c('P2_007N', 'P2_010N', 'P2_011N')
+      )
+    )
+  }
+      
+  list(
+    r_whi = 'P005003',
+    r_bla = 'P005004',
+    r_his = 'P005010',
+    r_asi = c('P005006', 'P005007'),
+    r_oth = c('P005005', 'P005008', 'P005009')
+  )
+}
+
 #' @rdname census_geo_api_names
 census_geo_api_url <- function(year = c("2020", "2010", "2000")) {
   year <- as.character(year)
