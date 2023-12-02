@@ -125,21 +125,20 @@ test_that("Fails on territories", {
   )
 }) 
 
-test_that("Fails on missing geolocation", {
+test_that("Drops rows with geolocations not found in census data", {
   skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-  expect_error(suppressMessages(predict_race(
+  test_drop <- suppressWarnings(predict_race(
     voter.file = voters[voters$state == "NJ", ],
     year = 2010,
     census.geo = "block", 
     census.key = NULL, 
     census.data = census, 
     use.counties = TRUE)
-  ),
-  "The following locations in the voter\\.file are not available"
-  )
+    )
+  expect_equal(nrow(test_drop), 6)
 })
 
 test_that("Handles zero-pop. geolocations", {
