@@ -215,7 +215,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
     #Check if geolocation missing from census object
     if(any(is.na(voters.census$r_whi))){
       miss_ind <- which(is.na(voters.census$r_whi))
-      warning("The following locations in the voter.file are not available in the census data and have been dropped: ",
+      message("The following locations in the voter.file are not available in the census data and have been dropped: ",
            paste0("(listed as ", paste0(c("state",geo.merge), collapse="-"),"):\n"),
            paste(do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]),
                                   sep="-")),

@@ -26,6 +26,7 @@ Depends:
     utils
 Imports:
     dplyr,
+    tidyr,
     furrr,
     future,
     purrr,

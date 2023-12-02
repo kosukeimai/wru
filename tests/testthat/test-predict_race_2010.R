@@ -130,7 +130,7 @@ test_that("Drops rows with geolocations not found in census data", {
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-  test_drop <- suppressWarnings(predict_race(
+  test_drop <- suppressMessages(predict_race(
     voter.file = voters[voters$state == "NJ", ],
     year = 2010,
     census.geo = "block", 
