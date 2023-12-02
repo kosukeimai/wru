@@ -221,7 +221,7 @@ census_helper_new <- function(key, voter.file, states = "all", geo = "tract", ag
                                   sep="-")),
                  collapse = ", "))
       
-      voters.census <- drop_na(voters.census, r_whi)
+      voters.census <- tidyr::drop_na(voters.census, r_whi)
     }
       
     # }
