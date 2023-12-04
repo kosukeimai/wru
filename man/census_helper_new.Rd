@@ -14,7 +14,8 @@ census_helper_new(
   year = "2020",
   census.data = NULL,
   retry = 3,
-  use.counties = FALSE
+  use.counties = FALSE,
+  skip_bad_geos = FALSE
 )
 }
 \arguments{
@@ -62,6 +63,10 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
 available in \var{census.data}?}
+
+\item{skip_bad_geos}{Logical. Option to have the function skip any geolocations that are not present 
+in the census data, returning a partial data set. Default is set to \code{FALSE}, which case it will 
+break and provide error message with a list of offending geolocations.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will 
