@@ -89,7 +89,7 @@ census_helper <- function(
   }
 
   if (toDownload) {
-    validate_key(key)
+    key <- validate_key(key)
   }
 
   states <- toupper(states)

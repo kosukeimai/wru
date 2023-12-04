@@ -40,6 +40,7 @@
 #' must have columns named \code{county}, \code{tract}, and \code{block}.
 #' If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
 #' must have column named \code{place}.
+#' If `census.geo = "zcta"`, then `voter.file` must have column named `zcta`.
 #' Specifying \code{\var{census.geo}} will call \code{census_helper} function
 #' to merge Census geographic data at specified level of geography.
 #' 
@@ -140,7 +141,7 @@ predict_race <- function(
     voter.file,
     census.surname = TRUE,
     surname.only = FALSE,
-    census.geo,
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
     census.data = NULL,
     age = FALSE,
@@ -178,6 +179,8 @@ predict_race <- function(
     )
   }
   
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
   
   # block_group is missing, pull from block
   if((surname.only == FALSE) && !(missing(census.geo)) && (census.geo == "block_group") && !("block_group" %in% names(voter.file))) {
@@ -190,7 +193,7 @@ predict_race <- function(
   if (surname.only == FALSE && is.null(census.data)) {
     # Otherwise predict_race_new and predict_race_me will both
     # attempt to pull census_data
-    validate_key(census.key)
+    census.key <- validate_key(census.key)
     voter.file$state <- toupper(voter.file$state)
     states <- unique(voter.file$state)
     county.list <- split(voter.file$county, voter.file$state)

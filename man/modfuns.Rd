@@ -31,7 +31,7 @@ predict_race_new(
   year = "2020",
   age = FALSE,
   sex = FALSE,
-  census.geo,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
@@ -48,7 +48,7 @@ predict_race_me(
   year = "2020",
   age = FALSE,
   sex = FALSE,
-  census.geo,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
@@ -75,11 +75,11 @@ predict_race_me(
 \item{census.geo}{See documentation in \code{race_predict}.}
 
 \item{census.key}{A character object specifying user's Census API key.
-Required if `census.geo` is specified, because a valid Census API key is
+Required if \code{census.geo} is specified, because a valid Census API key is
 required to download Census geographic data.
 
-If [`NULL`], the default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{census.data}{See documentation in \code{race_predict}.}
 
@@ -95,15 +95,11 @@ If [`NULL`], the default, attempts to find a census key stored in an
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
-
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
-\item{names.to.use}{One of 'surname', 'surname, first', or  'surname, first,
-middle'. Defaults to 'surname'.}
+\item{names.to.use}{See documentation in \code{race_predict}.}
 
-\item{race.init}{Vector of initial race for each observation in voter.file.
-Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
-5=other. Defaults to values obtained using \code{model="BISG_surname"}.}
+\item{race.init}{See documentation in \code{race_predict}.}
 
 \item{ctrl}{See \code{control} in documentation for \code{\link[=predict_race]{predict_race()}}.}
 }

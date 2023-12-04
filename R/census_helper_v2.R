@@ -59,7 +59,7 @@ census_helper_new <- function(
     key = Sys.getenv("CENSUS_API_KEY"),
     voter.file,
     states = "all",
-    geo = "tract",
+    geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     age = FALSE,
     sex = FALSE,
     year = "2020",
@@ -70,6 +70,9 @@ census_helper_new <- function(
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
+  
+  geo <- tolower(geo)
+  geo <- rlang::arg_match(geo)
   
   if(!(year %in% c("2000","2010","2020"))){
     stop("Interface only implemented for census years '2000', '2010', or '2020'.")
@@ -85,13 +88,13 @@ census_helper_new <- function(
   }
   
   if (toDownload) {
-    validate_key(key)
+    key <- validate_key(key)
   } 
   
-  states <- toupper(states)
-  if (states == "ALL") {
+  if (toupper(states) == "ALL") {
     states <- toupper(as.character(unique(voter.file$state)))
   }
+  states <- as_state_abbreviation(states)
   
   df.out <- NULL
   
@@ -99,30 +102,6 @@ census_helper_new <- function(
     
     message(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
-    
-    if (geo == "place") {
-      geo.merge <- c("place")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
-        #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        if(use.counties) {
-          census <- census_geo_api(key, state, geo = "place", age, sex, retry)
-        } else {
-          census <- census_geo_api(key, state, geo = "place", age, sex, retry)
-        }
-      } else {
-        census <- census.data[[toupper(state)]]$place
-      }
-    }
-    
-    if (geo == "county") {
-      geo.merge <- c("county")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {
-        #} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
-        census <- census_geo_api(key, state, geo = "county", age, sex, retry)
-      } else {
-        census <- census.data[[toupper(state)]]$county
-      }
-    }
     
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
@@ -132,14 +111,12 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "tract", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry)
         }
       } else {
         census <- census.data[[toupper(state)]]$tract
       }
-    }
-    
-    if (geo == "block_group") {
+    } else if (geo == "block_group") {
       geo.merge <- c("county", "tract", "block_group")
       if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use.counties) {
@@ -147,16 +124,13 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "block_group", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry)
         }
         
       } else {
         census <- census.data[[toupper(state)]]$block_group
       }
-    }
-    
-    
-    if (geo == "block") {
+    } else if (geo == "block") {
       if(any(names(census.data) == "block_group")) {
         geo.merge <- c("county", "tract", "block_group", "block")
       } else {
@@ -169,49 +143,51 @@ census_helper_new <- function(
                                    # Only those counties within the target state
                                    counties = unique(voter.file$county[voter.file$state == state]))
         } else {
-          census <- census_geo_api(key, state, geo = "block", age, sex, retry)
+          census <- census_geo_api(key, state, geo = "block", age, sex, year, retry)
         }
         
       } else {
         census <- census.data[[toupper(state)]]$block
       }
+    } else {
+      geo.merge <- geo
+      
+      state_must_be_downloaded <- toDownload ||
+        is.null(census.data[[state]]) ||
+        census.data[[state]]$year != year ||
+        census.data[[state]]$age != FALSE ||
+        census.data[[state]]$sex != FALSE
+      
+      if (state_must_be_downloaded) {
+        census <- census_geo_api(key, state, geo = geo, age, sex, year, retry)
+      } else {
+        census <- census.data[[state]][[geo]]
+      }
     }
     
     census$state <- state
     
-      
     ## Calculate Pr(Geolocation | Race)
-    if (year != "2020") {
-      vars_ <- c(
-        pop_white = 'P005003', pop_black = 'P005004',
-        pop_aian = 'P005005', pop_asian = 'P005006',
-        pop_nhpi = 'P005007', pop_other = 'P005008', 
-        pop_two = 'P005009', pop_hisp = 'P005010'
-      )
-      drop <- c(grep("state", names(census)), grep("P005", names(census)))
+    if (any(c("P2_005N", "P005003") %in% names(census))) {
+      vars_ <- census_geo_api_names_legacy(year = year)
     } else {
-      vars_ <- c(
-        pop_white = 'P2_005N', pop_black = 'P2_006N',
-        pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
-        pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
-        pop_two = 'P2_011N', pop_hisp = 'P2_002N'
-      )
-      drop <- c(grep("state", names(census)), grep("P2_", names(census)))
+      vars_ <- census_geo_api_names(year)
     }
-    geoPopulations <- rowSums(census[,names(census) %in% vars_])
+    drop <- match(c("state", unlist(vars_)), names(census))
     
-    census$r_whi <- (census[, vars_["pop_white"]]) / (geoPopulations ) #Pr(White | Geo)
-    census$r_bla <- (census[, vars_["pop_black"]]) / (geoPopulations) #Pr(Black | Geo)
-    census$r_his <- (census[, vars_["pop_hisp"]]) / (geoPopulations) #Pr(Latino | Geo)
-    census$r_asi <- (census[, vars_["pop_asian"]] + census[, vars_["pop_nhpi"]]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
-    census$r_oth <- (census[, vars_["pop_aian"]] + census[, vars_["pop_other"]] + census[, vars_["pop_two"]]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
+    geoPopulations <- rowSums(census[,names(census) %in% vars_])
+      
+    for (i in seq_along(vars_)) {
+      census[[names(vars_)[[i]]]] <- 
+        rowSums(census[, vars_[[i]], drop = FALSE]) / geoPopulations
+    }
     
     # check locations with zero people
     # get average without places with zero people, and assign that to zero locs.
-    if(any((geoPopulations - 0.0) < .Machine$double.eps)){
-      zero_ind <- which((geoPopulations - 0.0) < .Machine$double.eps)
-      for(rcat in c("r_whi","r_bla","r_his","r_asi","r_oth") ){
-        census[[rcat]][zero_ind] <- mean(census[[rcat]], na.rm=TRUE)
+    zero_ind <- which((geoPopulations - 0.0) < .Machine$double.eps)
+    if (length(zero_ind)) {
+      for (rcat in c("r_whi","r_bla","r_his","r_asi","r_oth")) {
+        census[[rcat]][zero_ind] <- mean(census[[rcat]], na.rm = TRUE)
       }
     }
     

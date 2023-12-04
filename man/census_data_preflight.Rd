@@ -24,6 +24,7 @@ And if \code{\var{census.geo} = "block"}, then \code{\var{voter.file}}
 must have columns named \code{county}, \code{tract}, and \code{block}.
 If \code{\var{census.geo} = "place"}, then \code{\var{voter.file}}
 must have column named \code{place}.
+If \code{census.geo = "zcta"}, then \code{voter.file} must have column named \code{zcta}.
 Specifying \code{\var{census.geo}} will call \code{census_helper} function
 to merge Census geographic data at specified level of geography.}
 

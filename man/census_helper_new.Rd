@@ -8,7 +8,7 @@ census_helper_new(
   key = Sys.getenv("CENSUS_API_KEY"),
   voter.file,
   states = "all",
-  geo = "tract",
+  geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   age = FALSE,
   sex = FALSE,
   year = "2020",
@@ -18,12 +18,12 @@ census_helper_new(
 )
 }
 \arguments{
-\item{key}{A character string containing a valid Census API key, 
+\item{key}{A character string containing a valid Census API key,
 which can be requested from the
-[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
 
 By default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named
 \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}

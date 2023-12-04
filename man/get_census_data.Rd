@@ -10,18 +10,18 @@ get_census_data(
   age = FALSE,
   sex = FALSE,
   year = "2020",
-  census.geo = "block",
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   retry = 3,
   county.list = NULL
 )
 }
 \arguments{
-\item{key}{A character string containing a valid Census API key, 
+\item{key}{A character string containing a valid Census API key,
 which can be requested from the
-[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
 
 By default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{states}{which states to extract Census data for, e.g., \code{c("NJ", "NY")}.}
 

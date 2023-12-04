@@ -16,12 +16,12 @@ get_census_api(
 \item{data_url}{URL root of the API,
 e.g., \code{"https://api.census.gov/data/2020/dec/pl"}.}
 
-\item{key}{A character string containing a valid Census API key, 
+\item{key}{A character string containing a valid Census API key,
 which can be requested from the
-[U.S. Census API key signup page](https://api.census.gov/data/key_signup.html).
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
 
 By default, attempts to find a census key stored in an
-[environment variable][Sys.getenv] named `CENSUS_API_KEY`.}
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{var.names}{A character vector of variables to get,
 e.g., \code{c("P2_005N", "P2_006N", "P2_007N", "P2_008N")}.
