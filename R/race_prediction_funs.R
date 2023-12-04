@@ -26,6 +26,7 @@
 #' @param party See documentation in \code{race_predict}.
 #' @param retry See documentation in \code{race_predict}.
 #' @param impute.missing See documentation in \code{race_predict}.
+#' @param skip_bad_geos See documentation in \code{race_predict}.
 #' @param names.to.use See documentation in \code{race_predict}.
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
@@ -263,8 +264,8 @@ NULL
 #' @rdname modfuns
 predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
-                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                             use.counties = FALSE) {
+                             census.data = NULL, retry = 0, impute.missing = TRUE, skip_bad_geos = FALSE,
+                             census.surname = FALSE, use.counties = FALSE) {
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -377,7 +378,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
       year = year,
       census.data = census.data, 
       retry = retry,
-      use.counties = use.counties
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos
     )
   }
   
@@ -432,8 +434,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
 #' @rdname modfuns
 predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
-                            census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use.counties = FALSE, race.init, ctrl) 
+                            census.data = NULL, retry = 0, impute.missing = TRUE,
+                            census.surname = FALSE, use.counties = FALSE, race.init, ctrl) 
 {
   if(!is.null(census.data)) {
     census_data_preflight(census.data, census.geo, year)

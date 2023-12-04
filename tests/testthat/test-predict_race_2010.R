@@ -125,19 +125,37 @@ test_that("Fails on territories", {
   )
 }) 
 
-test_that("Drops rows with geolocations not found in census data", {
+test_that("Fails on missing geolocation if skip_bad_geos default is used", {
   skip_on_cran()
   set.seed(42)
   data(voters)
   census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-  test_drop <- suppressMessages(predict_race(
+  expect_error(suppressMessages(predict_race(
     voter.file = voters[voters$state == "NJ", ],
     year = 2010,
     census.geo = "block", 
     census.key = NULL, 
     census.data = census, 
     use.counties = TRUE)
-    )
+  ),
+  "Stopping predictions. Please revise"
+  )
+})
+
+test_that("Skip_bad_geos option successfully returns working geolocations", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
+  test_drop <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    year = 2010,
+    census.geo = "block", 
+    census.key = NULL, 
+    census.data = census,
+    skip_bad_geos = TRUE,
+    use.counties = TRUE)
+  )
   expect_equal(nrow(test_drop), 6)
 })
 
