@@ -14,7 +14,7 @@
   surname.year = 2020,
   name.dictionaries = NULL,
   census.geo,
-  census.key,
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   census.data = NULL,
   age = FALSE,
   sex = FALSE,
@@ -31,8 +31,8 @@ predict_race_new(
   year = "2020",
   age = FALSE,
   sex = FALSE,
-  census.geo,
-  census.key = NULL,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -49,8 +49,8 @@ predict_race_me(
   year = "2020",
   age = FALSE,
   sex = FALSE,
-  census.geo,
-  census.key,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+  census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,
   surname.only = FALSE,
   census.data = NULL,
@@ -75,7 +75,12 @@ predict_race_me(
 
 \item{census.geo}{See documentation in \code{race_predict}.}
 
-\item{census.key}{See documentation in \code{race_predict}.}
+\item{census.key}{A character object specifying user's Census API key.
+Required if \code{census.geo} is specified, because a valid Census API key is
+required to download Census geographic data.
+
+If \code{\link{NULL}}, the default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{census.data}{See documentation in \code{race_predict}.}
 
@@ -99,14 +104,21 @@ predict_race_me(
 
 \item{race.init}{See documentation in \code{race_predict}.}
 
-\item{ctrl}{See \code{control} in documentation for \code{race_predict}.}
+\item{ctrl}{See \code{control} in documentation for \code{\link[=predict_race]{predict_race()}}.}
 }
 \value{
-See documentation in \code{race_predict}.
+Output will be an object of class \code{data.frame}. It will
+consist of the original user-input \code{voter.file} with additional columns with
+predicted probabilities for each of the five major racial categories:
+\code{\var{pred.whi}} for White,
+\code{\var{pred.bla}} for Black,
+\code{\var{pred.his}} for Hispanic/Latino,
+\code{\var{pred.asi}} for Asian/Pacific Islander, and
+\code{\var{pred.oth}} for Other/Mixed.
 }
 \description{
 These functions are intended for internal use only. Users should use the
-\code{race_predict} interface rather any of these functions directly.
+\code{\link[=predict_race]{predict_race()}} interface rather any of these functions directly.
 }
 \details{
 These functions fit different versions of WRU. \code{.predict_race_old} fits
