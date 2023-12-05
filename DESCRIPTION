@@ -33,6 +33,7 @@ Depends:
 Imports:
     cli,
     dplyr,
+    tidyr,
     furrr,
     future,
     piggyback (>= 0.1.4),

@@ -38,6 +38,7 @@ predict_race_new(
   census.data = NULL,
   retry = 0,
   impute.missing = TRUE,
+  skip_bad_geos = FALSE,
   census.surname = FALSE,
   use.counties = FALSE
 )
@@ -98,6 +99,8 @@ If \code{\link{NULL}}, the default, attempts to find a census key stored in an
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
 \item{names.to.use}{See documentation in \code{race_predict}.}
+
+\item{skip_bad_geos}{See documentation in \code{race_predict}.}
 
 \item{race.init}{See documentation in \code{race_predict}.}
 

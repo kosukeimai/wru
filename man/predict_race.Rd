@@ -17,6 +17,7 @@ predict_race(
   party = NULL,
   retry = 3,
   impute.missing = TRUE,
+  skip_bad_geos = FALSE,
   use.counties = FALSE,
   model = "BISG",
   race.init = NULL,
@@ -106,7 +107,12 @@ it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
-\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties
+\item{skip_bad_geos}{Logical. Option to have the function skip any geolocations that are not present 
+in the census data, returning a partial data set. Default is set to \code{FALSE}, in which case it
+will break and provide error message with a list of offending geolocations.}
+
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties 
+
 available in \var{census.data}?}
 
 \item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction,

@@ -26,6 +26,7 @@
 #' @param party See documentation in \code{race_predict}.
 #' @param retry See documentation in \code{race_predict}.
 #' @param impute.missing See documentation in \code{race_predict}.
+#' @param skip_bad_geos See documentation in \code{race_predict}.
 #' @param names.to.use See documentation in \code{race_predict}.
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
@@ -268,6 +269,7 @@ NULL
 #' New race prediction function, implementing classical BISG with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
+
 predict_race_new <- function(
     voter.file,
     names.to.use,
@@ -281,6 +283,7 @@ predict_race_new <- function(
     census.data = NULL,
     retry = 0,
     impute.missing = TRUE,
+    skip_bad_geos = FALSE,
     census.surname = FALSE,
     use.counties = FALSE
 ) {
@@ -379,7 +382,8 @@ predict_race_new <- function(
       year = year,
       census.data = census.data, 
       retry = retry,
-      use.counties = use.counties
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos
     )
   }
   
@@ -433,6 +437,7 @@ predict_race_new <- function(
 #' surname dictionary, as well as first and middle name information.
 #' @importFrom dplyr pull
 #' @rdname modfuns
+
 predict_race_me <- function(
     voter.file,
     names.to.use,

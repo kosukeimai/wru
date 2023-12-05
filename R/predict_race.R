@@ -75,6 +75,9 @@
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
+#' @param skip_bad_geos Logical. Option to have the function skip any geolocations that are not present 
+#' in the census data, returning a partial data set. Default is set to \code{FALSE}, in which case it
+#' will break and provide error message with a list of offending geolocations.
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @param model Character string, either "BISG" (default) or "fBISG" (for error-correction, 
@@ -150,6 +153,7 @@ predict_race <- function(
     party = NULL,
     retry = 3,
     impute.missing = TRUE,
+    skip_bad_geos = FALSE,
     use.counties = FALSE,
     model = "BISG",
     race.init = NULL,
@@ -220,6 +224,7 @@ predict_race <- function(
                               census.data = census.data,
                               retry = retry,
                               impute.missing = impute.missing,
+                              skip_bad_geos = skip_bad_geos,
                               census.surname = census.surname,
                               use.counties = use.counties)
   } else {
@@ -237,6 +242,7 @@ predict_race <- function(
       if(ctrl$verbose){
         message("Using `predict_race` to obtain initial race prediction priors with BISG model")
       }
+
       race.init <-  predict_race(voter.file = voter.file,
                                  names.to.use = names.to.use,
                                  year = year,
@@ -248,10 +254,12 @@ predict_race <- function(
                                  census.data = census.data,
                                  retry = retry,
                                  impute.missing = TRUE,
+                                 skip_bad_geos = skip_bad_geos,
                                  census.surname = census.surname,
                                  use.counties = use.counties,
                                  model = "BISG",
                                  control = list(verbose=FALSE))
+
       race.init <- max.col(
         race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
         ties.method = "random"

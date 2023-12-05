@@ -42,6 +42,9 @@
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
+#' @param skip_bad_geos Logical. Option to have the function skip any geolocations that are not present 
+#' in the census data, returning a partial data set. Default is set to \code{FALSE}, which case it will 
+#' break and provide error message with a list of offending geolocations.
 #' @return Output will be an object of class \code{data.frame}. It will 
 #'  consist of the original user-input data with additional columns of 
 #'  Census data.
@@ -65,8 +68,10 @@ census_helper_new <- function(
     year = "2020",
     census.data = NULL,
     retry = 3,
-    use.counties = FALSE
+    use.counties = FALSE,
+    skip_bad_geos = FALSE
 ) {
+  
   if (geo == "precinct") {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
@@ -198,11 +203,15 @@ census_helper_new <- function(
     #Check if geolocation missing from census object
     if(any(is.na(voters.census$r_whi))){
       miss_ind <- which(is.na(voters.census$r_whi))
-      stop("The following locations in the voter.file are not available in the census data ",
+      message("The following locations in the voter.file are not available in the census data.",
            paste0("(listed as ", paste0(c("state",geo.merge), collapse="-"),"):\n"),
            paste(do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]),
                                   sep="-")),
                  collapse = ", "))
+      if(skip_bad_geos == TRUE){
+        message("NOTE: Skipping unavailable geolocations. Returning partial data set.")
+      voters.census <- tidyr::drop_na(voters.census, r_whi)}
+      else(stop("Stopping predictions. Please revise census data and/or verify the correct year is being supplied. To skip these rows use 'skip_bad_geos = TRUE'"))
     }
       
     # }
