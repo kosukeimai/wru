@@ -72,7 +72,7 @@ census_helper_new <- function(
     skip_bad_geos = FALSE
 ) {
   
-  if (geo == "precinct") {
+  if ("precinct" %in% geo) {
     stop("Error: census_helper_new function does not currently support precinct-level data.")
   }
   
