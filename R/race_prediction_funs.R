@@ -82,12 +82,12 @@ NULL
       stop("Voter data frame needs to have a column named surname")
     }
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
+    if (missing(census.geo) || is.null(census.geo) || all(is.na(census.geo)) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
       stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
-    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
+    if (missing(census.data) || is.null(census.data) || all(is.na(census.data))) {
       census.key <- validate_key(census.key)
       message("Downloading Census geographic data using provided API key...")
     } else {
