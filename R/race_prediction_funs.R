@@ -82,12 +82,12 @@ NULL
       stop("Voter data frame needs to have a column named surname")
     }
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
+    if (missing(census.geo) || is.null(census.geo) || all(is.na(census.geo)) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
       stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
-    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
+    if (missing(census.data) || is.null(census.data) || all(is.na(census.data))) {
       census.key <- validate_key(census.key)
       message("Downloading Census geographic data using provided API key...")
     } else {
@@ -545,7 +545,7 @@ predict_race_me <- function(
   
   vars_ <- census_geo_api_names(year = year)
   
-  tmp_tabs <- lapply(
+  N_rg <- purrr::map(
     census.data,
     function(x) {
       all_names <- names(x[[census.geo]])
@@ -554,20 +554,19 @@ predict_race_me <- function(
         vars_ <- census_geo_api_names_legacy(year = year)
       }
       
-      tmp <- x[[census.geo]][, c(geo_id_names, grep("^P[0-2]", all_names, value = TRUE))]
+      totals <- x[[census.geo]][, match(c(geo_id_names, unlist(vars_)), all_names)]
       
-      for (i in seq_along(vars_)) {
-        tmp[[names(vars_)[[i]]]] <- 
-          rowSums(tmp[, vars_[[i]], drop = FALSE])
-      }
-      
-      all_names <- names(tmp)
-      ## Totals
-      tmp_la <- tmp[, c(geo_id_names, grep("^r_", all_names, value = TRUE))]
-      return(list(tots = tmp_la))
+      totals$r_whi <- rowSums(totals[, vars_[["r_whi"]], drop = FALSE]) # White population
+      totals$r_bla <- rowSums(totals[, vars_[["r_bla"]], drop = FALSE]) # Black population
+      totals$r_his <- rowSums(totals[, vars_[["r_his"]], drop = FALSE]) # Latino population
+      totals$r_asi <- rowSums(totals[, vars_[["r_asi"]], drop = FALSE]) # Asian + NH/PI population
+      totals$r_oth <- rowSums(totals[, vars_[["r_oth"]], drop = FALSE]) # AI/AN + Other + Mixed population
+
+      totals <- totals[, -match(unlist(vars_), names(totals))]
+      totals
     }
   )
-  N_rg <- do.call(rbind, lapply(tmp_tabs, function(x) x$tots))
+  N_rg <- dplyr::bind_rows(N_rg)
   N_rg_geo <- do.call(paste, N_rg[, geo_id_names])
   ## Subset to geo's in vf
   N_rg <- N_rg[N_rg_geo %in% geo_id, ]
