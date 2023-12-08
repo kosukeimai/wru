@@ -160,6 +160,7 @@ census_helper_new <- function(
       state_must_be_downloaded <- toDownload ||
         is.null(census.data[[state]]) ||
         census.data[[state]]$year != year ||
+        # TODO: Why do we always redownload if sex or age == TRUE?
         census.data[[state]]$age != FALSE ||
         census.data[[state]]$sex != FALSE
       
@@ -174,6 +175,10 @@ census_helper_new <- function(
     
     ## Calculate Pr(Geolocation | Race)
     if (any(c("P2_005N", "P005003") %in% names(census))) {
+      # TODO: Add message that they're using a legacy data source
+      # TODO: Add test that we get the same ratios with legacy and new tables for 2020
+      # Old table: Redistricting (Pl-some numbers) (does not have age, sex, or ZCTAs)
+      # New table: DHC (does have age, sex, and ZCTA)
       vars_ <- census_geo_api_names_legacy(year = year)
     } else {
       vars_ <- census_geo_api_names(year)

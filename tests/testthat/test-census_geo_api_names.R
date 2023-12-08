@@ -1,4 +1,6 @@
 test_that("census_geo_api_names() for 2020", {
+  # TODO: Verify against table names here: https://api.census.gov/data/2020/dec/dhc/variables.html
+  
   expect_equal(
     census_geo_api_names("2020"),
     list(

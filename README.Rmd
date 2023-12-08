@@ -210,6 +210,10 @@ future::plan(future.callr::callr)
 # ...
 ```
 
+```{comment}
+Add guidance for starting a new analysis vs. replicating a previous analysis
+```
+
 ## Census Data
 
 This package uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.
