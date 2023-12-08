@@ -186,11 +186,12 @@ census_helper_new <- function(
     drop <- match(c("state", unlist(vars_)), names(census))
     
     geoPopulations <- rowSums(census[,names(census) %in% vars_])
-      
-    for (i in seq_along(vars_)) {
-      census[[names(vars_)[[i]]]] <- 
-        rowSums(census[, vars_[[i]], drop = FALSE]) / geoPopulations
-    }
+    
+    census$r_whi <- rowSums(census[, vars_[["r_whi"]], drop = FALSE]) / (geoPopulations) #Pr(White | Geo)
+    census$r_bla <- rowSums(census[, vars_[["r_bla"]], drop = FALSE]) / (geoPopulations) #Pr(Black | Geo)
+    census$r_his <- rowSums(census[, vars_[["r_his"]], drop = FALSE]) / (geoPopulations) #Pr(Latino | Geo)
+    census$r_asi <- rowSums(census[, vars_[["r_asi"]], drop = FALSE]) / (geoPopulations) #Pr(Asian or NH/PI | Geo)
+    census$r_oth <- rowSums(census[, vars_[["r_oth"]], drop = FALSE]) / (geoPopulations) #Pr(AI/AN, Other, or Mixed | Geo)
     
     # check locations with zero people
     # get average without places with zero people, and assign that to zero locs.
