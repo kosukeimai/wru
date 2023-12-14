@@ -9,6 +9,7 @@ test_that("Fails if 'precinct' is set as the geo var",{
   skip_on_cran()
   set.seed(42)
   data(voters)
+  census <- readRDS("data/new_census_table_NJ_2020.rds")
   expect_error(
   census_helper_new(
     key = Sys.getenv("CENSUS_API_KEY"),
@@ -18,7 +19,7 @@ test_that("Fails if 'precinct' is set as the geo var",{
     age = FALSE,
     sex = FALSE,
     year = "2020",
-    census.data = NULL,
+    census.data = census,
     retry = 3,
     use.counties = FALSE,
     skip_bad_geos = FALSE
@@ -30,6 +31,7 @@ test_that("helper returns verified census tract data",{
   skip_on_cran()
   set.seed(42)
   data(voters)
+  census <- readRDS("data/new_census_table_NJ_2020.rds")
   x <- census_helper_new(
     key = Sys.getenv("CENSUS_API_KEY"),
     voter.file = voters,
@@ -38,7 +40,7 @@ test_that("helper returns verified census tract data",{
     age = FALSE,
     sex = FALSE,
     year = "2020",
-    census.data = NULL,
+    census.data = census,
     retry = 3,
     use.counties = FALSE,
     skip_bad_geos = FALSE
@@ -67,6 +69,7 @@ test_that("New tables and legacy tables return equal race predictions",{
     use.counties = FALSE
   )
   # use new table source
+  new_census <- readRDS("data/new_census_table_NJ_2020.rds")
   y <- census_helper_new(
     key = Sys.getenv("CENSUS_API_KEY"),
     voter.file = voters,
@@ -75,7 +78,7 @@ test_that("New tables and legacy tables return equal race predictions",{
     age = FALSE,
     sex = FALSE,
     year = "2020",
-    census.data = NULL,
+    census.data = new_census,
     use.counties = FALSE
   )
   expect_equal(x$r_whi, y$r_whi, tolerance = .01)
