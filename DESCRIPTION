@@ -33,7 +33,6 @@ Depends:
 Imports:
     cli,
     dplyr,
-    stringr,
     tidyr,
     furrr,
     future,
