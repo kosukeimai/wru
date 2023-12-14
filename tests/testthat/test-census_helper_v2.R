@@ -9,7 +9,7 @@ test_that("Fails if 'precinct' is set as the geo var",{
   skip_on_cran()
   set.seed(42)
   data(voters)
-  census <- readRDS("data/new_census_table_NJ_2020.rds")
+  census <- readRDS(test_path("data/new_census_table_NJ_2020.rds"))
   expect_error(
   census_helper_new(
     voter.file = voters,
@@ -30,7 +30,7 @@ test_that("helper returns verified census tract data",{
   skip_on_cran()
   set.seed(42)
   data(voters)
-  census <- readRDS("data/new_census_table_NJ_2020.rds")
+  census <- readRDS(test_path("data/new_census_table_NJ_2020.rds"))
   x <- census_helper_new(
     voter.file = voters,
     states = "NJ",
@@ -66,7 +66,7 @@ test_that("New tables and legacy tables return equal race predictions",{
     use.counties = FALSE
   )
   # use new table source
-  new_census <- readRDS("tests/testthat/data/new_census_table_NJ_2020.rds")
+  new_census <- readRDS(test_path("data/new_census_table_NJ_2020.rds"))
   y <- census_helper_new(
     voter.file = voters,
     states = "NJ",
