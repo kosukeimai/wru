@@ -4,6 +4,18 @@
 options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
+test_that("Fails if model is set to anything other than BISG or fBISG", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  expect_error(suppressMessages(predict_race(
+    voter.file = voters,
+    surname.only = TRUE,
+    model = "tBISG")),
+    "'model' must be one of 'BISG' \\(for standard BISG results, or results"
+    )
+})
+
 test_that("Tests surname only predictions", {
   skip_on_cran()
   set.seed(42)

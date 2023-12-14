@@ -182,7 +182,7 @@ test_that("Handles zero-pop. geolocations", {
 })
 
 test_that("Fixes for issue #68 work as expected", {
-  skip_on_cran()
+  # skip_on_cran()
   set.seed(42)
   surname <- c("SULLIVAN")
   one <- predict_race(voter.file=data.frame(surname), year = 2010, surname.only=TRUE)

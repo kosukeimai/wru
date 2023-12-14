@@ -175,7 +175,7 @@ census_helper_new <- function(
     
     ## Calculate Pr(Geolocation | Race)
     if (any(c("P2_005N", "P005003") %in% names(census))) {
-      # TODO: Add message that they're using a legacy data source
+      message(stringr::str_glue("NOTE: Legacy column names detected, loading Race values from Census Redistricting table for {year}. Age, Sex, and ZCTA predictions will be unavailable."))
       # TODO: Add test that we get the same ratios with legacy and new tables for 2020
       # Old table: Redistricting (Pl-some numbers) (does not have age, sex, or ZCTAs)
       # New table: DHC (does have age, sex, and ZCTA)
