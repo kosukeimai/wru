@@ -5,6 +5,7 @@
 options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
+skip_if_not(nzchar(Sys.getenv("CENSUS_API_KEY")))
 test_that("Fails if 'precinct' is set as the geo var",{
   skip_on_cran()
   set.seed(42)
@@ -26,6 +27,7 @@ test_that("Fails if 'precinct' is set as the geo var",{
   "Error: census_helper_new function does not currently support precinct-level data.")
 })
 
+skip_if_not(nzchar(Sys.getenv("CENSUS_API_KEY")))
 test_that("helper returns verified census tract data",{
   skip_on_cran()
   set.seed(42)
@@ -49,6 +51,7 @@ test_that("helper returns verified census tract data",{
   expect_equal(x[x$surname == "Khanna", "r_bla"], 0.10168031, tolerance = .000001)
 })
 
+skip_if_not(nzchar(Sys.getenv("CENSUS_API_KEY")))
 test_that("New tables and legacy tables return equal race predictions",{
   skip_on_cran()
   set.seed(42)
