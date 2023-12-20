@@ -68,8 +68,8 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties
 available in \var{census.data}?}
 
-\item{skip_bad_geos}{Logical. Option to have the function skip any geolocations that are not present 
-in the census data, returning a partial data set. Default is set to \code{FALSE}, which case it will 
+\item{skip_bad_geos}{Logical. Option to have the function skip any geolocations that are not present
+in the census data, returning a partial data set. Default is set to \code{FALSE}, which case it will
 break and provide error message with a list of offending geolocations.}
 }
 \value{
