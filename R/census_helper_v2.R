@@ -82,9 +82,6 @@ census_helper_new <- function(
   if(!(year %in% c("2000","2010","2020"))){
     stop("Interface only implemented for census years '2000', '2010', or '2020'.")
   }
-  if (any(age, sex)){
-    stop("Models using age and sex not currently implemented.")
-  }
   
   if (is.null(census.data) || (typeof(census.data) != "list")) {
     toDownload = TRUE
