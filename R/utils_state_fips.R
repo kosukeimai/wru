@@ -52,7 +52,9 @@
 #' as_state_abbreviation(c("utah", "NM", 8, "04"))
 #'
 #' @keywords internal
+#' @export
 as_fips_code <- function(x) {
+  state_fips <- wru::state_fips
   state_fips$state_code[
     dplyr::coalesce(
       match(toupper(x), state_fips$state),
@@ -63,7 +65,9 @@ as_fips_code <- function(x) {
 }
 
 #' @rdname as_fips_code
+#' @export
 as_state_abbreviation <- function(x) {
+  state_fips <- wru::state_fips
   state_fips$state[
     dplyr::coalesce(
       match(toupper(x), state_fips$state),

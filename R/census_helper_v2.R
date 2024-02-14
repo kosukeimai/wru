@@ -211,10 +211,13 @@ census_helper_new <- function(
            paste(do.call(paste, c(unique(voters.census[miss_ind, c("state",geo.merge)]),
                                   sep="-")),
                  collapse = ", "))
-      if(skip_bad_geos == TRUE){
+      if(skip_bad_geos == TRUE) {
         message("NOTE: Skipping unavailable geolocations. Returning partial data set.")
-      voters.census <- tidyr::drop_na(voters.census, r_whi)}
-      else(stop("Stopping predictions. Please revise census data and/or verify the correct year is being supplied. To skip these rows use 'skip_bad_geos = TRUE'"))
+        voters.census <- voters.census[!is.na(voters.census$r_whi),]
+      }
+      else {
+        stop("Stopping predictions. Please revise census data and/or verify the correct year is being supplied. To skip these rows use 'skip_bad_geos = TRUE'")
+      }
     }
       
     # }
