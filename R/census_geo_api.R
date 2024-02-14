@@ -112,7 +112,7 @@ census_geo_api <- function(
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
         get_census_api(data_url = census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
-      })
+      }, .progress = TRUE)
     } else {
       message('There were no intersecting counties in your voter.file data (tract)')
     } 
@@ -192,7 +192,7 @@ census_geo_api <- function(
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
             get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_block, retry)
-          })
+          }, .progress = TRUE)
         }
       )
       message("\n") # new line for progress bar

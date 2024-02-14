@@ -9,8 +9,8 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     ))
     
     r_tract_from_block <- r$DE$block |>
-      group_by(tract) |>
-      summarize(
+      dplyr::group_by(tract) |>
+      dplyr::summarize(
         sum_whi = sum(r_whi),
         sum_bla = sum(r_bla),
         sum_his = sum(r_his),
@@ -19,9 +19,9 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
       )
     
     r_tract_level <- r$DE$tract |>
-      select(tract, r_whi:r_oth) |>
-      group_by(tract) |>
-      summarize(
+      dplyr::select(tract, r_whi:r_oth) |>
+      dplyr::group_by(tract) |>
+      dplyr::summarize(
         sum_whi = sum(r_whi),
         sum_bla = sum(r_bla),
         sum_his = sum(r_his),
@@ -30,9 +30,9 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
       )
     
     r_county_from_tract <- r$DE$tract |>
-      select(county, r_whi:r_oth) |>
-      group_by(county) |>
-      summarize(
+      dplyr::select(county, r_whi:r_oth) |>
+      dplyr::group_by(county) |>
+      dplyr::summarize(
         sum_whi = sum(r_whi),
         sum_bla = sum(r_bla),
         sum_his = sum(r_his),
@@ -41,9 +41,9 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
       )
     
     r_county_level <- r$DE$county |>
-      select(county, r_whi:r_oth) |>
-      group_by(county) |>
-      summarize(
+      dplyr::select(county, r_whi:r_oth) |>
+      dplyr::group_by(county) |>
+      dplyr::summarize(
         sum_whi = sum(r_whi),
         sum_bla = sum(r_bla),
         sum_his = sum(r_his),
@@ -138,15 +138,15 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     ))
     
     r_sum_from_block <- r$AK$block |>
-      select(r_whi:r_fem_23_oth) |>
+      dplyr::select(r_whi:r_fem_23_oth) |>
       apply(2, sum)
     
     r_sum_from_tract <- r$AK$tract |>
-      select(r_whi:r_fem_23_oth) |>
+      dplyr::select(r_whi:r_fem_23_oth) |>
       apply(2, sum)
     
     r_sum_from_county <- r$AK$county  |>
-      select(r_whi:r_fem_23_oth) |>
+      dplyr::select(r_whi:r_fem_23_oth) |>
       apply(2, sum)
     
     r_zcta_level <- suppressMessages(get_census_data(
@@ -158,7 +158,7 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     ))
     
     r_sum_from_zcta <- r_zcta_level$AK$zcta |>
-      select(r_whi:r_fem_23_oth) |>
+      dplyr::select(r_whi:r_fem_23_oth) |>
       apply(2, sum)
     
     expect_true(
