@@ -26,6 +26,8 @@ sample_me(
 
 \item{first_name}{See last_name}
 
+\item{mid_name}{See last_name}
+
 \item{geo}{Integer vector of geographic units for each record. Must match column number in N_rg}
 
 \item{N_rg}{Integer matrix of race | geography counts in census (geograpgies in columns).}
@@ -47,10 +49,6 @@ sample_me(
 \item{race_init}{Integer vector of initial race assignments}
 
 \item{verbose}{Boolean; should informative messages be printed?}
-
-\item{middle_name}{See last_name}
-
-\item{alpha}{Numeric matrix of race | geography prior probabilities.}
 }
 \description{
 Collapsed Gibbs sampler for hWRU. Internal function

@@ -5,10 +5,9 @@
 #'
 #' @param last_name Integer vector of last name identifiers for each record (zero indexed; as all that follow). Must match columns numbers in M_rs.  
 #' @param first_name See last_name
-#' @param middle_name See last_name
+#' @param mid_name See last_name
 #' @param geo Integer vector of geographic units for each record. Must match column number in N_rg
 #' @param N_rg Integer matrix of race | geography counts in census (geograpgies in columns).
-#' @param alpha Numeric matrix of race | geography prior probabilities.
 #' @param pi_s Numeric matrix of race | surname prior probabilities.
 #' @param pi_f Same as `pi_s`, but for first names.
 #' @param pi_m Same as `pi_s`, but for middle names.
