@@ -7,9 +7,6 @@
 //' @param middle_name See last_name
 //' @param geo Integer vector of geographic units for each record. Must match column number in N_rg
 //' @param N_rg Integer matrix of race | geography counts in census (geograpgies in columns).
-//' @param M_rs Integer matrix of race | surname counts in dictionary (surnames in columns).
-//' @param M_rf Same as `M_rs`, but for first names (can be empty matrix for surname only models).
-//' @param M_rm Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).
 //' @param alpha Numeric matrix of race | geography prior probabilities.
 //' @param pi_s Numeric matrix of race | surname prior probabilities.
 //' @param pi_f Same as `pi_s`, but for first names.
@@ -18,7 +15,6 @@
 //' @param which_names Integer; 0=surname only. 1=surname + first name. 2= surname, first, and middle names.
 //' @param samples Integer number of samples to take after (in total)
 //' @param burnin Integer number of samples to discard as burn-in of Markov chain
-//' @param me_race Boolean; should measurement error in race | geography be corrected?
 //' @param race_init Integer vector of initial race assignments
 //' @param verbose Boolean; should informative messages be printed?
 //'

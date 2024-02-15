@@ -50,15 +50,7 @@ sample_me(
 
 \item{middle_name}{See last_name}
 
-\item{M_rs}{Integer matrix of race | surname counts in dictionary (surnames in columns).}
-
-\item{M_rf}{Same as \code{M_rs}, but for first names (can be empty matrix for surname only models).}
-
-\item{M_rm}{Same as \code{M_rs}, but for middle names (can be empty matrix for surname, or surname and first name only models).}
-
 \item{alpha}{Numeric matrix of race | geography prior probabilities.}
-
-\item{me_race}{Boolean; should measurement error in race | geography be corrected?}
 }
 \description{
 Collapsed Gibbs sampler for hWRU. Internal function

@@ -93,12 +93,12 @@
 #' Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
 #' 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
 #' @param control List of control arguments only used when \code{model="fBISG"}, including
-#' \itemize{
-#'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
-#'  \item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
-#'  \item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
-#'  \item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
-#'  \item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
+#' \describe{
+#'   \item{iter}{Number of MCMC iterations. Defaults to 1000.}
+#'   \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+#'   \item{verbose}{Print progress information. Defaults to \code{TRUE}.}
+#'   \item{me.correct}{Boolean. Should the model correct measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
+#'   \item{seed}{RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 #' }
 #'
 #' @return Output will be an object of class \code{data.frame}. It will

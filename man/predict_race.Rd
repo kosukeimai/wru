@@ -131,12 +131,12 @@ follow the same structure as \code{last_c}, \code{first_c},
 middle'. Defaults to 'surname'.}
 
 \item{control}{List of control arguments only used when \code{model="fBISG"}, including
-\itemize{
-\item{iter}{ Number of MCMC iterations. Defaults to 1000.}
-\item{burnin}{ Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
-\item{verbose}{ Print progress information. Defaults to \code{TRUE}.}
-\item{me.correct}{ Boolean. Should the model correcting measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
-\item{seed}{ RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
+\describe{
+\item{iter}{Number of MCMC iterations. Defaults to 1000.}
+\item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
+\item{verbose}{Print progress information. Defaults to \code{TRUE}.}
+\item{me.correct}{Boolean. Should the model correct measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
+\item{seed}{RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
 }
 \value{
