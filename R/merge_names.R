@@ -339,7 +339,7 @@ wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   tryCatch(
     # Oddity of conditions for .token. Ignores token if is ""
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = ""), 
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = "v2.0.0"), 
     error = function(e) message("There was an error retrieving data: ", e$message)
   )
 }
