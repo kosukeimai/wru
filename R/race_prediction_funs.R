@@ -1,7 +1,7 @@
 #' Internal model fitting functions
 #'
 #' These functions are intended for internal use only. Users should use the
-#' \code{race_predict} interface rather any of these functions directly.
+#' [predict_race()] interface rather any of these functions directly.
 #'
 #' These functions fit different versions of WRU. \code{.predict_race_old} fits
 #' the original WRU model, also known as BISG with census-based surname dictionary.
@@ -13,12 +13,12 @@
 #' the augmented surname dictionary, and the first and middle name
 #' dictionaries when making predictions.
 #'
+#' @inheritParams predict_race
 #' @param voter.file See documentation in \code{race_predict}.
 #' @param census.surname See documentation in \code{race_predict}.
 #' @param surname.only See documentation in \code{race_predict}.
 #' @param surname.year See documentation in \code{race_predict}.
 #' @param census.geo See documentation in \code{race_predict}.
-#' @param census.key See documentation in \code{race_predict}.
 #' @param census.data See documentation in \code{race_predict}.
 #' @param age See documentation in \code{race_predict}.
 #' @param sex See documentation in \code{race_predict}.
@@ -26,13 +26,14 @@
 #' @param party See documentation in \code{race_predict}.
 #' @param retry See documentation in \code{race_predict}.
 #' @param impute.missing See documentation in \code{race_predict}.
+#' @param skip_bad_geos See documentation in \code{race_predict}.
 #' @param names.to.use See documentation in \code{race_predict}.
 #' @param race.init See documentation in \code{race_predict}.
 #' @param name.dictionaries See documentation in \code{race_predict}.
-#' @param ctrl See \code{control} in documentation for \code{race_predict}.
+#' @param ctrl See `control` in documentation for [predict_race()].
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?
 #'
-#' @return See documentation in \code{race_predict}.
+#' @inherit predict_race return
 #'
 #' @name modfuns
 NULL
@@ -45,10 +46,23 @@ NULL
 #' @rdname modfuns
 #' @keywords internal
 
-.predict_race_old <- function(voter.file,
-                              census.surname = TRUE, surname.only = FALSE, surname.year = 2020, name.dictionaries = NULL,
-                              census.geo, census.key, census.data = NULL, age = FALSE, sex = FALSE, year = "2020",
-                              party, retry = 3, impute.missing = TRUE, use.counties = FALSE) {
+.predict_race_old <- function(
+    voter.file,
+    census.surname = TRUE,
+    surname.only = FALSE,
+    surname.year = 2020,
+    name.dictionaries = NULL,
+    census.geo,
+    census.key = Sys.getenv("CENSUS_API_KEY"),
+    census.data = NULL,
+    age = FALSE,
+    sex = FALSE,
+    year = "2020",
+    party,
+    retry = 3,
+    impute.missing = TRUE,
+    use.counties = FALSE
+) {
   
   # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
   if ((sex == TRUE || age == TRUE) && (year == "2020")) {
@@ -68,28 +82,22 @@ NULL
       stop("Voter data frame needs to have a column named surname")
     }
   } else {
-    if (missing(census.geo) || is.null(census.geo) || is.na(census.geo) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
+    if (missing(census.geo) || is.null(census.geo) || all(is.na(census.geo)) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
       stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
     } else {
       message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
     }
-    if (missing(census.data) || is.null(census.data) || is.na(census.data)) {
-      if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-        stop("Please provide a valid Census API key using census.key option.")
-      } else {
-        message("Downloading Census geographic data using provided API key...")
-      }
+    if (missing(census.data) || is.null(census.data) || all(is.na(census.data))) {
+      census.key <- validate_key(census.key)
+      message("Downloading Census geographic data using provided API key...")
     } else {
       if (!("state" %in% names(voter.file))) {
         stop("voter.file object needs to have a column named state.")
       }
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
         message("census.data object does not include all states in voter.file object.")
-        if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-          stop("Please provide either a valid Census API key or valid census.data object that covers all states in voter.file object.")
-        } else {
-          message("Downloading Census geographic data for states not included in census.data object...")
-        }
+        census.key <- validate_key(census.key)
+        message("Downloading Census geographic data for states not included in census.data object...")
       } else {
         message("Using Census geographic data from provided census.data object...")
       }
@@ -261,10 +269,24 @@ NULL
 #' New race prediction function, implementing classical BISG with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @rdname modfuns
-predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
-                             census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
-                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                             use.counties = FALSE) {
+
+predict_race_new <- function(
+    voter.file,
+    names.to.use,
+    year = "2020",
+    age = FALSE,
+    sex = FALSE,
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+    census.key = Sys.getenv("CENSUS_API_KEY"),
+    name.dictionaries,
+    surname.only=FALSE,
+    census.data = NULL,
+    retry = 0,
+    impute.missing = TRUE,
+    skip_bad_geos = FALSE,
+    census.surname = FALSE,
+    use.counties = FALSE
+) {
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -273,10 +295,9 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
   # Define 2020 race marginal
   race.margin <- c(r_whi=0.5783619, r_bla=0.1205021, r_his=0.1872988,
                    r_asi=0.06106737, r_oth=0.05276981)
-  # check the geography
-  if (!missing(census.geo) && (census.geo == "precinct")) {
-    stop("Error: census_helper function does not currently support merging precinct-level data.")
-  }
+  
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
   
   vars.orig <- names(voter.file)
   
@@ -325,17 +346,11 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
   
   # check the geographies
   if (surname.only == FALSE) {
-    if (!(census.geo %in% c("county", "tract","block_group", "block", "place"))) {
-      stop("census.geo must be either 'county', 'tract', 'block', 'block_group', or 'place'")
-    } else {
-      message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
-    }
+    message("Proceeding with Census geographic data at ", census.geo, " level...")
+
     if (is.null(census.data)) {
-      if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-        stop("Please provide a valid Census API key using census.key option.")
-      } else {
-        message("Downloading Census geographic data using provided API key...")
-      }
+      census.key <- validate_key(census.key)
+      message("Downloading Census geographic data using provided API key...")
     } else {
       if (!("state" %in% names(voter.file))) {
         stop("voter.file object needs to have a column named state.")
@@ -343,24 +358,14 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
       census_data_preflight(census.data, census.geo, year)
       if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
         message("census.data object does not include all states in voter.file object.")
-        if (missing(census.key) || is.null(census.key) || is.na(census.key)) {
-          stop("Please provide either a valid Census API key or valid census.data object that covers all states in voter.file object.")
-        } else {
-          message("Downloading Census geographic data for states not included in census.data object...")
-        }
+        census.key <- validate_key(census.key)
+        message("Downloading Census geographic data for states not included in census.data object...")
       } else {
         message("Using Census geographic data from provided census.data object...")
       }
     }
     
-    geo_id_names <- switch(
-      census.geo,
-      "county" = c("county"),
-      "tract" = c("county", "tract"),
-      "block_group" = c("county", "tract", "block_group"),
-      "block" = c("county", "tract", "block"),
-      "place" = c("place")
-    )
+    geo_id_names <- determine_geo_id_names(census.geo)
     
     if (!all(geo_id_names %in% names(voter.file))) {
       stop(message("To use",census.geo,"as census.geo, voter.file needs to include the following column(s):",
@@ -377,7 +382,8 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
       year = year,
       census.data = census.data, 
       retry = retry,
-      use.counties = use.counties
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos
     )
   }
   
@@ -429,12 +435,30 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
 #' New race prediction function, implementing fBISG (i.e. measurement
 #' error correction, fully Bayesian model) with augmented
 #' surname dictionary, as well as first and middle name information.
+#' @importFrom dplyr pull
 #' @rdname modfuns
-predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
-                            census.geo, census.key, name.dictionaries, surname.only=FALSE,
-                            census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use.counties = FALSE, race.init, ctrl) 
-{
+
+predict_race_me <- function(
+    voter.file,
+    names.to.use,
+    year = "2020",
+    age = FALSE,
+    sex = FALSE, 
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+    census.key = Sys.getenv("CENSUS_API_KEY"),
+    name.dictionaries,
+    surname.only = FALSE,
+    census.data = NULL,
+    retry = 0,
+    impute.missing = TRUE,
+    census.surname = FALSE,
+    use.counties = FALSE,
+    race.init,
+    ctrl
+) {
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
+  
   if(!is.null(census.data)) {
     census_data_preflight(census.data, census.geo, year)
   }
@@ -477,9 +501,6 @@ predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE,
   } 
   
   ## Other quick checks...
-  if (!(census.geo %in% c("county", "tract","block_group", "block", "place"))) {
-    stop("census.geo must be either 'county', 'tract', 'block', 'block_group', or 'place'")
-  }
   stopifnot(
     all(!is.na(voter.file$surname))
   )
@@ -509,15 +530,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE,
   )
   
   ## level of geo estimation
-  geo_id_names <- c("state", switch(census.geo,
-                                    "county" = c("county"),
-                                    "tract" = c("county", "tract"),
-                                    "block_group" = c("county", "tract", "block_group"),
-                                    "block" = c("county", "tract", "block"),
-                                    "place" = c("place"),
-                                    "zipcode" = c("zipcode")
-  ))
-  
+  geo_id_names <- c("state", determine_geo_id_names(census.geo))
   
   #race_pred_args[names(args_usr)] <- args_usr
   all_states <- unique(voter.file$state)
@@ -529,38 +542,31 @@ predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE,
   if (ctrl$verbose) {
     message("Forming Pr(race | location) tables from census data...\n")
   }
-  if(year == "2020") {
-    vars_ <- c(
-      pop_white = 'P2_005N', pop_black = 'P2_006N',
-      pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
-      pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
-      pop_two = 'P2_011N', pop_hisp = 'P2_002N'
-    ) 
-  } else {
-    vars_ <- c(
-      pop_white = 'P005003', pop_black = 'P005004',
-      pop_aian = 'P005005', pop_asian = 'P005006',
-      pop_nhpi = 'P005007', pop_other = 'P005008', 
-      pop_two = 'P005009', pop_hisp = 'P005010'
-    )
-  }
-  tmp_tabs <- lapply(
+  
+  vars_ <- census_geo_api_names(year = year)
+  
+  N_rg <- purrr::map(
     census.data,
     function(x) {
       all_names <- names(x[[census.geo]])
-      tmp <- x[[census.geo]][, c(geo_id_names, grep("P00|P2_0", all_names, value = TRUE))]
-      tmp$r_whi <- tmp[, vars_["pop_white"]]
-      tmp$r_bla <- tmp[, vars_["pop_black"]]
-      tmp$r_his <- tmp[, vars_["pop_hisp"]]
-      tmp$r_asi <- (tmp[, vars_["pop_asian"]] + tmp[, vars_["pop_nhpi"]])
-      tmp$r_oth <- (tmp[, vars_["pop_aian"]] + tmp[, vars_["pop_other"]] + tmp[, vars_["pop_two"]])
-      all_names <- names(tmp)
-      ## Totals
-      tmp_la <- tmp[, c(geo_id_names, grep("^r_", all_names, value = TRUE))]
-      return(list(tots = tmp_la))
+      
+      if (any(c("P2_005N", "P005003") %in% all_names)) {
+        vars_ <- census_geo_api_names_legacy(year = year)
+      }
+      
+      totals <- x[[census.geo]][, match(c(geo_id_names, unlist(vars_)), all_names)]
+      
+      totals$r_whi <- rowSums(totals[, vars_[["r_whi"]], drop = FALSE]) # White population
+      totals$r_bla <- rowSums(totals[, vars_[["r_bla"]], drop = FALSE]) # Black population
+      totals$r_his <- rowSums(totals[, vars_[["r_his"]], drop = FALSE]) # Latino population
+      totals$r_asi <- rowSums(totals[, vars_[["r_asi"]], drop = FALSE]) # Asian + NH/PI population
+      totals$r_oth <- rowSums(totals[, vars_[["r_oth"]], drop = FALSE]) # AI/AN + Other + Mixed population
+
+      totals <- totals[, -match(unlist(vars_), names(totals))]
+      totals
     }
   )
-  N_rg <- do.call(rbind, lapply(tmp_tabs, function(x) x$tots))
+  N_rg <- dplyr::bind_rows(N_rg)
   N_rg_geo <- do.call(paste, N_rg[, geo_id_names])
   ## Subset to geo's in vf
   N_rg <- N_rg[N_rg_geo %in% geo_id, ]
@@ -604,7 +610,7 @@ predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE,
                      surname = last_c,
                      first = first_c,
                      middle = mid_c)
-      kw_names <- toupper(ntab[, 1])
+      kw_names <- toupper(dplyr::pull(ntab, 1))
       proc_names_vf <- .name_preproc(voter.file[[ntype]], c(kw_names))
       u_vf_names <- unique(proc_names_vf)
       kw_in_vf <- kw_names %in% proc_names_vf

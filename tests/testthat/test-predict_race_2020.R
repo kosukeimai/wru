@@ -4,6 +4,18 @@
 options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
+test_that("Fails if model is set to anything other than BISG or fBISG", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  expect_error(suppressMessages(predict_race(
+    voter.file = voters,
+    surname.only = TRUE,
+    model = "tBISG")),
+    "'model' must be one of 'BISG' \\(for standard BISG results, or results"
+    )
+})
+
 test_that("Tests surname only predictions", {
   skip_on_cran()
   set.seed(42)
@@ -120,7 +132,7 @@ test_that("Fails on territories", {
   )
 }) 
 
-test_that("Fails on missing geolocation", {
+test_that("Fails on missing geolocation if skip_bad_geos default is used", {
   skip_on_cran()
   set.seed(42)
   data(voters)
@@ -132,9 +144,25 @@ test_that("Fails on missing geolocation", {
     census.data = census, 
     use.counties = TRUE)
   ),
-  "The following locations in the voter\\.file are not available"
+  "Stopping predictions. Please revise"
   )
 })
+
+test_that("Skip_bad_geos option successfully returns working geolocations", {
+  skip_on_cran()
+  set.seed(42)
+  data(voters)
+  census <- readRDS(test_path("data/census_test_nj_block_2020.rds"))
+  test_drop <- suppressMessages(predict_race(
+    voter.file = voters[voters$state == "NJ", ], 
+    census.geo = "block", 
+    census.key = NULL, 
+    census.data = census,
+    skip_bad_geos = TRUE,
+    use.counties = TRUE)
+  )
+  expect_equal(nrow(test_drop), 1)
+  })
 
 test_that("Handles zero-pop. geolocations", {
   skip_on_cran()

@@ -338,7 +338,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   tryCatch(
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest), 
-    error = function(e) message("There was an error retrieving data", e$message)
+    # Oddity of conditions for .token. Ignores token if is ""
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = ""), 
+    error = function(e) message("There was an error retrieving data: ", e$message)
   )
 }
