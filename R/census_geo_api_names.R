@@ -33,36 +33,78 @@ census_geo_api_names <- function(
     prefix <- "P12"
     separator <- "_"
     suffix <- "N"
+    sex_codes <- c("_mal" = 2, "_fem" = 26)
+    age_codes <- 1:23
+    names(age_codes) <- paste0("_", age_codes)
   } else if (year %in% c("2010", "2000")) {
-    prefix <- "P012"
+    prefix <- "PCT012"
     separator <- ""
     suffix <- ""
+    sex_codes <- c("_mal" = 2, "_fem" = 106)
+    age_codes <- list(
+      "_1" = 1:5,
+      "_2" = 6:10,
+      "_3" = 11:15,
+      "_4" = 16:18,
+      "_5" = 19:20,
+      "_6" = 21,
+      "_7" = 22,
+      "_8" = 23:25,
+      "_9" = 26:30,
+      "_10" = 31:35,
+      "_11" = 36:40,
+      "_12" = 41:45,
+      "_13" = 46:50,
+      "_14" = 51:55,
+      "_15" = 56:60,
+      "_16" = 61:62,
+      "_17" = 63:65,
+      "_18" = 66:67,
+      "_19" = 68:70,
+      "_20" = 71:75,
+      "_21" = 76:80,
+      "_22" = 81:85,
+      "_23" = 86:103
+    )
   }
   
   race_codes <- list(
     "_whi" = "I",
-    "_bla" = "B",
+    "_bla" = "J",
     "_his" = "H",
-    "_asi" = c("D", "E"),
-    "_oth" = c("C", "F", "G")
+    "_asi" = c("L", "M"),
+    "_oth" = c("K", "N", "O")
   )
   
-  sex_codes <- c("_mal" = 2, "_fem" = 26)
-  
-  age_codes <- 1:23
-  names(age_codes) <- paste0("_", age_codes)
-  
   numeric_codes <- if (age && sex) {
-    age_sex_codes <- unlist(
-      purrr::map(sex_codes, function(x) x + age_codes)
+    age_sex_codes <- purrr::imap(
+      sex_codes,
+      function(sex_code, name) {
+        codes <- purrr::map(
+          age_codes,
+          function(age_code) {
+            str_pad(age_code + sex_code, 3, "left", pad = "0")
+          }
+        )
+        names(codes) <- paste0(name, names(codes))
+        codes
+      }
     )
-    names(age_sex_codes) <- sub(".", "", names(age_sex_codes), fixed = TRUE)
-    age_sex_codes[] <- str_pad(age_sex_codes, 3, "left", pad = "0")
-    as.list(age_sex_codes)
+    
+    do.call(c, unname(age_sex_codes))
   } else if (age) {
     purrr::map(
       age_codes,
-      function(x) str_pad(x + sex_codes, 3, "left", pad = "0")
+      function(age_code) {
+        unlist(
+          purrr::map(
+            sex_codes,
+            function(sex_code) {
+              str_pad(age_code + sex_code, 3, "left", pad = "0")
+            }
+          )
+        )
+      }
     )
   } else if (sex) {
     sex_codes[] <- str_pad(sex_codes, 3, "left", pad = "0")
