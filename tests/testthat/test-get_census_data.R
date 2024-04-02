@@ -67,5 +67,14 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     ))
     expect_named(r$DC, c("state", "age", "sex", "year", "zcta"))
     expect_true(all(r$DC$zcta$state == "DC"))
+    
+    r <- suppressMessages(get_census_data(
+      key = NULL,
+      state = "DC",
+      census.geo = "zcta",
+      year = "2010"
+    ))
+    expect_named(r$DC, c("state", "age", "sex", "year", "zcta"))
+    expect_true(all(r$DC$zcta$state == "DC"))
   })
 }
