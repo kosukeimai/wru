@@ -16,4 +16,6 @@ Date        Version  Comment
 2022-06-17  1.0.0    Updates to BISG, inclusion of fBISG and other package improvements
 2022-10-04  1.0.1    Bug fixes for census url and census year
 2023-06-12  2.0.0    Updated defaults to 2020 data, specifiy as next major version 2.0.
-2024-02-15  3.0.0    Adding back age and sex functionality. Other improvements. 
+2024-02-15  3.0.0    Adding back age and sex functionality. Other improvements.
+2024-02-27  3.0.1    Github has changed their policy on binary formats in releases, need to refer to older version
+2024-04-02  3.0.2    Fixes a bug that led to overestimation of black and hispanic populations (see issue #145)
