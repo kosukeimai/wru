@@ -19,3 +19,4 @@ Date        Version  Comment
 2024-02-15  3.0.0    Adding back age and sex functionality. Other improvements.
 2024-02-27  3.0.1    Github has changed their policy on binary formats in releases, need to refer to older version
 2024-04-02  3.0.2    Fixes a bug that led to overestimation of black and hispanic populations (see issue #145)
+2024-05-24  3.0.3    Fixes a bug that pushed NaN into small population tracts (see issue #151)
