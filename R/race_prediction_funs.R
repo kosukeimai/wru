@@ -417,7 +417,7 @@ predict_race_new <- function(
   
   if(impute.missing){
    for(i in ncol(preds)){
-     preds[, i] <- dplyr::coalesce(df[, i], race.margin[i])
+     preds[, i] <- dplyr::coalesce(preds[, i], race.margin[i])
    }
   }
   ## Normalize (recycle marginal)
