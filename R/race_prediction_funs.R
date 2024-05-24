@@ -415,16 +415,14 @@ predict_race_new <- function(
     }
   }
   
+  if(impute.missing){
+   for(i in ncol(preds)){
+     preds[, i] <- dplyr::coalesce(df[, i], race.margin[i])
+   }
+  }
   ## Normalize (recycle marginal)
   preds <- preds/rowSums(preds)
-  ## Revert to Pr(Race|Surname) for missing predictions
-  if(impute.missing){
-    miss_ind <- !is.finite(preds$c_whi_last)
-    if(any(miss_ind)){
-      preds[miss_ind,] <- voter.file[miss_ind, grep("_last$", names(voter.file))] * 
-        matrix(race.margin, nrow=nrow(voter.file[miss_ind,]), ncol=length(race.margin), byrow = TRUE)
-    }
-  }
+  ## Revert to national Pr(Race) for missing predictions
   colnames(preds) <- paste("pred", eth, sep = ".")
   
   return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
