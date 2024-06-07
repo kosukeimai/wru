@@ -1,8 +1,8 @@
 Package: wru
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname,
     First Name, Middle Name, and Geolocation
-Version: 3.0.3
-Date: 2024-05-24
+Version: 3.0.4
+Date: 2024-06-07
 Authors@R: c(
     person("Kabir", "Khanna", , "kabirkhanna@gmail.com", role = "aut"),
     person("Brandon", "Bertelsen", , "brandon@bertelsen.ca", role = c("aut", "cre")),
