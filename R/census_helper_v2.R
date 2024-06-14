@@ -182,7 +182,7 @@ census_helper_new <- function(
     }
     drop <- match(c("state", unlist(vars_)), names(census))
     
-    geoPopulations <- rowSums(census[,names(census) %in% vars_])
+    geoPopulations <- rowSums(census[,names(census) %in% unlist(vars_)])
     
     census$r_whi <- rowSums(census[, vars_[["r_whi"]], drop = FALSE]) / (geoPopulations) #Pr(White | Geo)
     census$r_bla <- rowSums(census[, vars_[["r_bla"]], drop = FALSE]) / (geoPopulations) #Pr(Black | Geo)
