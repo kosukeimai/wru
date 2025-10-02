@@ -53,6 +53,8 @@
 #' any surnames in \code{\var{voter.file}} that cannot initially be matched
 #' to the database will be cleaned, according to U.S. Census specifications,
 #' in order to increase the chance of finding a match. Default is \code{TRUE}.
+#' @param return.unmatched Generates Boolean columns for any name-type column, reporting 
+#' whether a match was made. Default is set to \code{TRUE}.
 #' @return Output will be an object of class \code{data.frame}. It will
 #'  consist of the original user-input data with additional columns that
 #'  specify the part of the name matched with Census data (\code{\var{surname.match}}),
@@ -66,7 +68,7 @@
 #' data(voters)
 #' \dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
 #' @keywords internal
-merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
+merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG", return.unmatched = TRUE) {
 
   # check the names
   if (namesToUse == "surname") {
@@ -308,23 +310,65 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
       df[, i] <- dplyr::coalesce(df[, i], 1)
     }
   }
-
+  
+  if (return.unmatched == TRUE) {
+    ## Create match flags
+    if (namesToUse == "surname"){
+      df <- df |>
+        mutate(
+          last_matched = case_when(lastname.match == "NA" ~ FALSE,
+                                   TRUE ~ TRUE)
+        )
+    }
+    else if (namesToUse == "surname, first") {
+      df <- df |>
+        mutate(
+          last_matched = case_when(lastname.match == "NA" ~ FALSE,
+                                   TRUE ~ TRUE),
+          first_matched = !is.na(firstname.match)
+        )
+    }
+    else if (namesToUse == "surname, first, middle")
+      df <- df |>
+        mutate(
+          last_matched = case_when(lastname.match == "NA" ~ FALSE,
+                                   TRUE ~ TRUE),
+          middle_matched = case_when(middlename.match == "NA" ~ FALSE,
+                                     TRUE ~ TRUE),
+          first_matched = !is.na(firstname.match)
+        )
+  }
   # return the data
-  if (namesToUse == "surname") {
-    return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
-  } else if (namesToUse == "surname, first") {
-    return(df[, c(
-      names(voter.file), "lastname.match", "firstname.match",
-      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
-    )])
-  } else if (namesToUse == "surname, first, middle") {
-    return(df[, c(
-      names(voter.file), "lastname.match", "firstname.match", "middlename.match",
-      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
-    )])
+  if(return.unmatched == TRUE) {
+    if (namesToUse == "surname") {
+      return(df[, c(names(voter.file), "lastname.match", "last_matched", paste(p_eth, "last", sep = "_"))])
+    } else if (namesToUse == "surname, first") {
+      return(df[, c(
+        names(voter.file), "lastname.match", "last_matched", "firstname.match", "first_matched",
+        paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+      )])
+    } else if (namesToUse == "surname, first, middle") {
+      return(df[, c(
+        names(voter.file), "lastname.match", "last_matched", "firstname.match", "first_matched", "middlename.match", "middle_matched",
+        paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+      )])
+    } else(
+      # return the data
+      if (namesToUse == "surname") {
+        return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+      } else if (namesToUse == "surname, first") {
+        return(df[, c(
+          names(voter.file), "lastname.match", "firstname.match",
+          paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+        )])
+      } else if (namesToUse == "surname, first, middle") {
+        return(df[, c(
+          names(voter.file), "lastname.match", "firstname.match", "middlename.match",
+          paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+        )])
+      })
   }
 }
-
 
 #' Preflight for name data
 #'

@@ -264,7 +264,7 @@ NULL
 predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                              census.geo, census.key = NULL, name.dictionaries, surname.only=FALSE,
                              census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                             use.counties = FALSE) {
+                             return.unmatched = TRUE, use.counties = FALSE) {
   
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))){
@@ -392,6 +392,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
                             table.middle=name.dictionaries[["middle"]],
                             clean.names = TRUE,
                             impute.missing = impute.missing,
+                            return.unmatched = return.unmatched,
                             model = 'BISG')
   
   if (surname.only == TRUE) {
@@ -421,7 +422,12 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
   }
   colnames(preds) <- paste("pred", eth, sep = ".")
   
-  return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
+  if(return.unmatched == TRUE) {
+  return(data.frame(cbind(voter.file, preds)) |> 
+           select(vars.orig, any_of(c("last", "first", "middle")), ends_with("_matched"), -starts_with("c_"),-ends_with(".match"), starts_with("pred.")))
+  } else {
+    return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
+  }
 }
 
 
@@ -433,7 +439,7 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
 predict_race_me <- function(voter.file, names.to.use, year = "2020",age = FALSE, sex = FALSE, 
                             census.geo, census.key, name.dictionaries, surname.only=FALSE,
                             census.data = NULL, retry = 0, impute.missing = TRUE, census.surname = FALSE,
-                            use.counties = FALSE, race.init, ctrl) 
+                            return.unmatched = return.unmatched, use.counties = FALSE, race.init, ctrl) 
 {
   if(!is.null(census.data)) {
     census_data_preflight(census.data, census.geo, year)

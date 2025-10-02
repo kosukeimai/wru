@@ -14,11 +14,16 @@ First, you should save your census key to your `.Rprofile` or `.Renviron`. Below
 
 Now, here is a simple example that predicts the race/ethnicity of voters based only on their surnames.
 
+Note: Sample data `voters` is based on 2010 Census, therefore we fix that variable here. Default 
+is the latest Census release year (2020). See `get_census_data()` to retrieve Census data related to your 
+data set. If you are getting an error similar to setting `year = 2020`, this is what needs to be 
+addressed. 
+
 ``` r
 library(wru)
 future::plan(future::multisession)
 data(voters)
-predict_race(voter.file = voters, surname.only = T)
+predict_race(voter.file = voters, surname.only = T, year = 2010)
 ```
 
 The above produces the following output, where the last five columns are probabilistic race/ethnicity predictions (e.g., 'pred.his' is the probability of being Hispanic/Latino):
@@ -43,7 +48,7 @@ The following example predicts the race/ethnicity of voters based on their surna
 ``` r
 library(wru)
 data(voters)
-predict_race(voter.file = voters, census.geo = "tract", census.key = "...", party = "PID")
+predict_race(voter.file = voters, year = 2010, census.geo = "tract", census.key = "...", party = "PID")
 ```
 
 The above returns the following output.
@@ -64,7 +69,7 @@ In predict_race, the census.geo options are "county", "tract", "block" and "plac
 
 ``` r
 data(voters)
-predict_race(voter.file = voters, census.geo = "place", census.key = "...", party = "PID")
+predict_race(voter.file = voters, census.geo = "place", year = 2010, census.key = "...", party = "PID")
 ```
 
 It is also possible to pre-download Census geographic data, which can save time when running predict_race(). The example dataset 'voters' includes people in DC, NJ, and NY. The following example subsets voters in DC and NJ, and then uses get_census_data() to download Census geographic data in these two states (input parameter 'key' requires valid API key). Census data is assigned to an object named census.dc.nj. The predict_race() statement predicts the race/ethnicity of voters in DC and NJ using the pre-saved Census data (census.data = census.dc.nj). This example conditions race/ethnicity predictions on voters' surnames, block of residence (census.geo = "block"), age (age = TRUE), and party registration (party = "PID").
@@ -82,7 +87,7 @@ predict_race(voter.file = voters.dc.nj, census.geo = "block", census.data = cens
 The last two lines above are equivalent to the following:
 
 ``` r
-predict_race(voter.file = voters.dc.nj, census.geo = "block", census.key = "...", age = TRUE, sex = FALSE, party = "PID")
+predict_race(voter.file = voters.dc.nj, census.geo = "block", year = 2010, census.key = "...", age = TRUE, sex = FALSE, party = "PID")
 ```
 
 Using pre-downloaded Census data may be useful for the following reasons:

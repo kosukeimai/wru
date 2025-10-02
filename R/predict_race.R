@@ -68,7 +68,7 @@
 #' Whatever the name of the party registration field in \code{\var{voter.file}},
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
-#' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
+#' @param impute.missing Logical, defaults to TRUE. Should missing be imputed? FALSE = A constant(1)
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @param model Character string, either "BISG" (default) or "fBISG" (for error-correction, 
@@ -83,6 +83,8 @@
 #' @param race.init Vector of initial race for each observation in voter.file.
 #' Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
 #' 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
+#' @param return.unmatched Generates Boolean columns for each name reporting 
+#' whether a match was made. Default is set to \code{TRUE}.
 #' @param control List of control arguments only used when \code{model="fBISG"}, including
 #' \itemize{
 #'  \item{iter}{ Number of MCMC iterations. Defaults to 1000.}
@@ -134,8 +136,8 @@
 predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE,
                          census.geo, census.key = NULL, census.data = NULL, age = FALSE,
                          sex = FALSE, year = "2020", party = NULL, retry = 3, impute.missing = TRUE,
-                         use.counties = FALSE, model = "BISG", race.init = NULL, name.dictionaries = NULL,
-                         names.to.use = "surname", control = NULL) {
+                         use.counties = FALSE, model = "BISG", race.init = NULL, return.unmatched = TRUE, 
+                         name.dictionaries = NULL, names.to.use = "surname", control = NULL) {
   
   message("Predicting race for ", year)
   
@@ -208,6 +210,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                               census.data = census.data,
                               retry = retry,
                               impute.missing = impute.missing,
+                              return.unmatched = return.unmatched,
                               census.surname = census.surname,
                               use.counties = use.counties)
   } else {
@@ -237,6 +240,7 @@ predict_race <- function(voter.file, census.surname = TRUE, surname.only = FALSE
                                      retry = retry,
                                      impute.missing = TRUE,
                                      census.surname = census.surname,
+                                     return.unmatched = return.unmatched,
                                      use.counties = use.counties)
       race.init <- max.col(
         race.init[, paste0("pred.", c("whi", "bla", "his", "asi", "oth"))],
