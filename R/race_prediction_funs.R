@@ -423,9 +423,9 @@ predict_race_new <- function(voter.file, names.to.use, year = "2020",age = FALSE
   colnames(preds) <- paste("pred", eth, sep = ".")
   
   if(return.unmatched == TRUE) {
-  return(data.frame(cbind(voter.file, preds)) |> 
+    return(data.frame(cbind(voter.file, preds)) |> 
            select(vars.orig, any_of(c("last", "first", "middle")), ends_with("_matched"), -starts_with("c_"),-ends_with(".match"), starts_with("pred.")))
-  } else {
+    } else {
     return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
   }
 }

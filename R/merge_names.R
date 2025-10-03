@@ -338,7 +338,7 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
           first_matched = !is.na(firstname.match)
         )
   }
-  # return the data
+  # return the data with unmatched col
   if(return.unmatched == TRUE) {
     if (namesToUse == "surname") {
       return(df[, c(names(voter.file), "lastname.match", "last_matched", paste(p_eth, "last", sep = "_"))])
@@ -350,6 +350,37 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     } else if (namesToUse == "surname, first, middle") {
       return(df[, c(
         names(voter.file), "lastname.match", "last_matched", "firstname.match", "first_matched", "middlename.match", "middle_matched",
+        paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+      )])
+    } else(
+      # return the data
+      if (namesToUse == "surname") {
+        return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+      } else if (namesToUse == "surname, first") {
+        return(df[, c(
+          names(voter.file), "lastname.match", "firstname.match",
+          paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+        )])
+      } else if (namesToUse == "surname, first, middle") {
+        return(df[, c(
+          names(voter.file), "lastname.match", "firstname.match", "middlename.match",
+          paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+        )])
+      })
+  }
+  
+  # return data without appended cols
+  if(return.unmatched == FALSE) {
+    if (namesToUse == "surname") {
+      return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+    } else if (namesToUse == "surname, first") {
+      return(df[, c(
+        names(voter.file), "lastname.match", "firstname.match",
+        paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+      )])
+    } else if (namesToUse == "surname, first, middle") {
+      return(df[, c(
+        names(voter.file), "lastname.match", "firstname.match", "middlename.match",
         paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
       )])
     } else(
@@ -383,6 +414,6 @@ wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   tryCatch(
     piggyback::pb_download(repo = "kosukeimai/wru", dest = dest), 
-    error = function(e) message("There was an error retrieving data", e$message)
+    error = function(e) message("There was an error retrieving data ", e$message)
   )
 }
