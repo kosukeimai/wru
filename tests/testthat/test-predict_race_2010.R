@@ -14,7 +14,7 @@ test_that("Tests surname only predictions", {
     year = 2010,
     surname.only = TRUE))
   # Test and confirm prediction output is as expected
-  expect_equal(dim(x), c(10, 20))
+  expect_equal(dim(x), c(10, 21))
   expect_equal(sum(is.na(x)), 0)
   expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.045, tolerance = 0.01)
   expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0272, tolerance = 0.01)
@@ -33,7 +33,7 @@ test_that("Test BISG NJ at county level", {
     ))
 
   expect_equal(as.character(x$VoterID), as.character(c(1, 2, 4, 5, 6, 8, 9)))
-  expect_equal(dim(x), c(7, 20))
+  expect_equal(dim(x), c(7, 21))
   expect_equal(sum(is.na(x)), 0L)
   expect_equal(sum(x$surname == "Johnson"), 0)
   expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0314, tolerance = 0.01)
@@ -82,7 +82,7 @@ test_that("BISG NJ at block level", {
     use.counties = TRUE)
   )
   
-  expect_equal(dim(x), c(7, 20))
+  expect_equal(dim(x), c(7, 21))
   expect_equal(sum(is.na(x$pred.asi)), 0L)
   expect_true(!any(duplicated(x$surname)))
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7640, tolerance = 0.01)
@@ -108,7 +108,7 @@ test_that("BISG NJ at block_group level", {
     use.counties = TRUE)
   )
   
-  expect_equal(dim(x), c(7, 21))
+  expect_equal(dim(x), c(7, 22))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9183, tolerance = 0.01)
@@ -156,7 +156,7 @@ test_that("Handles zero-pop. geolocations", {
     census.data = census, 
     use.counties = TRUE)
   )
-  expect_equal(dim(x), c(7, 20))
+  expect_equal(dim(x), c(7, 21))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
   expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
