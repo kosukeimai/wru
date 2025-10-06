@@ -1,31 +1,15 @@
 #' Preflight census data
 #' 
-#' @param census.data See documentation in \code{race_predict}.
-#' @param census.geo See documentation in \code{race_predict}.
-#' @param year See documentation in \code{race_predict}.
+#' @inheritParams predict_race
 #' @keywords internal
 
 census_data_preflight <- function(census.data, census.geo, year) {
-  
-  if (year != "2020"){
-    vars_ <- c(
-      pop_white = 'P005003', pop_black = 'P005004',
-      pop_aian = 'P005005', pop_asian = 'P005006',
-      pop_nhpi = 'P005007', pop_other = 'P005008', 
-      pop_two = 'P005009', pop_hisp = 'P005010'
-    )
-  } else {
-    vars_ <- c(
-      pop_white = 'P2_005N', pop_black = 'P2_006N',
-      pop_aian = 'P2_007N', pop_asian = 'P2_008N', 
-      pop_nhpi = 'P2_009N', pop_other = 'P2_010N', 
-      pop_two = 'P2_011N', pop_hisp = 'P2_002N'
-    )
-  }
+  vars_ <- unlist(census_geo_api_names(year = year))
+  legacy_vars <- unlist(census_geo_api_names_legacy(year = year))
   
   test <- lapply(census.data, function(x) {
     nms_to_test <- names(x[[census.geo]])
-    all(vars_ %in% nms_to_test)
+    all(vars_ %in% nms_to_test) || all(legacy_vars %in% nms_to_test)
   }) 
   missings <- names(test)[!unlist(test)]
   

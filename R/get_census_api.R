@@ -5,10 +5,9 @@
 #' This function obtains U.S. Census data via the public API. User
 #' can specify the variables and region(s) for which to obtain data.
 #'
+#' @inheritParams get_census_data
 #' @param data_url URL root of the API,
 #'  e.g., \code{"https://api.census.gov/data/2020/dec/pl"}.
-#' @param key A required character object containing user's Census API key,
-#'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param var.names A character vector of variables to get,
 #'  e.g., \code{c("P2_005N", "P2_006N", "P2_007N", "P2_008N")}.
 #'  If there are more than 50 variables, then function will automatically
@@ -23,7 +22,7 @@
 #' @examples
 #' \dontrun{
 #' get_census_api(
-#'   data_url = "https://api.census.gov/data/2020/dec/pl", key = "...",
+#'   data_url = "https://api.census.gov/data/2020/dec/pl",
 #'   var.names = c("P2_005N", "P2_006N", "P2_007N", "P2_008N"), region = "for=county:*&in=state:34"
 #' )
 #' }
@@ -33,7 +32,13 @@
 #' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @keywords internal
-get_census_api <- function(data_url, key, var.names, region, retry = 0) {
+get_census_api <- function(
+    data_url,
+    key = Sys.getenv("CENSUS_API_KEY"),
+    var.names,
+    region,
+    retry = 0
+) {
   if (length(var.names) > 50) {
     var.names <- vec_to_chunk(var.names) # Split variables into a list
     get <- lapply(var.names, function(x) paste(x, sep = "", collapse = ","))

@@ -6,10 +6,9 @@
 #' It is used by the \code{get_census_api} function. The user should not need to call this 
 #' function directly.
 #'
+#' @inheritParams get_census_data
 #' @param data_url URL root of the API,
 #'  e.g., \code{"https://api.census.gov/data/2020/dec/pl"}.
-#' @param key A required character object containing user's Census API key, 
-#'  which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.
 #' @param get A character vector of variables to get, 
 #'  e.g., \code{c("P2_005N", "P2_006N", "P2_007N", "P2_008N")}.
 #'  If there are more than 50 variables, then function will automatically 
@@ -22,7 +21,7 @@
 #'  If unsuccessful, function prints the URL query that was constructed.
 #'
 #' @examples
-#' \dontrun{try(get_census_api_2(data_url = "https://api.census.gov/data/2020/dec/pl", key = "...", 
+#' \dontrun{try(get_census_api_2(data_url = "https://api.census.gov/data/2020/dec/pl",
 #' get = c("P2_005N", "P2_006N", "P2_007N", "P2_008N"), region = "for=county:*&in=state:34"))}
 #' 
 #' @references
@@ -30,7 +29,13 @@
 #' \href{https://rstudio-pubs-static.s3.amazonaws.com/19337_2e7f827190514c569ea136db788ce850.html}{here}.
 #'
 #' @keywords internal
-get_census_api_2 <- function(data_url, key, get, region, retry = 3){
+get_census_api_2 <- function(
+    data_url,
+    key = Sys.getenv("CENSUS_API_KEY"),
+    get,
+    region,
+    retry = 3
+){
   if(length(get) > 1) {
     get <- paste(get, collapse=',', sep='')
   }

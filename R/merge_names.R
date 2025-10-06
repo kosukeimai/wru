@@ -433,3 +433,20 @@ merge_names <- function(
   df[, cols, drop = FALSE]
 }
 
+#' Preflight for name data
+#'
+#' Checks if namedata is available in the current working directory, if not
+#' downloads it from github using piggyback. By default, wru will download the
+#' data to a temporary directory that lasts as long as your session does.
+#' However, you may wish to set the \code{wru_data_wd} option to save the 
+#' downloaded data to your current working directory for more permanence. 
+#'
+#' @importFrom piggyback pb_download
+wru_data_preflight <- function() {
+  dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
+  tryCatch(
+    # Oddity of conditions for .token. Ignores token if is ""
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = "v2.0.0"), 
+    error = function(e) message("There was an error retrieving data: ", e$message)
+  )
+}

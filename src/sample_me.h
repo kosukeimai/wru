@@ -1,7 +1,6 @@
 #ifndef _HWRUME
 #define _HWRUME
 
-// [[Rcpp::plugins(cpp11)]]
 #include <RcppArmadillo.h>
 #include "aux_funs.h"
 

@@ -10,6 +10,6 @@ wru_data_preflight()
 Checks if namedata is available in the current working directory, if not
 downloads it from github using piggyback. By default, wru will download the
 data to a temporary directory that lasts as long as your session does.
-However, you may wish to set the \code{wru_data_wd} option to save the 
+However, you may wish to set the \code{wru_data_wd} option to save the
 downloaded data to your current working directory for more permanence.
 }

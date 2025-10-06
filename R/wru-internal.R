@@ -1,7 +1,10 @@
-.onAttach <- 
-function(libname, pkgname) {
-  packageStartupMessage("\nPlease cite as: \n")
-  packageStartupMessage("Khanna K, Bertelsen B, Olivella S, Rosenman E, Imai K (2022). wru: Who are You?")
-  packageStartupMessage("Bayesian Prediction of Racial Category Using Surname, First Name, Middle Name, and Geolocation.")
-  packageStartupMessage("URL: https://CRAN.R-project.org/package=wru \n")
+.onAttach <- function(libname, pkgname) {
+  packageStartupMessage(
+    "\n",
+    "Please cite as:", "\n\n",
+    format(utils::citation("wru"), style = "text"), "\n\n",
+    "Note that wru 2.0.0 uses 2020 census data by default.", "\n",
+    'Use the argument `year = "2010"`, to replicate analyses produced with earlier package versions.',
+    "\n"
+  )
 }

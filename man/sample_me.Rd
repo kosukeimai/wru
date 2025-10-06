@@ -26,15 +26,17 @@ sample_me(
 
 \item{first_name}{See last_name}
 
+\item{mid_name}{See last_name}
+
 \item{geo}{Integer vector of geographic units for each record. Must match column number in N_rg}
 
 \item{N_rg}{Integer matrix of race | geography counts in census (geograpgies in columns).}
 
 \item{pi_s}{Numeric matrix of race | surname prior probabilities.}
 
-\item{pi_f}{Same as `pi_s`, but for first names.}
+\item{pi_f}{Same as \code{pi_s}, but for first names.}
 
-\item{pi_m}{Same as `pi_s`, but for middle names.}
+\item{pi_m}{Same as \code{pi_s}, but for middle names.}
 
 \item{pi_nr}{Matrix of marginal probability distribution over missing names; non-keyword names default to this distribution.}
 
@@ -47,18 +49,6 @@ sample_me(
 \item{race_init}{Integer vector of initial race assignments}
 
 \item{verbose}{Boolean; should informative messages be printed?}
-
-\item{middle_name}{See last_name}
-
-\item{M_rs}{Integer matrix of race | surname counts in dictionary (surnames in columns).}
-
-\item{M_rf}{Same as `M_rs`, but for first names (can be empty matrix for surname only models).}
-
-\item{M_rm}{Same as `M_rs`, but for middle names (can be empty matrix for surname, or surname and first name only models).}
-
-\item{alpha}{Numeric matrix of race | geography prior probabilities.}
-
-\item{me_race}{Boolean; should measurement error in race | geography be corrected?}
 }
 \description{
 Collapsed Gibbs sampler for hWRU. Internal function

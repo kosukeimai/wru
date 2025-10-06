@@ -5,7 +5,7 @@
 \title{Census helper function.}
 \usage{
 census_helper(
-  key,
+  key = Sys.getenv("CENSUS_API_KEY"),
   voter.file,
   states = "all",
   geo = "tract",
@@ -18,8 +18,12 @@ census_helper(
 )
 }
 \arguments{
-\item{key}{A required character object. Must contain user's Census API
-key, which can be requested \href{https://api.census.gov/data/key_signup.html}{here}.}
+\item{key}{A character string containing a valid Census API key,
+which can be requested from the
+\href{https://api.census.gov/data/key_signup.html}{U.S. Census API key signup page}.
+
+By default, attempts to find a census key stored in an
+\link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
 \item{voter.file}{An object of class \code{data.frame}. Must contain field(s) named
 \code{\var{county}}, \code{\var{tract}}, \code{\var{block}}, and/or \code{\var{place}}
@@ -68,8 +72,8 @@ If \code{\var{census.data}} is missing, Census geographic data will be obtained 
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
- consist of the original user-input data with additional columns of
- Census data.
+consist of the original user-input data with additional columns of
+Census data.
 }
 \description{
 \code{census_helper} links user-input dataset with Census geographic data.
@@ -85,17 +89,17 @@ Pr(Geolocation | Race) where geolocation is county, tract, block, or place.
 data(voters)
 }
 \dontrun{
-census_helper(key = "...", voter.file = voters, states = "nj", geo = "block")
+census_helper(voter.file = voters, states = "nj", geo = "block")
 }
 \dontrun{
 census_helper(
-  key = "...", voter.file = voters, states = "all", geo = "tract",
+  voter.file = voters, states = "all", geo = "tract",
   age = TRUE, sex = TRUE
 )
 }
 \dontrun{
 census_helper(
-  key = "...", voter.file = voters, states = "all", geo = "county",
+  voter.file = voters, states = "all", geo = "county",
   age = FALSE, sex = FALSE, year = "2020"
 )
 }
