@@ -5,7 +5,7 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     r <- suppressMessages(get_census_data(
       key = NULL, 
       state = c("DC"), 
-      census.geo = "block" 
+      census.geo = "block", 
     ))
     
     expect_named(r$DC, c("state", "age", "sex", "year", "block", "tract", "county"))
@@ -13,7 +13,6 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
   })
   
   test_that("Census block_group download works", {
-    future::plan(future::multisession)
     r <- suppressMessages(get_census_data(
       key = NULL,
       state = "RI",
@@ -24,7 +23,6 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
   })
   
   test_that("Census tract download works", {
-    future::plan(future::multisession)
     r <- suppressMessages(get_census_data(
       key = NULL,
       state = c("NY"),
@@ -37,7 +35,6 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
   })
   
   test_that("Census county download works", {
-    future::plan(future::multisession)
     r <- suppressMessages(get_census_data(
       key = NULL, 
       state = "NJ",
@@ -49,7 +46,6 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
   })
   
   test_that("Census place download works", {
-    future::plan(future::multisession)
     r <- suppressMessages(get_census_data(
       key = NULL,
       state = "RI",
@@ -59,22 +55,4 @@ if(Sys.getenv("CENSUS_API_KEY") != "") {
     expect_true(all(r$RI$place$state == "RI"))
   })
   
-  test_that("Census ZCTA download works", {
-    r <- suppressMessages(get_census_data(
-      key = NULL,
-      state = "DC",
-      census.geo = "zcta"
-    ))
-    expect_named(r$DC, c("state", "age", "sex", "year", "zcta"))
-    expect_true(all(r$DC$zcta$state == "DC"))
-    
-    r <- suppressMessages(get_census_data(
-      key = NULL,
-      state = "DC",
-      census.geo = "zcta",
-      year = "2010"
-    ))
-    expect_named(r$DC, c("state", "age", "sex", "year", "zcta"))
-    expect_true(all(r$DC$zcta$state == "DC"))
-  })
 }

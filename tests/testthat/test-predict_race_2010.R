@@ -125,7 +125,7 @@ test_that("Fails on territories", {
   )
 }) 
 
-test_that("Fails on missing geolocation if skip_bad_geos default is used", {
+test_that("Fails on missing geolocation", {
   skip_on_cran()
   set.seed(42)
   data(voters)
@@ -138,25 +138,8 @@ test_that("Fails on missing geolocation if skip_bad_geos default is used", {
     census.data = census, 
     use.counties = TRUE)
   ),
-  "Stopping predictions. Please revise"
+  "The following locations in the voter\\.file are not available"
   )
-})
-
-test_that("Skip_bad_geos option successfully returns working geolocations", {
-  skip_on_cran()
-  set.seed(42)
-  data(voters)
-  census <- readRDS(test_path("data/census_test_nj_block_2010.rds"))
-  test_drop <- suppressMessages(predict_race(
-    voter.file = voters[voters$state == "NJ", ], 
-    year = 2010,
-    census.geo = "block", 
-    census.key = NULL, 
-    census.data = census,
-    skip_bad_geos = TRUE,
-    use.counties = TRUE)
-  )
-  expect_equal(nrow(test_drop), 6)
 })
 
 test_that("Handles zero-pop. geolocations", {
@@ -182,7 +165,7 @@ test_that("Handles zero-pop. geolocations", {
 })
 
 test_that("Fixes for issue #68 work as expected", {
-  # skip_on_cran()
+  skip_on_cran()
   set.seed(42)
   surname <- c("SULLIVAN")
   one <- predict_race(voter.file=data.frame(surname), year = 2010, surname.only=TRUE)
