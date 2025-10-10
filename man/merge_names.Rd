@@ -12,89 +12,38 @@ merge_names(
   table.first = NULL,
   table.middle = NULL,
   clean.names = TRUE,
+  return.unmatched = TRUE,
   impute.missing = FALSE,
   model = "BISG"
 )
 }
 \arguments{
-\item{voter.file}{An object of class \code{data.frame}.  Must contain a row for each individual being predicted,
-as well as a field named \code{\var{last}} containing each individual's surname.
-If first name is also being used for prediction, the file must also contain a field
-named \code{\var{first}}. If middle name is also being used for prediction, the field
-must also contain a field named \code{\var{middle}}.}
+\item{voter.file}{data.frame with at least a \code{surname} column; \code{first} and \code{middle} if used}
 
-\item{namesToUse}{A character vector identifying which names to use for the prediction.
-The default value is \code{"last"}, indicating that only the last name will be used.
-Other options are \code{"last, first"}, indicating that both last and first names will be
-used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
-be used.}
+\item{namesToUse}{"surname", "surname, first", or "surname, first, middle"}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-Default is \code{TRUE}.}
+\item{census.surname}{logical; if TRUE, use Census/Spanish surname list}
 
-\item{table.surnames}{An object of class \code{data.frame} provided by the
-users as an alternative surname dictionary. It will consist of a list of
-U.S. surnames, along with the associated probabilities P(name | ethnicity)
-for ethnicities: white, Black, Hispanic, Asian, and other. Default is \code{NULL}.
-(\code{\var{last_name}} for U.S. surnames, \code{\var{p_whi_last}} for White,
-\code{\var{p_bla_last}} for Black, \code{\var{p_his_last}} for Hispanic,
-\code{\var{p_asi_last}} for Asian, \code{\var{p_oth_last}} for other).}
+\item{table.surnames}{Optional custom last-name dictionary (schema like shipped RDS)}
 
-\item{table.first}{See \code{\var{table.surnames}}.}
+\item{table.first}{Optional custom first-name dictionary}
 
-\item{table.middle}{See \code{\var{table.surnames}}.}
+\item{table.middle}{Optional custom middle-name dictionary}
 
-\item{clean.names}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-any surnames in \code{\var{voter.file}} that cannot initially be matched
-to the database will be cleaned, according to U.S. Census specifications,
-in order to increase the chance of finding a match. Default is \code{TRUE}.}
+\item{clean.names}{logical; try cleaning/fallback passes}
 
-\item{impute.missing}{See \code{predict_race}.}
+\item{return.unmatched}{logical; add *_matched boolean columns}
 
-\item{model}{See \code{predict_race}.}
+\item{impute.missing}{logical; impute c_* NA with column means (else 1)}
+
+\item{model}{kept for API parity}
 }
 \value{
-Output will be an object of class \code{data.frame}. It will
-consist of the original user-input data with additional columns that
-specify the part of the name matched with Census data (\code{\var{surname.match}}),
-and the probabilities Pr(Race | Surname) for each racial group
-(\code{\var{p_whi}} for White, \code{\var{p_bla}} for Black,
-\code{\var{p_his}} for Hispanic/Latino,
-\code{\var{p_asi}} for Asian and Pacific Islander, and
-\code{\var{p_oth}} for Other/Mixed).
+data.frame with probabilities (and flags if requested)
 }
 \description{
 \code{merge_names} merges names in a user-input dataset with corresponding
 race/ethnicity probabilities derived from both the U.S. Census Surname List
 and Spanish Surname List and voter files from states in the Southern U.S.
-}
-\details{
-This function allows users to match names in their dataset with database entries
-estimating P(name | ethnicity) for each of the five major racial groups for each
-name. The database probabilities are derived from both the U.S. Census Surname List
-and Spanish Surname List and voter files from states in the Southern U.S.
-
-By default, the function matches names as follows:
-\enumerate{
-\item Search raw surnames in the database;
-\item Remove any punctuation and search again;
-\item Remove any spaces and search again;
-\item Remove suffixes (e.g., "Jr") and search again (last names only)
-\item Split double-barreled names into two parts and search first part of name;
-\item Split double-barreled names into two parts and search second part of name;
-}
-
-Each step only applies to names not matched in a previous step.
-Steps 2 through 6 are not applied if \code{clean.surname} is FALSE.
-
-Note: Any name appearing only on the Spanish Surname List is assigned a
-probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
-}
-\examples{
-data(voters)
-\dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
 }
 \keyword{internal}

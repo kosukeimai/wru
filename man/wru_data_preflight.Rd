@@ -2,14 +2,14 @@
 % Please edit documentation in R/merge_names.R
 \name{wru_data_preflight}
 \alias{wru_data_preflight}
-\title{Preflight for name data}
+\title{Preflight for name data (persistent, pinned, and verified)
+Downloads 4 name dictionaries to a persistent directory if missing.
+Set options(wru_data_wd = TRUE) to cache in getwd(); otherwise uses tempdir().}
 \usage{
 wru_data_preflight()
 }
 \description{
-Checks if namedata is available in the current working directory, if not
-downloads it from github using piggyback. By default, wru will download the
-data to a temporary directory that lasts as long as your session does.
-However, you may wish to set the \code{wru_data_wd} option to save the
-downloaded data to your current working directory for more permanence.
+Preflight for name data (persistent, pinned, and verified)
+Downloads 4 name dictionaries to a persistent directory if missing.
+Set options(wru_data_wd = TRUE) to cache in getwd(); otherwise uses tempdir().
 }

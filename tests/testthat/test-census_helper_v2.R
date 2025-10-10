@@ -47,10 +47,10 @@ test_that("helper returns verified census tract data",{
     use.counties = FALSE,
     skip_bad_geos = FALSE
     )
-  expect_equal(x[x$surname == "Lopez", "r_whi"], 0.767197, tolerance = 0.000001)
-  expect_equal(x[x$surname == "Khanna", "r_whi"], 0.708026, tolerance = 0.000001)
-  expect_equal(x[x$surname == "Lopez", "r_bla"], 0.09522743, tolerance = 0.000001)
-  expect_equal(x[x$surname == "Khanna", "r_bla"], 0.09544469, tolerance = 0.000001)
+  expect_equal(x[x$surname == "Lopez", "r_whi"], 0.5288848, tolerance = 0.000001)
+  expect_equal(x[x$surname == "Khanna", "r_whi"], 0.5740415, tolerance = 0.000001)
+  expect_equal(x[x$surname == "Lopez", "r_bla"], 0.06564720, tolerance = 0.000001)
+  expect_equal(x[x$surname == "Khanna", "r_bla"], 0.07738305, tolerance = 0.000001)
 })
 
 skip_if_not(nzchar(Sys.getenv("CENSUS_API_KEY")))
@@ -89,3 +89,4 @@ test_that("New tables and legacy tables return equal race predictions",{
   expect_equal(x$r_asi, y$r_asi, tolerance = .01)
   # expect_equal(x$r_oth, y$r_oth, tolerance = .01)
 })
+

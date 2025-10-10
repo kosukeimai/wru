@@ -74,6 +74,8 @@
 #' Whatever the name of the party registration field in \code{\var{voter.file}},
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param return.unmatched Generates Boolean columns for each name reporting 
+#' whether a match was made. Default is set to \code{TRUE}.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
 #' @param skip_bad_geos Logical. Option to have the function skip any geolocations that are not present 
 #' in the census data, returning a partial data set. Default is set to \code{FALSE}, in which case it
@@ -152,6 +154,7 @@ predict_race <- function(
     year = "2020",
     party = NULL,
     retry = 3,
+    return.unmatched = TRUE,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
     use.counties = FALSE,
@@ -223,6 +226,7 @@ predict_race <- function(
                               surname.only=surname.only,
                               census.data = census.data,
                               retry = retry,
+                              return.unmatched = return.unmatched,
                               impute.missing = impute.missing,
                               skip_bad_geos = skip_bad_geos,
                               census.surname = census.surname,
@@ -253,6 +257,7 @@ predict_race <- function(
                                  surname.only=surname.only,
                                  census.data = census.data,
                                  retry = retry,
+                                 return.unmatched = TRUE,
                                  impute.missing = TRUE,
                                  skip_bad_geos = skip_bad_geos,
                                  census.surname = census.surname,

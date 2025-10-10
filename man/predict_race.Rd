@@ -16,6 +16,7 @@ predict_race(
   year = "2020",
   party = NULL,
   retry = 3,
+  return.unmatched = TRUE,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
   use.counties = FALSE,
@@ -104,6 +105,9 @@ Whatever the name of the party registration field in \code{\var{voter.file}},
 it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{return.unmatched}{Generates Boolean columns for each name reporting
+whether a match was made. Default is set to \code{TRUE}.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
