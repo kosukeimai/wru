@@ -57,7 +57,7 @@ predict_race_me(
   surname.only = FALSE,
   census.data = NULL,
   retry = 0,
-  return.missing = TRUE,
+  return_missing = TRUE,
   impute.missing = TRUE,
   census.surname = FALSE,
   use.counties = FALSE,

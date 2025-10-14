@@ -431,7 +431,7 @@ predict_race_new <- function(
   
   if(return.unmatched == TRUE) {
     return(data.frame(cbind(voter.file, preds)) |> 
-             dplyr::select(vars.orig, any_of(c("last", "first", "middle")), ends_with("_matched"), -starts_with("c_"),-ends_with(".match"), starts_with("pred.")))
+             dplyr::select(dplyr::all_of(vars.orig), dplyr::any_of(c("last", "first", "middle")), dplyr::ends_with("_matched"), -dplyr::starts_with("c_"),-dplyr::ends_with(".match"), dplyr::starts_with("pred.")))
   } else {
     return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
   }
@@ -457,6 +457,7 @@ predict_race_me <- function(
     surname.only = FALSE,
     census.data = NULL,
     retry = 0,
+    return_missing = TRUE,
     impute.missing = TRUE,
     census.surname = FALSE,
     use.counties = FALSE,
