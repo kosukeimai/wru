@@ -80,8 +80,19 @@
 #' will break and provide error message with a list of offending geolocations.
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
-#' @param model Character string, either "BISG" (default) or "fBISG" (for error-correction, 
-#' fully-Bayesian model).
+#' @param model Character string: "BISG" (default), "fBISG" (fully-Bayesian with
+#' error correction), or "eBISG" (embedding-supplemented BISG, which uses
+#' text embeddings to predict race probabilities for names not found
+#' in Census surname lists). The eBISG model requires Python with
+#' sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.
+#' @param ebisg.model Character string or list specifying which embedding model
+#' to use when \code{model = "eBISG"}. Built-in options are
+#' \code{"e5-large"} (default; \code{intfloat/multilingual-e5-large}, 1024-dim),
+#' \code{"jina-small"} (\code{jinaai/jina-embeddings-v2-small-en}, 512-dim), and
+#' \code{"gemma-300m"} (\code{google/gemma-2b}, 300M parameter variant).
+#' Alternatively, pass a named list with elements \code{transformer}
+#' (HuggingFace model ID), \code{dim} (embedding dimension), and
+#' \code{surname_mlp}, \code{firstname_mlp} (paths to custom .pt checkpoints).
 #' @param name.dictionaries Optional named list of \code{data.frame}'s 
 #' containing counts of names by race. Any of the following named elements 
 #' are allowed: "surname", "first", "middle". When present, the objects must 
@@ -159,18 +170,20 @@ predict_race <- function(
     race.init = NULL,
     name.dictionaries = NULL,
     names.to.use = "surname",
-    control = NULL
+    control = NULL,
+    ebisg.model = "e5-large"
 ) {
   
   message("Predicting race for ", year)
   
   ## Check model type
-  if (!(model %in% c("BISG", "fBISG"))) {
+  if (!(model %in% c("BISG", "fBISG", "eBISG"))) {
     stop(
       paste0(
         "'model' must be one of 'BISG' (for standard BISG results, or results",
-        " with all name data without error correction) or 'fBISG' (for the",
-        " fully Bayesian/error correction model that accommodates all name data)."
+        " with all name data without error correction), 'fBISG' (for the",
+        " fully Bayesian/error correction model that accommodates all name data),",
+        " or 'eBISG' (for embedding-supplemented BISG)."
       )
     )
   }
@@ -209,7 +222,28 @@ predict_race <- function(
     )
   }
   
-  if((model == "BISG") | (surname.only==TRUE)){
+  if (model == "eBISG") {
+    if ((surname.only == TRUE) && (model == "eBISG")) {
+      warning("eBISG surname-only mode: embedding predictions will be used for unmatched surnames.")
+    }
+    preds <- predict_race_embedding(
+      voter.file = voter.file,
+      names.to.use = names.to.use,
+      year = year,
+      age = age, sex = sex,
+      census.geo = census.geo,
+      census.key = census.key,
+      name.dictionaries = name.dictionaries,
+      surname.only = surname.only,
+      census.data = census.data,
+      retry = retry,
+      impute.missing = impute.missing,
+      skip_bad_geos = skip_bad_geos,
+      census.surname = census.surname,
+      use.counties = use.counties,
+      ebisg.model = ebisg.model
+    )
+  } else if((model == "BISG") | (surname.only==TRUE)){
     if((surname.only==TRUE) & (model == "fBISG")){
       warning("Surname-only model only available with model = BISG.")
     }
