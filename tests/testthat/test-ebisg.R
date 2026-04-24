@@ -11,8 +11,8 @@ test_that("map_6class_to_5class produces correct output", {
   result <- map_6class_to_5class(probs_6)
   expect_equal(ncol(result), 5)
   expect_equal(rowSums(result), 1, tolerance = 1e-6)
-  expect_equal(result[1, "c_whi"], 0.5)
-  expect_equal(result[1, "c_oth"], 0.10)  # aian + oth = 0.05 + 0.05
+  expect_equal(as.numeric(result[1, "c_whi"]), 0.5)
+  expect_equal(as.numeric(result[1, "c_oth"]), 0.10)  # aian + oth = 0.05 + 0.05
 })
 
 test_that("map_6class_to_5class handles multiple rows", {
