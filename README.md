@@ -121,6 +121,79 @@ predict_race(voter.file = voters, census.geo = "place", party = "PID")
            9 Wantchekon    NJ 12    021 004501  1025  50   0   Rep   2 60900 0.428723819 0.1209683869 2.796062e-01 0.10142953 0.069272098
           10      Morse    DC  0    001 001301  3005  29   1   Rep   2 50000 0.716211008 0.1899554127 1.867133e-02 0.01025241 0.064909839
 
+### Using surname embeddings (eBISG)
+
+About 10% of US voters have surnames that do not appear in the Census
+surname list. Standard BISG falls back on the national racial marginal
+for these names, which is uninformative. The `eBISG` model embeds each
+unmatched surname with a pre-trained sentence-transformer (E5-Large by
+default), then runs a small neural network trained on Census 2020 data
+to predict race-conditional probabilities for that specific name. For
+names that *are* in the Census list, predictions are identical to
+standard BISG.
+
+`eBISG` is opt-in. It depends on Python with `sentence-transformers` and
+`torch`; the first call additionally downloads about 17 MB of
+pre-trained MLP weights from the package’s GitHub release.
+
+Run this once per machine to set up the environment:
+
+``` r
+library(wru)
+setup_ebisg()
+# Installs sentence-transformers + torch into the 'r-ebisg' virtualenv
+# and downloads the MLP weight files.
+```
+
+Then call `predict_race()` with `model = "eBISG"`:
+
+``` r
+predict_race(voter.file = voters, surname.only = TRUE, model = "eBISG")
+```
+
+     VoterID    surname state CD county  tract block age sex party PID place    pred.whi    pred.bla     pred.his    pred.asi    pred.oth
+           1     Khanna    NJ 12    021 004000  3001  29   0   Ind   0 74000 0.045110474 0.003067623 0.0068522723 0.860411906 0.084557725
+           2       Imai    NJ 12    021 004501  1025  40   0   Dem   1 60900 0.052645440 0.001334812 0.0558160072 0.719376581 0.170827160
+           3     Rivera    NY 12    061 004800  6001  33   0   Rep   2 51000 0.043285692 0.008204605 0.9136195794 0.024316883 0.010573240
+           4    Fifield    NJ 12    021 004501  1025  27   0   Dem   1 60900 0.895405704 0.001911388 0.0337464844 0.011079323 0.057857101
+           5       Zhou    NJ 12    021 004501  1025  28   1   Dem   1 60900 0.006572555 0.001298962 0.0005388581 0.982365594 0.009224032
+           6   Ratkovic    NJ 12    021 004000  1025  35   0   Ind   0 60900 0.861236727 0.008212824 0.0095395642 0.011334635 0.109676251
+           7    Johnson    NY  9    061 014900  4000  25   0   Dem   1 51000 0.543815322 0.344128607 0.0272403940 0.007405765 0.077409913
+           8      Lopez    NJ 12    021 004501  1025  33   0   Rep   2 60900 0.038939877 0.004920643 0.9318797791 0.012154125 0.012105576
+           9 Wantchekon    NJ 12    021 004501  1025  50   0   Rep   2 60900 0.968991787 0.008741963 0.0141595571 0.004716009 0.003390685
+          10      Morse    DC  0    001 001301  3005  29   1   Rep   2 50000 0.866360147 0.044429853 0.0246568086 0.010219712 0.054333479
+
+Compare row 9 (`Wantchekon`) with the standard-BISG output above: under
+standard BISG, the absent surname falls back on the population marginal
+(~33% White, ~19% Black, ~40% Hispanic). Under eBISG, the embedding
+model produces a name-specific prediction.
+
+eBISG also composes with geolocation just like standard BISG:
+
+``` r
+predict_race(voter.file = voters, census.geo = "tract", model = "eBISG")
+```
+
+To use a different sentence-transformer (for example, one of the newer
+top entries on the [MTEB
+leaderboard](https://huggingface.co/spaces/mteb/leaderboard)), pass a
+list to `ebisg.model` with the HuggingFace model ID and a path to a
+matching MLP checkpoint trained against that encoder:
+
+``` r
+predict_race(
+  voter.file = voters, surname.only = TRUE, model = "eBISG",
+  ebisg.model = list(
+    transformer  = "your-org/your-encoder",
+    dim          = 768L,
+    surname_mlp  = "/path/to/your-surname-mlp.pt"
+  )
+)
+```
+
+For methodological details, see Dasanaike and Imai (2026),
+“Embedding-Supplemented Bayesian Improved Surname Geocoding.”
+
 ### Downloading census data
 
 It is also possible to pre-download Census geographic data, which can
