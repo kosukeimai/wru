@@ -728,11 +728,23 @@ predict_race_embedding <- function(
     skip_bad_geos = FALSE,
     census.surname = FALSE,
     use.counties = FALSE,
-    ebisg.model = "e5-large"
+    ebisg.model = "intfloat/multilingual-e5-large"
 ) {
 
   # Resolve the embedding model configuration
   cfg <- resolve_ebisg_model(ebisg.model)
+
+  # eBISG always provides per-name predictions for unmatched surnames via the
+  # MLP, so the caller's impute.missing setting is moot for the surname step.
+  # Warn if the user explicitly asked for FALSE so they understand what's
+  # happening.
+  if (!isTRUE(impute.missing)) {
+    warning(
+      "impute.missing = FALSE is overridden under model = 'eBISG': ",
+      "the embedding model provides per-name predictions for unmatched ",
+      "surnames, so no rows are left with NA name probabilities."
+    )
+  }
 
   # Check years
   if (!(year %in% c("2000", "2010", "2020"))) {
@@ -771,12 +783,12 @@ predict_race_embedding <- function(
 
   path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
 
-  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
-  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
+  first_c <- readRDS(file.path(path, "wru-data-first_c.rds"))
+  mid_c <- readRDS(file.path(path, "wru-data-mid_c.rds"))
   if (census.surname) {
-    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
+    last_c <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
   } else {
-    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
+    last_c <- readRDS(file.path(path, "wru-data-last_c.rds"))
   }
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
@@ -853,9 +865,9 @@ predict_race_embedding <- function(
 
   ## Load the surname dictionary to identify which names were actually matched
   if (census.surname) {
-    last_dict <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
+    last_dict <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
   } else {
-    last_dict <- readRDS(paste0(path, "/wru-data-last_c.rds"))
+    last_dict <- readRDS(file.path(path, "wru-data-last_c.rds"))
   }
   known_surnames <- toupper(last_dict[[1]])  # first column is the name
 
@@ -917,7 +929,7 @@ predict_race_embedding <- function(
   ## rows are unmatched, but the text we embed comes from the original
   ## first-name column.
   if (grepl("first", names.to.use) && !is.null(cfg$firstname_mlp)) {
-    first_dict <- readRDS(paste0(path, "/wru-data-first_c.rds"))
+    first_dict <- readRDS(file.path(path, "wru-data-first_c.rds"))
     known_firstnames    <- toupper(first_dict[[1]])
     cleaned_firstnames  <- toupper(voter.file$firstname.match)
     original_firstnames <- toupper(as.character(voter.file$first))

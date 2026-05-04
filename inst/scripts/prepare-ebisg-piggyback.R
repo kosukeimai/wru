@@ -3,14 +3,18 @@
 ##
 ## Prerequisites:
 ##   - GITHUB_PAT environment variable set with write access to kosukeimai/wru
-##   - The three .pt checkpoint files in DATA_DIR
+##   - The three .pt checkpoint files in DATA_DIR (passed as first arg)
 ##
 ## Usage:
-##   Rscript inst/scripts/prepare-ebisg-piggyback.R
+##   Rscript inst/scripts/prepare-ebisg-piggyback.R <path/to/checkpoints>
+##
+## Example:
+##   Rscript inst/scripts/prepare-ebisg-piggyback.R ./checkpoints
 
 library(piggyback)
 
-DATA_DIR <- "C:/Users/Noah/Desktop/Papers/surname_embeddings/data/2020"
+args <- commandArgs(trailingOnly = TRUE)
+DATA_DIR <- if (length(args) >= 1) args[1] else getwd()
 
 # Create the release tag if it doesn't exist
 tryCatch(

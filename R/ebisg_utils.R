@@ -7,37 +7,55 @@
 #' @name ebisg
 NULL
 
-# Package-level environment for caching Python objects
+# Package-level environment for caching loaded Python objects within a single
+# R session. This caches the *loaded* SentenceTransformer / NameMLP objects in
+# RAM to avoid re-deserializing them on every predict_race() call.
+#
+# The underlying weight files persist on disk:
+#   - MLP .pt files: downloaded once via piggyback to tempdir() (or to getwd()
+#     if options(wru_data_wd = TRUE)); re-downloads only if absent.
+#   - E5-Large tensors: cached by sentence_transformers under
+#     ~/.cache/huggingface/hub/.
+#
+# So no network round-trips happen between sessions. To force a reload of an
+# updated .pt within a session, restart R or `rm(list=ls(.ebisg_env))`.
 .ebisg_env <- new.env(parent = emptyenv())
 
 #' Registry of built-in embedding models for eBISG
 #'
 #' Each entry specifies the HuggingFace transformer model, its embedding
-#' dimension, and the corresponding MLP checkpoint filenames.
+#' dimension, and the corresponding MLP checkpoint filenames distributed
+#' via piggyback. Users wanting to plug in a different sentence-transformer
+#' (e.g., one of the newer top entries on
+#' \href{https://huggingface.co/spaces/mteb/leaderboard}{MTEB}) can bypass
+#' this registry by passing a list directly to \code{ebisg.model} with their
+#' own \code{transformer}, \code{dim}, and \code{surname_mlp} (path to a local
+#' .pt checkpoint). See \code{resolve_ebisg_model()} for the schema.
 #' @keywords internal
 ebisg_model_registry <- list(
-  "e5-large" = list(
+  "intfloat/multilingual-e5-large" = list(
     transformer = "intfloat/multilingual-e5-large",
     dim = 1024L,
     surname_mlp = "ebisg-surname-mlp.pt",
     firstname_mlp = "ebisg-firstname-mlp.pt",
     fullname_mlp = "ebisg-fullname-mlp.pt",
-    tag = "v2.0.0"
+    tag = "ebisg-v1.0"
   )
 )
 
 
 #' Resolve an ebisg.model argument into a config list
 #'
-#' @param ebisg.model A character string naming a built-in model (e.g.,
-#'   \code{"e5-large"}) or a named list with elements \code{transformer},
-#'   \code{dim}, \code{surname_mlp}, and optionally \code{firstname_mlp}.
+#' @param ebisg.model A character string giving the HuggingFace model ID
+#'   of a built-in model (e.g., \code{"intfloat/multilingual-e5-large"}),
+#'   or a named list with elements \code{transformer}, \code{dim},
+#'   \code{surname_mlp}, and optionally \code{firstname_mlp}.
 #' @return A list with elements \code{transformer}, \code{dim},
 #'   \code{surname_mlp}, \code{firstname_mlp}, \code{fullname_mlp}, \code{tag}.
 #' @keywords internal
 resolve_ebisg_model <- function(ebisg.model) {
   if (is.character(ebisg.model)) {
-    ebisg.model <- tolower(ebisg.model)
+    # Don't lowercase: HuggingFace model IDs are case-sensitive in the org part.
     if (!(ebisg.model %in% names(ebisg_model_registry))) {
       stop(
         "Unknown ebisg.model '", ebisg.model, "'. ",
@@ -76,10 +94,11 @@ resolve_ebisg_model <- function(ebisg.model) {
 #' @param envname Name of the Python virtual environment to use. Defaults to
 #'   \code{"r-ebisg"}.
 #' @param ebisg.model Which embedding model to set up. Defaults to
-#'   \code{"e5-large"}.
+#'   \code{"intfloat/multilingual-e5-large"}.
 #'
 #' @export
-setup_ebisg <- function(envname = "r-ebisg", ebisg.model = "e5-large") {
+setup_ebisg <- function(envname = "r-ebisg",
+                        ebisg.model = "intfloat/multilingual-e5-large") {
   if (!requireNamespace("reticulate", quietly = TRUE)) {
     stop(
       "The 'reticulate' package is required for eBISG. ",
@@ -87,12 +106,15 @@ setup_ebisg <- function(envname = "r-ebisg", ebisg.model = "e5-large") {
     )
   }
   cfg <- resolve_ebisg_model(ebisg.model)
-  message("Installing Python packages for eBISG...")
+  message("Installing Python packages into virtualenv '", envname, "'...")
   reticulate::py_install(
     c("sentence-transformers", "torch"),
     pip = TRUE,
     envname = envname
   )
+  # Wire the freshly-set-up env into this R session so subsequent
+  # py_module_available() / py$ lookups hit the right interpreter.
+  reticulate::use_virtualenv(envname, required = TRUE)
   message("Downloading eBISG model weights...")
   ebisg_data_preflight(cfg)
   message(
@@ -176,6 +198,13 @@ ebisg_data_preflight <- function(cfg) {
 
 
 #' Load the Python eBISG helper module
+#'
+#' Imports `inst/python/ebisg_helper.py` as a private module via
+#' `reticulate::import_from_path()` and caches the module object on
+#' `.ebisg_env`. Using `import_from_path` keeps the helper's symbols
+#' encapsulated rather than dumping them into Python's global namespace
+#' as `source_python` would.
+#'
 #' @keywords internal
 get_ebisg_module <- function() {
   if (is.null(.ebisg_env$module)) {
@@ -183,9 +212,11 @@ get_ebisg_module <- function() {
     if (helper_path == "") {
       stop("Cannot find inst/python/ebisg_helper.py in the wru package.")
     }
-    reticulate::source_python(file.path(helper_path, "ebisg_helper.py"))
-    .ebisg_env$module <- TRUE
+    .ebisg_env$module <- reticulate::import_from_path(
+      "ebisg_helper", path = helper_path
+    )
   }
+  .ebisg_env$module
 }
 
 
@@ -199,8 +230,8 @@ get_ebisg_module <- function() {
 #' @keywords internal
 ebisg_embed_names <- function(names, transformer = "intfloat/multilingual-e5-large",
                               cache_dir = NULL) {
-  get_ebisg_module()
-  embeddings <- reticulate::py$embed_names(
+  mod <- get_ebisg_module()
+  embeddings <- mod$embed_names(
     as.list(names),
     model_name = transformer,
     cache_dir = cache_dir
@@ -217,40 +248,42 @@ ebisg_embed_names <- function(names, transformer = "intfloat/multilingual-e5-lar
 #'   (whi, bla, his, asi, aian, oth).
 #' @keywords internal
 ebisg_predict_mlp <- function(embeddings, model_path) {
-  get_ebisg_module()
+  mod <- get_ebisg_module()
 
   # Cache loaded models by path
   if (is.null(.ebisg_env$models)) {
     .ebisg_env$models <- list()
   }
   if (is.null(.ebisg_env$models[[model_path]])) {
-    result <- reticulate::py$load_mlp(model_path)
+    result <- mod$load_mlp(model_path)
     .ebisg_env$models[[model_path]] <- result[[1]]
   }
 
   model <- .ebisg_env$models[[model_path]]
-  probs <- reticulate::py$predict_mlp(embeddings, model)
-  as.matrix(probs)
+  probs <- as.matrix(mod$predict_mlp(embeddings, model))
+  # Source of truth for column ordering lives in Python (EBISG_RACE_COLS).
+  colnames(probs) <- as.character(mod$EBISG_RACE_COLS)
+  probs
 }
 
 
 #' Map 6-class eBISG output to wru's 5-class system
 #'
 #' The MLP outputs probabilities for 6 categories:
-#' (white, black, hispanic, asian, aian, other).
-#' wru uses 5 categories: (whi, bla, his, asi, oth).
-#' This function sums aian and other into oth.
+#' (whi, bla, his, asi, aian, oth) -- see \code{EBISG_RACE_COLS} in the
+#' Python helper. wru uses 5 categories: (whi, bla, his, asi, oth).
+#' This function sums \code{aian} and \code{oth} into \code{oth}.
 #'
-#' @param probs_6 A matrix with 6 columns.
+#' @param probs_6 A matrix with 6 columns named whi, bla, his, asi, aian, oth.
 #' @return A matrix with 5 columns named c_whi, c_bla, c_his, c_asi, c_oth.
 #' @keywords internal
 map_6class_to_5class <- function(probs_6) {
   out <- cbind(
-    probs_6[, 1],  # whi
-    probs_6[, 2],  # bla
-    probs_6[, 3],  # his
-    probs_6[, 4],  # asi
-    probs_6[, 5] + probs_6[, 6]  # aian + oth -> oth
+    probs_6[, "whi"],
+    probs_6[, "bla"],
+    probs_6[, "his"],
+    probs_6[, "asi"],
+    probs_6[, "aian"] + probs_6[, "oth"]
   )
   colnames(out) <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
   out

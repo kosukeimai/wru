@@ -85,14 +85,14 @@
 #' text embeddings to predict race probabilities for names not found
 #' in Census surname lists). The eBISG model requires Python with
 #' sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.
-#' @param ebisg.model Character string or list specifying which embedding model
-#' to use when \code{model = "eBISG"}. Built-in options are
-#' \code{"e5-large"} (default; \code{intfloat/multilingual-e5-large}, 1024-dim),
-#' \code{"jina-small"} (\code{jinaai/jina-embeddings-v2-small-en}, 512-dim), and
-#' \code{"gemma-300m"} (\code{google/gemma-2b}, 300M parameter variant).
-#' Alternatively, pass a named list with elements \code{transformer}
-#' (HuggingFace model ID), \code{dim} (embedding dimension), and
-#' \code{surname_mlp}, \code{firstname_mlp} (paths to custom .pt checkpoints).
+#' @param ebisg.model Character string (HuggingFace model ID) or named list
+#' specifying which embedding model to use when \code{model = "eBISG"}.
+#' The only built-in option is \code{"intfloat/multilingual-e5-large"}
+#' (default; 1024-dim), which is keyed by its full HuggingFace ID for
+#' consistency with the Python side. To use a different sentence-transformer,
+#' pass a named list with elements \code{transformer} (HuggingFace model ID),
+#' \code{dim} (embedding dimension), and \code{surname_mlp},
+#' \code{firstname_mlp} (paths to custom .pt checkpoints).
 #' @param name.dictionaries Optional named list of \code{data.frame}'s 
 #' containing counts of names by race. Any of the following named elements 
 #' are allowed: "surname", "first", "middle". When present, the objects must 
@@ -171,7 +171,7 @@ predict_race <- function(
     name.dictionaries = NULL,
     names.to.use = "surname",
     control = NULL,
-    ebisg.model = "e5-large"
+    ebisg.model = "intfloat/multilingual-e5-large"
 ) {
   
   message("Predicting race for ", year)
@@ -223,7 +223,7 @@ predict_race <- function(
   }
   
   if (model == "eBISG") {
-    if ((surname.only == TRUE) && (model == "eBISG")) {
+    if (isTRUE(surname.only)) {
       warning("eBISG surname-only mode: embedding predictions will be used for unmatched surnames.")
     }
     preds <- predict_race_embedding(

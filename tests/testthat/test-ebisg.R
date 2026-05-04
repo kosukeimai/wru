@@ -1,26 +1,31 @@
-test_that("predict_race accepts model='eBISG' in validation", {
-  # The model string validation should not error for eBISG
-  expect_no_error({
-    model <- "eBISG"
-    stopifnot(model %in% c("BISG", "fBISG", "eBISG"))
-  })
+test_that("predict_race rejects unknown model strings", {
+  data(voters)
+  # Confirms the validation block in predict_race() actually fires; the
+  # eBISG-accepting path is exercised by the end-to-end test below (when
+  # Python is available).
+  expect_error(
+    predict_race(voter.file = voters, surname.only = TRUE, model = "not_a_model"),
+    "model"
+  )
 })
 
 test_that("map_6class_to_5class produces correct output", {
-  probs_6 <- matrix(c(0.5, 0.1, 0.2, 0.1, 0.05, 0.05), nrow = 1)
+  probs_6 <- matrix(c(0.5, 0.1, 0.2, 0.1, 0.05, 0.05), nrow = 1,
+                    dimnames = list(NULL, c("whi", "bla", "his", "asi", "aian", "oth")))
   result <- map_6class_to_5class(probs_6)
   expect_equal(ncol(result), 5)
-  expect_equal(rowSums(result), 1, tolerance = 1e-6)
+  expect_equal(as.numeric(rowSums(result)), 1, tolerance = 1e-6)
   expect_equal(as.numeric(result[1, "c_whi"]), 0.5)
   expect_equal(as.numeric(result[1, "c_oth"]), 0.10)  # aian + oth = 0.05 + 0.05
 })
 
 test_that("map_6class_to_5class handles multiple rows", {
-  probs_6 <- matrix(1 / 6, nrow = 5, ncol = 6)
+  probs_6 <- matrix(1 / 6, nrow = 5, ncol = 6,
+                    dimnames = list(NULL, c("whi", "bla", "his", "asi", "aian", "oth")))
   result <- map_6class_to_5class(probs_6)
   expect_equal(nrow(result), 5)
   expect_equal(ncol(result), 5)
-  expect_equal(rowSums(result), rep(1, 5), tolerance = 1e-6)
+  expect_equal(as.numeric(rowSums(result)), rep(1, 5), tolerance = 1e-6)
 })
 
 test_that("ensure_ebisg_python gives clear error without reticulate", {
