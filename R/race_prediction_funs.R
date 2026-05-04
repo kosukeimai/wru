@@ -859,13 +859,22 @@ predict_race_embedding <- function(
   }
   known_surnames <- toupper(last_dict[[1]])  # first column is the name
 
-  ## Identify unmatched surnames: those whose cleaned match is not in the dictionary
-  ## merge_names applies a 6-step cleaning cascade; the lastname.match column
+  ## Initialized lazily on first use; both the surname and first-name
+  ## blocks below check is.null(model_dir) to avoid double-downloading.
+  model_dir <- NULL
 
-  ## reflects the final cleaned form that was looked up
-  cleaned_surnames <- toupper(voter.file$lastname.match)
-  unmatched_mask <- !(cleaned_surnames %in% known_surnames)
-  n_unmatched <- sum(unmatched_mask)
+  ## Identify unmatched surnames via merge_names' final scratchpad. The
+  ## scratchpad is only used for the matched/unmatched decision; the text
+  ## handed to the embedding model must come from the original surname
+  ## column, since merge_names overwrites lastname.match during cleaning
+  ## (a non-hyphenated unmatched name ends up as the literal string "NA").
+  cleaned_surnames  <- toupper(voter.file$lastname.match)
+  original_surnames <- toupper(as.character(voter.file$surname))
+  unmatched_mask    <- !(cleaned_surnames %in% known_surnames)
+  embed_mask        <- unmatched_mask &
+                       !is.na(original_surnames) &
+                       original_surnames != ""
+  n_unmatched <- sum(embed_mask)
 
   if (n_unmatched > 0) {
     ## Check Python dependencies and download model weights
@@ -878,43 +887,48 @@ predict_race_embedding <- function(
       "Using ", cfg$transformer, " embeddings for these names."
     )
 
-    ## Get unique unmatched surnames to avoid redundant embedding
-    unmatched_surnames <- unique(cleaned_surnames[unmatched_mask])
-    unmatched_surnames <- unmatched_surnames[!is.na(unmatched_surnames) & unmatched_surnames != ""]
+    ## Embed the original surname text (not the cascade scratchpad) so each
+    ## row gets a name-specific prediction.
+    unmatched_surnames <- unique(original_surnames[embed_mask])
 
-    if (length(unmatched_surnames) > 0) {
-      ## Embed and predict
-      message("Embedding ", length(unmatched_surnames), " unique unmatched surnames...")
-      embeddings <- ebisg_embed_names(unmatched_surnames, transformer = cfg$transformer)
-      mlp_path <- if (is.null(cfg$tag)) cfg$surname_mlp else file.path(model_dir, cfg$surname_mlp)
-      probs_6 <- ebisg_predict_mlp(embeddings, mlp_path)
-      probs_5 <- map_6class_to_5class(probs_6)
+    message("Embedding ", length(unmatched_surnames), " unique unmatched surnames...")
+    embeddings <- ebisg_embed_names(unmatched_surnames, transformer = cfg$transformer)
+    mlp_path   <- if (is.null(cfg$tag)) cfg$surname_mlp else file.path(model_dir, cfg$surname_mlp)
+    probs_6    <- ebisg_predict_mlp(embeddings, mlp_path)
+    probs_5    <- map_6class_to_5class(probs_6)
 
-      ## Build lookup: surname -> 5-class probabilities
-      sn_lookup <- as.data.frame(probs_5)
-      rownames(sn_lookup) <- unmatched_surnames
+    sn_lookup <- as.data.frame(probs_5)
+    rownames(sn_lookup) <- unmatched_surnames
 
-      ## Override imputed values for unmatched rows
-      for (k in seq_along(eth)) {
-        col_name <- paste0("c_", eth[k], "_last")
-        voter.file[[col_name]][unmatched_mask] <-
-          sn_lookup[cleaned_surnames[unmatched_mask], paste0("c_", eth[k])]
-      }
+    ## Override imputed values for embeddable unmatched rows. Rows excluded
+    ## from embed_mask (NA / empty original surname) keep merge_names'
+    ## column-mean fallback rather than getting NA written over them.
+    for (k in seq_along(eth)) {
+      col_name <- paste0("c_", eth[k], "_last")
+      voter.file[[col_name]][embed_mask] <-
+        sn_lookup[original_surnames[embed_mask], paste0("c_", eth[k])]
     }
   } else {
     message("eBISG: All surnames matched Census list.")
   }
 
-  ## Also handle unmatched first names with embedding if requested
+  ## Also handle unmatched first names with embedding if requested. Same
+  ## logic as the surname block: the cleaning scratchpad decides which
+  ## rows are unmatched, but the text we embed comes from the original
+  ## first-name column.
   if (grepl("first", names.to.use) && !is.null(cfg$firstname_mlp)) {
     first_dict <- readRDS(paste0(path, "/wru-data-first_c.rds"))
-    known_firstnames <- toupper(first_dict[[1]])
-    cleaned_firstnames <- toupper(voter.file$firstname.match)
+    known_firstnames    <- toupper(first_dict[[1]])
+    cleaned_firstnames  <- toupper(voter.file$firstname.match)
+    original_firstnames <- toupper(as.character(voter.file$first))
     unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames)
-    n_unmatched_first <- sum(unmatched_first_mask)
+    embed_first_mask     <- unmatched_first_mask &
+                            !is.na(original_firstnames) &
+                            original_firstnames != ""
+    n_unmatched_first <- sum(embed_first_mask)
 
     if (n_unmatched_first > 0) {
-      if (!exists("model_dir")) {
+      if (is.null(model_dir)) {
         ensure_ebisg_python()
         model_dir <- ebisg_data_preflight(cfg)
       }
@@ -925,23 +939,20 @@ predict_race_embedding <- function(
         "Using ", cfg$transformer, " embeddings."
       )
 
-      unmatched_firstnames <- unique(cleaned_firstnames[unmatched_first_mask])
-      unmatched_firstnames <- unmatched_firstnames[!is.na(unmatched_firstnames) & unmatched_firstnames != ""]
+      unmatched_firstnames <- unique(original_firstnames[embed_first_mask])
 
-      if (length(unmatched_firstnames) > 0) {
-        embeddings_fn <- ebisg_embed_names(unmatched_firstnames, transformer = cfg$transformer)
-        fn_mlp_path <- if (is.null(cfg$tag)) cfg$firstname_mlp else file.path(model_dir, cfg$firstname_mlp)
-        probs_6_fn <- ebisg_predict_mlp(embeddings_fn, fn_mlp_path)
-        probs_5_fn <- map_6class_to_5class(probs_6_fn)
+      embeddings_fn <- ebisg_embed_names(unmatched_firstnames, transformer = cfg$transformer)
+      fn_mlp_path   <- if (is.null(cfg$tag)) cfg$firstname_mlp else file.path(model_dir, cfg$firstname_mlp)
+      probs_6_fn    <- ebisg_predict_mlp(embeddings_fn, fn_mlp_path)
+      probs_5_fn    <- map_6class_to_5class(probs_6_fn)
 
-        fn_lookup <- as.data.frame(probs_5_fn)
-        rownames(fn_lookup) <- unmatched_firstnames
+      fn_lookup <- as.data.frame(probs_5_fn)
+      rownames(fn_lookup) <- unmatched_firstnames
 
-        for (k in seq_along(eth)) {
-          col_name <- paste0("c_", eth[k], "_first")
-          voter.file[[col_name]][unmatched_first_mask] <-
-            fn_lookup[cleaned_firstnames[unmatched_first_mask], paste0("c_", eth[k])]
-        }
+      for (k in seq_along(eth)) {
+        col_name <- paste0("c_", eth[k], "_first")
+        voter.file[[col_name]][embed_first_mask] <-
+          fn_lookup[original_firstnames[embed_first_mask], paste0("c_", eth[k])]
       }
     }
   }
