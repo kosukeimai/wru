@@ -26,7 +26,11 @@ with_mocked_ebisg <- function(code) {
       n <- nrow(embeddings)
       ## Distinct softmax distributions per input row, normalized.
       raw <- matrix(seq_len(n * 6L), nrow = n, ncol = 6L)
-      raw / rowSums(raw)
+      probs <- raw / rowSums(raw)
+      ## Mirror the real ebisg_predict_mlp() contract: name the columns
+      ## using the EBISG_RACE_COLS ordering from the Python helper.
+      colnames(probs) <- c("whi", "bla", "his", "asi", "aian", "oth")
+      probs
     },
     .package = "wru"
   )

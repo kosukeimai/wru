@@ -30,10 +30,11 @@ test_that("map_6class_to_5class handles multiple rows", {
 
 test_that("ensure_ebisg_python gives clear error without reticulate", {
   skip_on_cran()
-  # If reticulate is not installed, we expect a clear error message
-  if (!requireNamespace("reticulate", quietly = TRUE)) {
-    expect_error(ensure_ebisg_python(), "reticulate")
-  }
+  # Only meaningful when reticulate isn't installed; skip otherwise so
+  # testthat doesn't flag this as an empty test on CI (where it is installed).
+  skip_if(requireNamespace("reticulate", quietly = TRUE),
+          "reticulate is installed; this test is for the missing-deps path")
+  expect_error(ensure_ebisg_python(), "reticulate")
 })
 
 test_that("eBISG predictions work end-to-end", {
