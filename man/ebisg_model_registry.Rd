@@ -12,6 +12,12 @@ ebisg_model_registry
 }
 \description{
 Each entry specifies the HuggingFace transformer model, its embedding
-dimension, and the corresponding MLP checkpoint filenames.
+dimension, and the corresponding MLP checkpoint filenames distributed
+via piggyback. Users wanting to plug in a different sentence-transformer
+(e.g., one of the newer top entries on
+\href{https://huggingface.co/spaces/mteb/leaderboard}{MTEB}) can bypass
+this registry by passing a list directly to \code{ebisg.model} with their
+own \code{transformer}, \code{dim}, and \code{surname_mlp} (path to a local
+.pt checkpoint). See \code{resolve_ebisg_model()} for the schema.
 }
 \keyword{internal}

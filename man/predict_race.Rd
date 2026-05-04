@@ -24,7 +24,7 @@ predict_race(
   name.dictionaries = NULL,
   names.to.use = "surname",
   control = NULL,
-  ebisg.model = "e5-large"
+  ebisg.model = "intfloat/multilingual-e5-large"
 )
 }
 \arguments{
@@ -143,14 +143,14 @@ middle'. Defaults to 'surname'.}
 \item{seed}{RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
 
-\item{ebisg.model}{Character string or list specifying which embedding model
-to use when \code{model = "eBISG"}. Built-in options are
-\code{"e5-large"} (default; \code{intfloat/multilingual-e5-large}, 1024-dim),
-\code{"jina-small"} (\code{jinaai/jina-embeddings-v2-small-en}, 512-dim), and
-\code{"gemma-300m"} (\code{google/gemma-2b}, 300M parameter variant).
-Alternatively, pass a named list with elements \code{transformer}
-(HuggingFace model ID), \code{dim} (embedding dimension), and
-\code{surname_mlp}, \code{firstname_mlp} (paths to custom .pt checkpoints).}
+\item{ebisg.model}{Character string (HuggingFace model ID) or named list
+specifying which embedding model to use when \code{model = "eBISG"}.
+The only built-in option is \code{"intfloat/multilingual-e5-large"}
+(default; 1024-dim), which is keyed by its full HuggingFace ID for
+consistency with the Python side. To use a different sentence-transformer,
+pass a named list with elements \code{transformer} (HuggingFace model ID),
+\code{dim} (embedding dimension), and \code{surname_mlp},
+\code{firstname_mlp} (paths to custom .pt checkpoints).}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

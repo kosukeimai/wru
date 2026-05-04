@@ -7,9 +7,10 @@
 resolve_ebisg_model(ebisg.model)
 }
 \arguments{
-\item{ebisg.model}{A character string naming a built-in model (e.g.,
-\code{"e5-large"}) or a named list with elements \code{transformer},
-\code{dim}, \code{surname_mlp}, and optionally \code{firstname_mlp}.}
+\item{ebisg.model}{A character string giving the HuggingFace model ID
+of a built-in model (e.g., \code{"intfloat/multilingual-e5-large"}),
+or a named list with elements \code{transformer}, \code{dim},
+\code{surname_mlp}, and optionally \code{firstname_mlp}.}
 }
 \value{
 A list with elements \code{transformer}, \code{dim},

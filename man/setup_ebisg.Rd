@@ -4,14 +4,17 @@
 \alias{setup_ebisg}
 \title{Set up Python environment for eBISG predictions}
 \usage{
-setup_ebisg(envname = "r-ebisg", ebisg.model = "e5-large")
+setup_ebisg(
+  envname = "r-ebisg",
+  ebisg.model = "intfloat/multilingual-e5-large"
+)
 }
 \arguments{
 \item{envname}{Name of the Python virtual environment to use. Defaults to
 \code{"r-ebisg"}.}
 
 \item{ebisg.model}{Which embedding model to set up. Defaults to
-\code{"e5-large"}.}
+\code{"intfloat/multilingual-e5-large"}.}
 }
 \description{
 Installs the required Python packages (sentence-transformers and torch)

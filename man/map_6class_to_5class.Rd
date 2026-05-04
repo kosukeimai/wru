@@ -7,15 +7,15 @@
 map_6class_to_5class(probs_6)
 }
 \arguments{
-\item{probs_6}{A matrix with 6 columns.}
+\item{probs_6}{A matrix with 6 columns named whi, bla, his, asi, aian, oth.}
 }
 \value{
 A matrix with 5 columns named c_whi, c_bla, c_his, c_asi, c_oth.
 }
 \description{
 The MLP outputs probabilities for 6 categories:
-(white, black, hispanic, asian, aian, other).
-wru uses 5 categories: (whi, bla, his, asi, oth).
-This function sums aian and other into oth.
+(whi, bla, his, asi, aian, oth) -- see \code{EBISG_RACE_COLS} in the
+Python helper. wru uses 5 categories: (whi, bla, his, asi, oth).
+This function sums \code{aian} and \code{oth} into \code{oth}.
 }
 \keyword{internal}

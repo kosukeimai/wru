@@ -7,6 +7,10 @@
 get_ebisg_module()
 }
 \description{
-Load the Python eBISG helper module
+Imports \code{inst/python/ebisg_helper.py} as a private module via
+\code{reticulate::import_from_path()} and caches the module object on
+\code{.ebisg_env}. Using \code{import_from_path} keeps the helper's symbols
+encapsulated rather than dumping them into Python's global namespace
+as \code{source_python} would.
 }
 \keyword{internal}
