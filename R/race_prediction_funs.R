@@ -703,3 +703,292 @@ predict_race_me <- function(
   ## Return expanded voter.file with RNG see attribute
   return(voter.file)
 }
+
+
+#' @section .predict_race_embedding:
+#' eBISG race prediction function, which uses pre-trained text embeddings
+#' (E5-Large) to predict race probabilities for names not found in Census
+#' surname lists, rather than falling back to generic population-level priors.
+#' @rdname modfuns
+#' @keywords internal
+
+predict_race_embedding <- function(
+    voter.file,
+    names.to.use,
+    year = "2020",
+    age = FALSE,
+    sex = FALSE,
+    census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+    census.key = Sys.getenv("CENSUS_API_KEY"),
+    name.dictionaries,
+    surname.only = FALSE,
+    census.data = NULL,
+    retry = 0,
+    impute.missing = TRUE,
+    skip_bad_geos = FALSE,
+    census.surname = FALSE,
+    use.counties = FALSE,
+    ebisg.model = "intfloat/multilingual-e5-large"
+) {
+
+  # Resolve the embedding model configuration
+  cfg <- resolve_ebisg_model(ebisg.model)
+
+  # eBISG always provides per-name predictions for unmatched surnames via the
+  # MLP, so the caller's impute.missing setting is moot for the surname step.
+  # Warn if the user explicitly asked for FALSE so they understand what's
+  # happening.
+  if (!isTRUE(impute.missing)) {
+    warning(
+      "impute.missing = FALSE is overridden under model = 'eBISG': ",
+      "the embedding model provides per-name predictions for unmatched ",
+      "surnames, so no rows are left with NA name probabilities."
+    )
+  }
+
+  # Check years
+  if (!(year %in% c("2000", "2010", "2020"))) {
+    stop("Year should be one of 2000, 2010, or 2020 (default).")
+  }
+  # Define 2020 race marginal
+  race.margin <- c(r_whi = 0.5783619, r_bla = 0.1205021, r_his = 0.1872988,
+                   r_asi = 0.06106737, r_oth = 0.05276981)
+
+  census.geo <- tolower(census.geo)
+  census.geo <- rlang::arg_match(census.geo)
+
+  vars.orig <- names(voter.file)
+
+  # Check names
+  if (names.to.use == "surname") {
+    message("Proceeding with eBISG last name predictions...")
+    if (!("surname" %in% names(voter.file))) {
+      stop("Voter data frame needs to have a column named 'surname'.")
+    }
+  } else if (names.to.use == "surname, first") {
+    message("Proceeding with eBISG first and last name predictions...")
+    if (!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file))) {
+      stop("Voter data frame needs to have a column named 'surname' and a column called 'first'.")
+    }
+  } else if (names.to.use == "surname, first, middle") {
+    message("Proceeding with eBISG first, last, and middle name predictions...")
+    if (!("surname" %in% names(voter.file)) || !("first" %in% names(voter.file)) ||
+        !("middle" %in% names(voter.file))) {
+      stop("Voter data frame needs to have columns named 'surname', 'first', and 'middle'.")
+    }
+  }
+
+  ## Preliminary data quality checks
+  wru_data_preflight()
+
+  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
+
+  first_c <- readRDS(file.path(path, "wru-data-first_c.rds"))
+  mid_c <- readRDS(file.path(path, "wru-data-mid_c.rds"))
+  if (census.surname) {
+    last_c <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
+  } else {
+    last_c <- readRDS(file.path(path, "wru-data-last_c.rds"))
+  }
+  if (any(!is.null(name.dictionaries))) {
+    if (!is.null(name.dictionaries[["surname"]])) {
+      stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
+    }
+    if (!is.null(name.dictionaries[["first"]])) {
+      stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
+    }
+    if (!is.null(name.dictionaries[["middle"]])) {
+      stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
+    }
+  }
+
+  # Check geographies
+  if (surname.only == FALSE) {
+    message("Proceeding with Census geographic data at ", census.geo, " level...")
+
+    if (is.null(census.data)) {
+      census.key <- validate_key(census.key)
+      message("Downloading Census geographic data using provided API key...")
+    } else {
+      if (!("state" %in% names(voter.file))) {
+        stop("voter.file object needs to have a column named state.")
+      }
+      census_data_preflight(census.data, census.geo, year)
+      if (sum(toupper(unique(as.character(voter.file$state))) %in%
+              toupper(names(census.data)) == FALSE) > 0) {
+        message("census.data object does not include all states in voter.file object.")
+        census.key <- validate_key(census.key)
+        message("Downloading Census geographic data for states not included in census.data object...")
+      } else {
+        message("Using Census geographic data from provided census.data object...")
+      }
+    }
+
+    geo_id_names <- determine_geo_id_names(census.geo)
+
+    if (!all(geo_id_names %in% names(voter.file))) {
+      stop(message(
+        "To use ", census.geo, " as census.geo, voter.file needs to include the following column(s): ",
+        paste(geo_id_names, collapse = ", ")
+      ))
+    }
+
+    voter.file <- census_helper_new(
+      key = census.key,
+      voter.file = voter.file,
+      states = "all",
+      geo = census.geo,
+      age = age,
+      sex = sex,
+      year = year,
+      census.data = census.data,
+      retry = retry,
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos
+    )
+  }
+
+  eth <- c("whi", "bla", "his", "asi", "oth")
+
+  ## Merge in Pr(Name | Race) using standard merge_names
+  voter.file <- merge_names(
+    voter.file = voter.file,
+    namesToUse = names.to.use,
+    census.surname = census.surname,
+    table.surnames = name.dictionaries[["surname"]],
+    table.first = name.dictionaries[["first"]],
+    table.middle = name.dictionaries[["middle"]],
+    clean.names = TRUE,
+    impute.missing = TRUE,
+    model = "BISG"
+  )
+
+  ## Load the surname dictionary to identify which names were actually matched
+  if (census.surname) {
+    last_dict <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
+  } else {
+    last_dict <- readRDS(file.path(path, "wru-data-last_c.rds"))
+  }
+  known_surnames <- toupper(last_dict[[1]])  # first column is the name
+
+  ## Initialized lazily on first use; both the surname and first-name
+  ## blocks below check is.null(model_dir) to avoid double-downloading.
+  model_dir <- NULL
+
+  ## Identify unmatched surnames via merge_names' final scratchpad. The
+  ## scratchpad is only used for the matched/unmatched decision; the text
+  ## handed to the embedding model must come from the original surname
+  ## column, since merge_names overwrites lastname.match during cleaning
+  ## (a non-hyphenated unmatched name ends up as the literal string "NA").
+  cleaned_surnames  <- toupper(voter.file$lastname.match)
+  original_surnames <- toupper(as.character(voter.file$surname))
+  unmatched_mask    <- !(cleaned_surnames %in% known_surnames)
+  embed_mask        <- unmatched_mask &
+                       !is.na(original_surnames) &
+                       original_surnames != ""
+  n_unmatched <- sum(embed_mask)
+
+  if (n_unmatched > 0) {
+    ## Check Python dependencies and download model weights
+    ensure_ebisg_python()
+    model_dir <- ebisg_data_preflight(cfg)
+
+    message(
+      "eBISG: ", n_unmatched, " of ", nrow(voter.file),
+      " records have surnames not in Census list. ",
+      "Using ", cfg$transformer, " embeddings for these names."
+    )
+
+    ## Embed the original surname text (not the cascade scratchpad) so each
+    ## row gets a name-specific prediction.
+    unmatched_surnames <- unique(original_surnames[embed_mask])
+
+    message("Embedding ", length(unmatched_surnames), " unique unmatched surnames...")
+    embeddings <- ebisg_embed_names(unmatched_surnames, transformer = cfg$transformer)
+    mlp_path   <- if (is.null(cfg$tag)) cfg$surname_mlp else file.path(model_dir, cfg$surname_mlp)
+    probs_6    <- ebisg_predict_mlp(embeddings, mlp_path)
+    probs_5    <- map_6class_to_5class(probs_6)
+
+    sn_lookup <- as.data.frame(probs_5)
+    rownames(sn_lookup) <- unmatched_surnames
+
+    ## Override imputed values for embeddable unmatched rows. Rows excluded
+    ## from embed_mask (NA / empty original surname) keep merge_names'
+    ## column-mean fallback rather than getting NA written over them.
+    for (k in seq_along(eth)) {
+      col_name <- paste0("c_", eth[k], "_last")
+      voter.file[[col_name]][embed_mask] <-
+        sn_lookup[original_surnames[embed_mask], paste0("c_", eth[k])]
+    }
+  } else {
+    message("eBISG: All surnames matched Census list.")
+  }
+
+  ## Also handle unmatched first names with embedding if requested. Same
+  ## logic as the surname block: the cleaning scratchpad decides which
+  ## rows are unmatched, but the text we embed comes from the original
+  ## first-name column.
+  if (grepl("first", names.to.use) && !is.null(cfg$firstname_mlp)) {
+    first_dict <- readRDS(file.path(path, "wru-data-first_c.rds"))
+    known_firstnames    <- toupper(first_dict[[1]])
+    cleaned_firstnames  <- toupper(voter.file$firstname.match)
+    original_firstnames <- toupper(as.character(voter.file$first))
+    unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames)
+    embed_first_mask     <- unmatched_first_mask &
+                            !is.na(original_firstnames) &
+                            original_firstnames != ""
+    n_unmatched_first <- sum(embed_first_mask)
+
+    if (n_unmatched_first > 0) {
+      if (is.null(model_dir)) {
+        ensure_ebisg_python()
+        model_dir <- ebisg_data_preflight(cfg)
+      }
+
+      message(
+        "eBISG: ", n_unmatched_first,
+        " records have first names not in dictionary. ",
+        "Using ", cfg$transformer, " embeddings."
+      )
+
+      unmatched_firstnames <- unique(original_firstnames[embed_first_mask])
+
+      embeddings_fn <- ebisg_embed_names(unmatched_firstnames, transformer = cfg$transformer)
+      fn_mlp_path   <- if (is.null(cfg$tag)) cfg$firstname_mlp else file.path(model_dir, cfg$firstname_mlp)
+      probs_6_fn    <- ebisg_predict_mlp(embeddings_fn, fn_mlp_path)
+      probs_5_fn    <- map_6class_to_5class(probs_6_fn)
+
+      fn_lookup <- as.data.frame(probs_5_fn)
+      rownames(fn_lookup) <- unmatched_firstnames
+
+      for (k in seq_along(eth)) {
+        col_name <- paste0("c_", eth[k], "_first")
+        voter.file[[col_name]][embed_first_mask] <-
+          fn_lookup[original_firstnames[embed_first_mask], paste0("c_", eth[k])]
+      }
+    }
+  }
+
+  ## Compute predictions (same Bayesian combination as predict_race_new)
+  if (surname.only == TRUE) {
+    # Pr(Race | Surname)
+    preds <- voter.file[, grep("_last$", names(voter.file))] *
+      matrix(race.margin, nrow = nrow(voter.file), ncol = length(race.margin), byrow = TRUE)
+  } else {
+    # Pr(Race | Surname, Geolocation)
+    preds <- voter.file[, grep("_last$", names(voter.file))] *
+      voter.file[, grep("^r_", names(voter.file))]
+    if (grepl("first", names.to.use)) {
+      preds <- preds * voter.file[, grep("_first$", names(voter.file))]
+    }
+    if (grepl("middle", names.to.use)) {
+      preds <- preds * voter.file[, grep("_middle$", names(voter.file))]
+    }
+  }
+
+  ## Normalize
+  preds <- preds / rowSums(preds)
+  colnames(preds) <- paste("pred", eth, sep = ".")
+
+  return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
+}

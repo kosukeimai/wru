@@ -1,15 +1,16 @@
 Package: wru
 Title: Who are You? Bayesian Prediction of Racial Category Using Surname,
     First Name, Middle Name, and Geolocation
-Version: 3.0.4
-Date: 2024-06-07
+Version: 3.1.0
+Date: 2026-04-30
 Authors@R: c(
     person("Kabir", "Khanna", , "kabirkhanna@gmail.com", role = "aut"),
     person("Brandon", "Bertelsen", , "brandon@bertelsen.ca", role = c("aut", "cre")),
     person("Santiago", "Olivella", , "olivella@unc.edu", role = "aut"),
     person("Evan", "Rosenman", , "etrrosenman@gmail.com", role = "aut"),
     person("Alexander", "Rossell Hayes", , "alexander@rossellhayes.com", role = "aut"),
-    person("Kosuke", "Imai", , "imai@harvard.edu", role = "aut")
+    person("Kosuke", "Imai", , "imai@harvard.edu", role = "aut"),
+    person("Noah", "Dasanaike", , "noahdasanaike@g.harvard.edu", role = "aut")
   )
 Description: Predicts individual race/ethnicity using surname, first name,
     middle name, geolocation, and other attributes, such as gender and
@@ -44,6 +45,7 @@ Imports:
     rlang
 Suggests:
     covr,
+    reticulate,
     testthat (>= 3.0.0),
     tidycensus
 LinkingTo:

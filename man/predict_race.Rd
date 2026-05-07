@@ -23,7 +23,8 @@ predict_race(
   race.init = NULL,
   name.dictionaries = NULL,
   names.to.use = "surname",
-  control = NULL
+  control = NULL,
+  ebisg.model = "intfloat/multilingual-e5-large"
 )
 }
 \arguments{
@@ -114,8 +115,11 @@ will break and provide error message with a list of offending geolocations.}
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties
 available in \var{census.data}?}
 
-\item{model}{Character string, either "BISG" (default) or "fBISG" (for error-correction,
-fully-Bayesian model).}
+\item{model}{Character string: "BISG" (default), "fBISG" (fully-Bayesian with
+error correction), or "eBISG" (embedding-supplemented BISG, which uses
+text embeddings to predict race probabilities for names not found
+in Census surname lists). The eBISG model requires Python with
+sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
 Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
@@ -138,6 +142,15 @@ middle'. Defaults to 'surname'.}
 \item{me.correct}{Boolean. Should the model correct measurement error for \code{races|geo}? Defaults to \code{TRUE}.}
 \item{seed}{RNG seed. If \code{NULL}, a seed is generated and returned as an attribute for reproducibility.}
 }}
+
+\item{ebisg.model}{Character string (HuggingFace model ID) or named list
+specifying which embedding model to use when \code{model = "eBISG"}.
+The only built-in option is \code{"intfloat/multilingual-e5-large"}
+(default; 1024-dim), which is keyed by its full HuggingFace ID for
+consistency with the Python side. To use a different sentence-transformer,
+pass a named list with elements \code{transformer} (HuggingFace model ID),
+\code{dim} (embedding dimension), and \code{surname_mlp},
+\code{firstname_mlp} (paths to custom .pt checkpoints).}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will

@@ -5,6 +5,7 @@
 \alias{.predict_race_old}
 \alias{predict_race_new}
 \alias{predict_race_me}
+\alias{predict_race_embedding}
 \title{Internal model fitting functions}
 \usage{
 .predict_race_old(
@@ -61,6 +62,25 @@ predict_race_me(
   race.init,
   ctrl
 )
+
+predict_race_embedding(
+  voter.file,
+  names.to.use,
+  year = "2020",
+  age = FALSE,
+  sex = FALSE,
+  census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
+  census.key = Sys.getenv("CENSUS_API_KEY"),
+  name.dictionaries,
+  surname.only = FALSE,
+  census.data = NULL,
+  retry = 0,
+  impute.missing = TRUE,
+  skip_bad_geos = FALSE,
+  census.surname = FALSE,
+  use.counties = FALSE,
+  ebisg.model = "intfloat/multilingual-e5-large"
+)
 }
 \arguments{
 \item{voter.file}{See documentation in \code{race_predict}.}
@@ -105,6 +125,15 @@ If \code{\link{NULL}}, the default, attempts to find a census key stored in an
 \item{race.init}{See documentation in \code{race_predict}.}
 
 \item{ctrl}{See \code{control} in documentation for \code{\link[=predict_race]{predict_race()}}.}
+
+\item{ebisg.model}{Character string (HuggingFace model ID) or named list
+specifying which embedding model to use when \code{model = "eBISG"}.
+The only built-in option is \code{"intfloat/multilingual-e5-large"}
+(default; 1024-dim), which is keyed by its full HuggingFace ID for
+consistency with the Python side. To use a different sentence-transformer,
+pass a named list with elements \code{transformer} (HuggingFace model ID),
+\code{dim} (embedding dimension), and \code{surname_mlp},
+\code{firstname_mlp} (paths to custom .pt checkpoints).}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
@@ -148,6 +177,13 @@ surname dictionary, as well as first and middle name information.
 New race prediction function, implementing fBISG (i.e. measurement
 error correction, fully Bayesian model) with augmented
 surname dictionary, as well as first and middle name information.
+}
+
+\section{.predict_race_embedding}{
+
+eBISG race prediction function, which uses pre-trained text embeddings
+(E5-Large) to predict race probabilities for names not found in Census
+surname lists, rather than falling back to generic population-level priors.
 }
 
 \keyword{internal}

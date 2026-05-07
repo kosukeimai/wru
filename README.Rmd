@@ -122,6 +122,76 @@ predict_race(voter.file = voters, census.geo = "place", party = "PID")
       10      Morse    DC  0    001 001301  3005  29   1   Rep   2 50000 0.716211008 0.1899554127 1.867133e-02 0.01025241 0.064909839
 ```
 
+### Using surname embeddings (eBISG)
+
+About 10% of US voters have surnames that do not appear in the Census surname list. Standard BISG has no name-specific information for these voters and falls back on a name-independent imputation (the column means of the matched-surname probabilities), which gives every unmatched name the same prediction. The `eBISG` model fills this gap: it embeds each unmatched surname with a pre-trained sentence-transformer (E5-Large by default), then runs a small neural network trained on Census 2020 data to predict race-conditional probabilities for that specific name. For names that *are* in the Census list, predictions are identical to standard BISG.
+
+`eBISG` is opt-in. It depends on Python with `sentence-transformers` and `torch`; the first call additionally downloads about 17 MB of pre-trained MLP weights from the package's GitHub release.
+
+Run this once per machine to set up the environment:
+
+``` r
+library(wru)
+setup_ebisg()
+# Installs sentence-transformers + torch into the 'r-ebisg' virtualenv
+# and downloads the MLP weight files.
+```
+
+Now consider a small voter file with one Census-listed surname (`Smith`) and two surnames that are not in the Census list (`Rajasekhar`, a Tamil name, and `Schwarzenegger`, an Austrian-German name):
+
+``` r
+demo <- data.frame(
+  surname = c("Smith", "Rajasekhar", "Schwarzenegger"),
+  state   = "NJ",
+  stringsAsFactors = FALSE
+)
+
+predict_race(voter.file = demo, surname.only = TRUE, model = "BISG")
+```
+
+```
+         surname state    pred.whi    pred.bla    pred.his    pred.asi    pred.oth
+1          Smith    NJ 0.663005990 0.232872914 0.028090777 0.006953018 0.069077301
+2     Rajasekhar    NJ 0.663005990 0.232872914 0.028090777 0.006953018 0.069077301
+3 Schwarzenegger    NJ 0.663005990 0.232872914 0.028090777 0.006953018 0.069077301
+```
+
+The two unmatched surnames receive the *same* prediction; standard BISG cannot distinguish them. With eBISG:
+
+``` r
+predict_race(voter.file = demo, surname.only = TRUE, model = "eBISG")
+```
+
+```
+         surname state    pred.whi    pred.bla    pred.his    pred.asi    pred.oth
+1          Smith    NJ 0.663005990 0.232872914 0.028090777 0.006953018 0.069077301
+2     Rajasekhar    NJ 0.528512168 0.020206366 0.032476816 0.411517171 0.007287581
+3 Schwarzenegger    NJ 0.987577004 0.004130978 0.005649397 0.000511518 0.002131135
+```
+
+`Smith` (matched) is unchanged. `Rajasekhar` is now correctly tilted toward Asian (~41%) and `Schwarzenegger` toward White (~99%), reflecting the name-specific signal the embedding model recovers.
+
+eBISG also composes with geolocation just like standard BISG:
+
+``` r
+predict_race(voter.file = voters, census.geo = "tract", model = "eBISG")
+```
+
+To use a different sentence-transformer (for example, one of the newer top entries on the [MTEB leaderboard](https://huggingface.co/spaces/mteb/leaderboard)), pass a list to `ebisg.model` with the HuggingFace model ID and a path to a matching MLP checkpoint trained against that encoder:
+
+``` r
+predict_race(
+  voter.file = voters, surname.only = TRUE, model = "eBISG",
+  ebisg.model = list(
+    transformer  = "your-org/your-encoder",
+    dim          = 768L,
+    surname_mlp  = "/path/to/your-surname-mlp.pt"
+  )
+)
+```
+
+For methodological details, see Dasanaike and Imai (2026), "Embedding-Supplemented Bayesian Improved Surname Geocoding."
+
 ### Downloading census data
 
 It is also possible to pre-download Census geographic data, which can save time when running `predict_race()`.
