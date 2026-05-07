@@ -38,7 +38,7 @@ ebisg_model_registry <- list(
     dim = 1024L,
     surname_mlp = "ebisg-surname-mlp.pt",
     firstname_mlp = "ebisg-firstname-mlp.pt",
-    tag = "v3.1.0"
+    tag = "v3.1.1"
   )
 )
 
