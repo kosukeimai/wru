@@ -206,7 +206,7 @@ predict_race(
 ```
 
 For methodological details, see Dasanaike and Imai (2026),
-“Embedding-Supplemented Bayesian Improved Surname Geocoding.”
+“Using Embedding Models to Improve Probabilistic Race Prediction.”
 
 ### Downloading census data
 
