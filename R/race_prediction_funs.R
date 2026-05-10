@@ -25,6 +25,7 @@
 #' @param year See documentation in \code{race_predict}.
 #' @param party See documentation in \code{race_predict}.
 #' @param retry See documentation in \code{race_predict}.
+#' @param return.unmatched See documentation in \code{race_predict}.
 #' @param impute.missing See documentation in \code{race_predict}.
 #' @param skip_bad_geos See documentation in \code{race_predict}.
 #' @param names.to.use See documentation in \code{race_predict}.
@@ -60,6 +61,7 @@ NULL
     year = "2020",
     party,
     retry = 3,
+    return.unmatched = TRUE,
     impute.missing = TRUE,
     use.counties = FALSE
 ) {
@@ -282,6 +284,7 @@ predict_race_new <- function(
     surname.only=FALSE,
     census.data = NULL,
     retry = 0,
+    return.unmatched = TRUE,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
     census.surname = FALSE,
@@ -397,6 +400,7 @@ predict_race_new <- function(
                             table.first=name.dictionaries[["first"]],
                             table.middle=name.dictionaries[["middle"]],
                             clean.names = TRUE,
+                            return.unmatched = return.unmatched,
                             impute.missing = impute.missing,
                             model = 'BISG')
   
@@ -425,7 +429,12 @@ predict_race_new <- function(
   ## Revert to national Pr(Race) for missing predictions
   colnames(preds) <- paste("pred", eth, sep = ".")
   
-  return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
+  if(return.unmatched == TRUE) {
+    return(data.frame(cbind(voter.file, preds)) |> 
+             dplyr::select(dplyr::all_of(vars.orig), dplyr::any_of(c("last", "first", "middle")), dplyr::ends_with("_matched"), -dplyr::starts_with("c_"),-dplyr::ends_with(".match"), dplyr::starts_with("pred.")))
+  } else {
+    return(data.frame(cbind(voter.file[c(vars.orig)], preds)))
+  }
 }
 
 
@@ -448,6 +457,7 @@ predict_race_me <- function(
     surname.only = FALSE,
     census.data = NULL,
     retry = 0,
+    return_missing = TRUE,
     impute.missing = TRUE,
     census.surname = FALSE,
     use.counties = FALSE,

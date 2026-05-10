@@ -43,10 +43,15 @@ pak::pkg_install("kosukeimai/wru")
 
 Here is a simple example that predicts the race/ethnicity of voters based only on their surnames.
 
+Note: Sample data `voters` is based on 2010 Census, therefore we fix that variable here. Default 
+is the latest Census release year (2020). See `get_census_data()` to retrieve Census data related to your 
+data set. If you are getting an error similar to setting `year = 2020`, this is what needs to be 
+ addressed. 
+
 ``` r
 library(wru)
 future::plan(future::multisession)
-predict_race(voter.file = voters, surname.only = TRUE)
+predict_race(voter.file = voters, surname.only = TRUE, year = 2010)
 ```
 
 The above produces the following output, where the last five columns are probabilistic race/ethnicity predictions (e.g., `pred.his` is the probability of being Hispanic/Latino):
@@ -86,7 +91,7 @@ Note that a valid API key must be stored in a `CENSUS_API_KEY` environment varia
 
 ``` r
 library(wru)
-predict_race(voter.file = voters, census.geo = "tract", party = "PID")
+predict_race(voter.file = voters, year = 2010, census.geo = "tract", party = "PID")
 ```
 ```
  VoterID    surname state CD county  tract block age sex party PID place    pred.whi     pred.bla     pred.his   pred.asi    pred.oth
@@ -106,7 +111,7 @@ In `predict_race()`, the `census.geo` options are "county", "tract", "block" and
 Here is an example of prediction based on census statistics collected at the level of "place":
 
 ``` r
-predict_race(voter.file = voters, census.geo = "place", party = "PID")
+predict_race(voter.file = voters, year = 2010, census.geo = "place", party = "PID")
 ```
 ```
  VoterID    surname state CD county  tract block age sex party PID place    pred.whi     pred.bla     pred.his   pred.asi    pred.oth
@@ -207,7 +212,7 @@ In this case, predictions are conditioned on age but not sex, so `age = TRUE` an
 library(wru)
 voters.dc.nj <- voters[voters$state %in% c("DC", "NJ"), ]
 census.dc.nj <- get_census_data(state = c("DC", "NJ"), age = TRUE, sex = FALSE)
-predict_race(voter.file = voters.dc.nj, census.geo = "block", census.data = census.dc.nj, age = TRUE, sex = FALSE, party = "PID")
+predict_race(voter.file = voters.dc.nj, year = 2010, census.geo = "block", census.data = census.dc.nj, age = TRUE, sex = FALSE, party = "PID")
 ```
 
 This produces the same result as the following statement, which downloads census data during evaluation rather than using pre-downloaded data:

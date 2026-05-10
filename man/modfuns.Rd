@@ -22,6 +22,7 @@
   year = "2020",
   party,
   retry = 3,
+  return.unmatched = TRUE,
   impute.missing = TRUE,
   use.counties = FALSE
 )
@@ -38,6 +39,7 @@ predict_race_new(
   surname.only = FALSE,
   census.data = NULL,
   retry = 0,
+  return.unmatched = TRUE,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
   census.surname = FALSE,
@@ -56,6 +58,7 @@ predict_race_me(
   surname.only = FALSE,
   census.data = NULL,
   retry = 0,
+  return_missing = TRUE,
   impute.missing = TRUE,
   census.surname = FALSE,
   use.counties = FALSE,
@@ -113,6 +116,8 @@ If \code{\link{NULL}}, the default, attempts to find a census key stored in an
 \item{party}{See documentation in \code{race_predict}.}
 
 \item{retry}{See documentation in \code{race_predict}.}
+
+\item{return.unmatched}{See documentation in \code{race_predict}.}
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
