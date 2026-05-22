@@ -354,7 +354,7 @@ predict_race <- function(
       impute.missing = FALSE,
       return.unmatched = TRUE
     ))
-    flag_cols <- .match_flag_cols(names.to.use)
+    flag_cols <- grep("_matched$", names(flags), value = TRUE)
     preds <- merge(preds, flags[, c("caseid", flag_cols)], by = "caseid", sort = FALSE)
   }
 

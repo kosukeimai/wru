@@ -1,11 +1,3 @@
-# Whether to show the furrr progress bar during census downloads. Controlled by
-# the `wru_progress` option (default TRUE). Set options(wru_progress = FALSE) to
-# suppress the bar in batch/non-interactive runs without silencing the
-# per-county/tract messages (#150).
-.census_progress <- function() {
-  isTRUE(getOption("wru_progress", default = TRUE))
-}
-
 #' Census Data download function.
 #'
 #' \code{census_geo_api} retrieves U.S. Census geographic data for a given state.
@@ -120,7 +112,7 @@ census_geo_api <- function(
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
         get_census_api(data_url = census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
-      }, .progress = .census_progress())
+      }, .progress = isTRUE(getOption("wru_progress", default = TRUE)))
     } else {
       message('There were no intersecting counties in your voter.file data (tract)')
     } 
@@ -200,7 +192,7 @@ census_geo_api <- function(
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
             get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_block, retry)
-          }, .progress = .census_progress())
+          }, .progress = isTRUE(getOption("wru_progress", default = TRUE)))
         }
       )
       message("\n") # new line for progress bar

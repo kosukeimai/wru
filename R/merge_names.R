@@ -1,58 +1,3 @@
-# Names of the per-name match-flag columns implied by `namesToUse`.
-.match_flag_cols <- function(namesToUse) {
-  cols <- "last_matched"
-  if (grepl("first", namesToUse)) cols <- c(cols, "first_matched")
-  if (grepl("middle", namesToUse)) cols <- c(cols, "middle_matched")
-  cols
-}
-
-# TRUE where a name genuinely matched the dictionary. A non-NA probability is
-# necessary but not sufficient: the cleaning cascade coerces unmatched
-# non-hyphenated names to the literal string "NA", which then merges against the
-# genuine surname "NA" in the Census list. Exclude that collision unless the
-# original name really was "NA".
-.name_matched <- function(prob, match_col, orig_upper) {
-  spurious_na <- toupper(match_col) == "NA" & toupper(orig_upper) != "NA"
-  spurious_na[is.na(spurious_na)] <- FALSE
-  !is.na(prob) & !spurious_na
-}
-
-# Undo the cascade's "NA" coercion. The double-barrel cleaning step leaves an
-# unmatched non-hyphenated name with a missing match-key, which merge()
-# stringifies to the literal "NA"; a later pass then matches it against the
-# genuine surname "NA" ("Na", ~97% Asian in the voter-file dictionary). Left
-# alone, every unmatched name would inherit those probabilities. Blank the
-# affected name columns back to NA so the row is treated as unmatched and
-# routed through imputation (or left NA when impute.missing = FALSE). #162.
-.blank_spurious_na <- function(df, namesToUse) {
-  blank_one <- function(df, match_col, orig_upper, suffix) {
-    spurious <- toupper(df[[match_col]]) == "NA" & toupper(df[[orig_upper]]) != "NA"
-    spurious[is.na(spurious)] <- FALSE
-    if (any(spurious)) {
-      cols <- intersect(paste0(c("c_whi_", "c_bla_", "c_his_", "c_asi_", "c_oth_"), suffix), names(df))
-      df[spurious, cols] <- NA
-    }
-    df
-  }
-  df <- blank_one(df, "lastname.match", "lastname.upper", "last")
-  if (grepl("first", namesToUse)) df <- blank_one(df, "firstname.match", "firstname.upper", "first")
-  if (grepl("middle", namesToUse)) df <- blank_one(df, "middlename.match", "middlename.upper", "middle")
-  df
-}
-
-# Append per-name match flags (TRUE = found in dictionary). Must be called
-# before imputation so imputed rows still read as unmatched.
-.add_match_flags <- function(df, namesToUse) {
-  df$last_matched <- .name_matched(df$c_whi_last, df$lastname.match, df$lastname.upper)
-  if (grepl("first", namesToUse)) {
-    df$first_matched <- .name_matched(df$c_whi_first, df$firstname.match, df$firstname.upper)
-  }
-  if (grepl("middle", namesToUse)) {
-    df$middle_matched <- .name_matched(df$c_whi_middle, df$middlename.match, df$middlename.upper)
-  }
-  df
-}
-
 #' Surname probability merging function.
 #'
 #' \code{merge_names} merges names in a user-input dataset with corresponding
@@ -178,24 +123,14 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
     df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE, sort = FALSE)
   }
 
-  ## Flag columns are appended only on the way out, never carried into the
-  ## cleaning cascade below (which juggles columns by name).
-  flag_cols <- if (return.unmatched) .match_flag_cols(namesToUse) else character(0)
-
-  if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
-    if (return.unmatched) df <- .add_match_flags(df, namesToUse)
-    return(df[, c(names(voter.file), "lastname.match", paste0(p_eth, "_last"), flag_cols)])
-  }
-  if (namesToUse == "surname, first" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0) {
-    if (return.unmatched) df <- .add_match_flags(df, namesToUse)
-    return(df[, c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), flag_cols)])
-  }
-  if (namesToUse == "surname, first, middle" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0) {
-    if (return.unmatched) df <- .add_match_flags(df, namesToUse)
-    return(df[, c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"), flag_cols)])
-  }
+  ## Match-flag columns appended on the way out (when return.unmatched). The
+  ## all-matched case needs no early return: the cleaning cascade below simply
+  ## runs as a no-op and falls through to the same final return.
+  flag_cols <- if (return.unmatched) {
+    c("last_matched",
+      if (grepl("first", namesToUse)) "first_matched",
+      if (grepl("middle", namesToUse)) "middle_matched")
+  } else character(0)
 
   ## Clean names (if specified by user)
   if (clean.names) {
@@ -318,9 +253,20 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
     }
   }
 
-  ## Drop the spurious "NA"-surname matches the cascade introduces for unmatched
-  ## names, so they are correctly counted as unmatched below (#162).
-  df <- .blank_spurious_na(df, namesToUse)
+  name_types <- c("last",
+                  if (grepl("first", namesToUse)) "first",
+                  if (grepl("middle", namesToUse)) "middle")
+
+  ## Undo the cascade's "NA" coercion: an unmatched non-hyphenated name ends up
+  ## with a match key of "NA", which then merges against the genuine surname "Na"
+  ## (~97% Asian in the voter-file dictionary). Treat those rows as unmatched so
+  ## they are imputed (or left NA), not assigned "Na" probabilities (#162).
+  for (nt in name_types) {
+    bad <- toupper(df[[paste0(nt, "name.match")]]) == "NA" &
+           toupper(df[[paste0(nt, "name.upper")]]) != "NA"
+    bad[is.na(bad)] <- FALSE
+    if (any(bad)) df[bad, paste0(p_eth, "_", nt)] <- NA
+  }
 
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
   c_miss_last <- mean(is.na(df$c_whi_last))
@@ -341,10 +287,10 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
   }
 
   ## Record match flags before imputation so imputed rows still read as
-  ## unmatched. Computed after the full cleaning cascade, so a name rescued by
-  ## cleaning counts as matched (#105).
+  ## unmatched. After the cascade and the "NA" cleanup above, a non-NA
+  ## probability means the name was matched (#105).
   if (return.unmatched) {
-    df <- .add_match_flags(df, namesToUse)
+    for (nt in name_types) df[[paste0(nt, "_matched")]] <- !is.na(df[[paste0("c_whi_", nt)]])
   }
 
   ## When impute.missing is TRUE, fill unmatched names with the column mean.
