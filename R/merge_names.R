@@ -83,46 +83,17 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     }
   }
 
-  wru_data_preflight()
-
-  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
-
-  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
-  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
-  if(census.surname){
-    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
-  } else {
-    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
-  }
-  
-  p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
-  if (is.null(table.surnames)) {
-    lastNameDict <- last_c
-  } else {
-    lastNameDict <- table.surnames
-    names(lastNameDict) <- names(last_c)
-    lastNameDict[is.na(lastNameDict)] <- 0
-  }
-  if (is.null(table.first)) {
-    firstNameDict <- first_c
-  } else {
-    firstNameDict <- table.first
-    firstNameDict[is.na(firstNameDict)] <- 0
-    names(firstNameDict) <- names(first_c)
-  }
-  if (is.null(table.middle)) {
-    middleNameDict <- mid_c
-  } else {
-    middleNameDict <- table.middle
-    middleNameDict[is.na(middleNameDict)] <- 0
-    names(middleNameDict) <- names(mid_c)
-  }
-
-  nameDict <- list(
-    "first" = firstNameDict,
-    "middle" = middleNameDict,
-    "last" = lastNameDict
+  nameDict <- load_name_dictionaries(
+    census.surname = census.surname,
+    table.surnames = table.surnames,
+    table.first = table.first,
+    table.middle = table.middle
   )
+  lastNameDict <- nameDict[["last"]]
+  firstNameDict <- nameDict[["first"]]
+  middleNameDict <- nameDict[["middle"]]
+
+  p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
 
   ## Convert names in voter file to upper case
   df <- voter.file
