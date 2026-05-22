@@ -25,3 +25,6 @@ src/RcppExports.o
 src/aux_funs.o
 src/sample_me.o
 src/wru.so
+
+# local-only handoff/working docs (not part of the package)
+docs/
