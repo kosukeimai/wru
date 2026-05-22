@@ -269,14 +269,12 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
     }
   }
 
+  ## When impute.missing is TRUE, fill unmatched names with the column mean.
+  ## When FALSE, leave them as NA so callers can identify unmatched names (#162).
   if (impute.missing) {
-    impute.vec <- colMeans(df[, grep("c_", names(df), value = TRUE)], na.rm = TRUE)
-    for (i in grep("c_", names(df), value = TRUE)) {
+    impute.vec <- colMeans(df[, grep("^c_", names(df), value = TRUE)], na.rm = TRUE)
+    for (i in grep("^c_", names(df), value = TRUE)) {
       df[, i] <- dplyr::coalesce(df[, i], impute.vec[i])
-    }
-  } else {
-    for (i in grep("c_", names(df), value = TRUE)) {
-      df[, i] <- dplyr::coalesce(df[, i], 1)
     }
   }
 
