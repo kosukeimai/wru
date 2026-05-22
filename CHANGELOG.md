@@ -1,5 +1,11 @@
 # wru (development version)
 
+* Fixed `use.counties = TRUE` raising `` `year` must be one of "2020" or "2010", not "3" ``:
+  the county-filtered Census download passed arguments positionally with `year`
+  omitted, so `retry` was read as `year` (#161).
+* Provided `census.data` built with `age = TRUE` and/or `sex = TRUE` is now used
+  instead of being silently re-downloaded; the cache check compared the stored
+  flags against `FALSE` rather than the requested `age`/`sex` (#161).
 * Surname-only predictions (`surname.only = TRUE` or `names.to.use = "surname"`)
   no longer require the first- and middle-name dictionaries to be present; those
   files are read only when first/middle names are actually used (#160).
