@@ -76,6 +76,14 @@
 #' Whatever the name of the party registration field in \code{\var{voter.file}},
 #' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param return.unmatched Logical, defaults to FALSE. If TRUE, appends boolean
+#'  columns reporting whether each name was found in the name dictionary:
+#'  \code{last_matched}, plus \code{first_matched} and \code{middle_matched}
+#'  when those names are used. The flags use the same dictionary match for every
+#'  \code{model}, so results are comparable across models and name selections.
+#'  They are computed before imputation, so a row whose probabilities were only
+#'  imputed (or, for \code{model = "eBISG"}, supplied by the embedding model)
+#'  still reads as unmatched.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
 #' @param skip_bad_geos Logical. Option to have the function skip any geolocations that are not present 
 #' in the census data, returning a partial data set. Default is set to \code{FALSE}, in which case it
@@ -166,6 +174,7 @@ predict_race <- function(
     year = "2020",
     party = NULL,
     retry = 3,
+    return.unmatched = FALSE,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
     use.counties = FALSE,
@@ -326,6 +335,29 @@ predict_race <- function(
                              ctrl = ctrl)
   }
   seed_attr <- attr(preds, "RNGseed")
+
+  ## Match flags are computed once, here, from a single merge_names pass rather
+  ## than inside each predictor. This guarantees the same matched/unmatched
+  ## definition regardless of `model`, so flags are comparable across models and
+  ## name selections. merge_names only needs the name columns; impute.missing is
+  ## forced FALSE so the flags reflect dictionary matches, not imputed fills.
+  if (return.unmatched) {
+    flags <- suppressMessages(merge_names(
+      voter.file = voter.file,
+      namesToUse = names.to.use,
+      name_source = name_source,
+      year = year,
+      table.surnames = name.dictionaries[["surname"]],
+      table.first = name.dictionaries[["first"]],
+      table.middle = name.dictionaries[["middle"]],
+      clean.names = TRUE,
+      impute.missing = FALSE,
+      return.unmatched = TRUE
+    ))
+    flag_cols <- .match_flag_cols(names.to.use)
+    preds <- merge(preds, flags[, c("caseid", flag_cols)], by = "caseid", sort = FALSE)
+  }
+
   preds <- preds[order(preds$caseid),setdiff(names(preds), "caseid")]
   attr(preds, "RNGseed") <- seed_attr
   preds

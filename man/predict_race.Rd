@@ -17,6 +17,7 @@ predict_race(
   year = "2020",
   party = NULL,
   retry = 3,
+  return.unmatched = FALSE,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
   use.counties = FALSE,
@@ -109,6 +110,15 @@ Whatever the name of the party registration field in \code{\var{voter.file}},
 it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{return.unmatched}{Logical, defaults to FALSE. If TRUE, appends boolean
+columns reporting whether each name was found in the name dictionary:
+\code{last_matched}, plus \code{first_matched} and \code{middle_matched}
+when those names are used. The flags use the same dictionary match for every
+\code{model}, so results are comparable across models and name selections.
+They are computed before imputation, so a row whose probabilities were only
+imputed (or, for \code{model = "eBISG"}, supplied by the embedding model)
+still reads as unmatched.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 

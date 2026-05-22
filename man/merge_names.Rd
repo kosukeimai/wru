@@ -14,7 +14,8 @@ merge_names(
   table.middle = NULL,
   clean.names = TRUE,
   impute.missing = FALSE,
-  model = "BISG"
+  model = "BISG",
+  return.unmatched = FALSE
 )
 }
 \arguments{
@@ -55,6 +56,13 @@ in order to increase the chance of finding a match. Default is \code{TRUE}.}
 \item{impute.missing}{See \code{predict_race}.}
 
 \item{model}{See \code{predict_race}.}
+
+\item{return.unmatched}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
+boolean columns (\code{last_matched}, and \code{first_matched} /
+\code{middle_matched} when those names are used) are appended, reporting
+whether each name was found in the dictionary. The flags are computed
+before imputation, so they remain \code{FALSE} for names that were only
+filled in by imputation. Default is \code{FALSE}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
