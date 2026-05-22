@@ -2,27 +2,38 @@
 % Please edit documentation in R/name_source.R
 \name{load_name_dictionaries}
 \alias{load_name_dictionaries}
-\title{Load the first, middle, and last name dictionaries}
+\title{Load and assemble the name dictionaries for merge_names()}
 \usage{
 load_name_dictionaries(
-  census.surname,
+  namesToUse,
+  name_source = NULL,
+  year = "2020",
+  census.surname = TRUE,
   table.surnames = NULL,
   table.first = NULL,
   table.middle = NULL
 )
 }
 \arguments{
-\item{census.surname}{If TRUE, load the Census-derived surname dictionary;
-otherwise the augmented surname dictionary.}
+\item{namesToUse}{Which names are in play, e.g. \code{"surname, first"}.}
 
-\item{table.surnames, table.first, table.middle}{Optional user-supplied dictionaries.}
+\item{name_source}{One of \code{"mixed"}, \code{"census_only"}, \code{"vf_only"},
+or \code{NULL} for the legacy \code{census.surname} path.}
+
+\item{year}{Census vintage passed to \code{\link[=read_name_dictionaries]{read_name_dictionaries()}}.}
+
+\item{census.surname}{Legacy flag, used only when \code{name_source} is \code{NULL}.}
+
+\item{table.surnames, table.first, table.middle}{Optional user dictionaries.}
 }
 \value{
 A named list with elements \code{first}, \code{middle}, and \code{last}.
 }
 \description{
-Downloads (via \code{\link[=wru_data_preflight]{wru_data_preflight()}}) and reads the name dictionaries used by
-\code{\link[=merge_names]{merge_names()}}, applying any user-supplied dictionary overrides. Separated from
-the merge logic so the latter can be tested without network access.
+Selects and stacks the first, middle, and last dictionaries according to
+\code{name_source} and \code{year}. When \code{name_source} is \code{NULL} the
+legacy \code{census.surname} behavior is used (Census-or-augmented surnames,
+voter-file first/middle). \code{name_source = "census_only"} has no Census
+middle-name dictionary and errors if middle names are requested.
 }
 \keyword{internal}

@@ -30,6 +30,14 @@ test_that("mixed name_source unions Census over voter-file, Census winning on ov
   expect_equal(out$source[out$last_name == "CCC"], "vf")
 })
 
+test_that("mixed with no Census dictionary falls back to voter-file only", {
+  vf <- make_dict(c("BBB", "CCC"), whi = c(0.90, 0.40))
+  out <- stack_name_dictionary(census = NULL, vf = vf,
+                               name_source = "mixed", key = "last_name")
+  expect_setequal(out$last_name, c("BBB", "CCC"))
+  expect_true(all(out$source == "vf"))
+})
+
 test_that("census_only returns only the Census dictionary, ignoring voter-file", {
   census <- make_dict(c("AAA", "BBB"), whi = c(0.20, 0.20))
   vf     <- make_dict(c("BBB", "CCC"), whi = c(0.90, 0.40))

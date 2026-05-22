@@ -84,6 +84,9 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
   }
 
   nameDict <- load_name_dictionaries(
+    namesToUse = namesToUse,
+    name_source = NULL,
+    year = "2020",
     census.surname = census.surname,
     table.surnames = table.surnames,
     table.first = table.first,
