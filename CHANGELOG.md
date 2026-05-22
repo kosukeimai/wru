@@ -1,5 +1,9 @@
 # wru (development version)
 
+* Added a `wru_progress` option to suppress the Census-download progress bar.
+  Set `options(wru_progress = FALSE)` to silence the `furrr` progress bar (which
+  bloats batch/non-interactive log files) while keeping the other progress
+  messages (#150).
 * `predict_race()` gains a `return.unmatched` argument (default `FALSE`). When
   `TRUE`, it appends boolean `last_matched` / `first_matched` / `middle_matched`
   columns reporting whether each name was found in the dictionary. The flags use

@@ -59,6 +59,12 @@ Output will contain a subset of the following elements:
 for specified state(s). Using this function to download Census data in advance
 can save considerable time when running \code{predict_race} and \code{census_helper}.
 }
+\details{
+A progress bar is shown while Census data is downloaded. To suppress
+it (e.g., in batch or non-interactive runs where it bloats log files) without
+silencing the other progress messages, set \code{options(wru_progress = FALSE)}.
+This also applies to downloads triggered internally by \code{\link[=predict_race]{predict_race()}}.
+}
 \examples{
 \dontrun{get_census_data(states = c("NJ", "NY"), age = TRUE, sex = FALSE)}
 \dontrun{get_census_data(states = "MN", age = FALSE, sex = FALSE, year = "2020")}
