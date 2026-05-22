@@ -46,12 +46,3 @@ test_that("census_only selects only the Census last dictionary", {
   expect_setequal(d$last$last_name, c("SMITH", "GARCIA"))
 })
 
-test_that("legacy census.surname path (name_source NULL) preserves old behavior", {
-  local_mocked_bindings(read_name_dictionaries = mock_raw(), .package = "wru")
-  d_t <- load_name_dictionaries(namesToUse = "surname", name_source = NULL,
-                                census.surname = TRUE, year = "2020")
-  expect_setequal(d_t$last$last_name, c("SMITH", "GARCIA")) # census_last
-  d_f <- load_name_dictionaries(namesToUse = "surname", name_source = NULL,
-                                census.surname = FALSE, year = "2020")
-  expect_setequal(d_f$last$last_name, c("GARCIA", "OCONNELL")) # last_c
-})

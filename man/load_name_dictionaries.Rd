@@ -6,9 +6,8 @@
 \usage{
 load_name_dictionaries(
   namesToUse,
-  name_source = NULL,
+  name_source = "mixed",
   year = "2020",
-  census.surname = TRUE,
   table.surnames = NULL,
   table.first = NULL,
   table.middle = NULL
@@ -17,12 +16,9 @@ load_name_dictionaries(
 \arguments{
 \item{namesToUse}{Which names are in play, e.g. \code{"surname, first"}.}
 
-\item{name_source}{One of \code{"mixed"}, \code{"census_only"}, \code{"vf_only"},
-or \code{NULL} for the legacy \code{census.surname} path.}
+\item{name_source}{One of \code{"mixed"}, \code{"census_only"}, \code{"vf_only"}.}
 
 \item{year}{Census vintage passed to \code{\link[=read_name_dictionaries]{read_name_dictionaries()}}.}
-
-\item{census.surname}{Legacy flag, used only when \code{name_source} is \code{NULL}.}
 
 \item{table.surnames, table.first, table.middle}{Optional user dictionaries.}
 }
@@ -31,9 +27,7 @@ A named list with elements \code{first}, \code{middle}, and \code{last}.
 }
 \description{
 Selects and stacks the first, middle, and last dictionaries according to
-\code{name_source} and \code{year}. When \code{name_source} is \code{NULL} the
-legacy \code{census.surname} behavior is used (Census-or-augmented surnames,
-voter-file first/middle). \code{name_source = "census_only"} has no Census
-middle-name dictionary and errors if middle names are requested.
+\code{name_source} and \code{year}. \code{name_source = "census_only"} has no
+Census middle-name dictionary and errors if middle names are requested.
 }
 \keyword{internal}

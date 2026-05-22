@@ -6,7 +6,8 @@
 \usage{
 predict_race(
   voter.file,
-  census.surname = TRUE,
+  census.surname = NULL,
+  name_source = c("mixed", "census_only", "vf_only"),
   surname.only = FALSE,
   census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
@@ -44,10 +45,14 @@ tract is six characters, block group is usually a single character and block
 is four characters. Place is five characters.
 See below for other optional fields.}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
-If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
-\code{name.dictionary} (see below). Default is \code{TRUE}.}
+\item{census.surname}{Deprecated in favor of \code{name_source}. If supplied,
+\code{TRUE} maps to \code{name_source = "mixed"} and \code{FALSE} to
+\code{name_source = "vf_only"}, with a warning. Default \code{NULL}.}
+
+\item{name_source}{One of \code{"mixed"} (default; union of the Census and
+voter-file dictionaries, Census winning on overlapping names), \code{"census_only"}
+(Census dictionaries only; errors if middle names are requested), or
+\code{"vf_only"} (augmented voter-file dictionaries only).}
 
 \item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.}

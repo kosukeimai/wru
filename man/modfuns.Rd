@@ -21,7 +21,7 @@ predict_race_new(
   retry = 0,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE
 )
 
@@ -38,7 +38,7 @@ predict_race_me(
   census.data = NULL,
   retry = 0,
   impute.missing = TRUE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE,
   race.init,
   ctrl
@@ -58,7 +58,7 @@ predict_race_embedding(
   retry = 0,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE,
   ebisg.model = "intfloat/multilingual-e5-large"
 )
@@ -95,7 +95,7 @@ If \code{\link{NULL}}, the default, attempts to find a census key stored in an
 
 \item{skip_bad_geos}{See documentation in \code{race_predict}.}
 
-\item{census.surname}{See documentation in \code{race_predict}.}
+\item{name_source}{See documentation in \code{race_predict}.}
 
 \item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 

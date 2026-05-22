@@ -20,10 +20,13 @@
 #' tract is six characters, block group is usually a single character and block
 #'  is four characters. Place is five characters.
 #' See below for other optional fields.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-#'  the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
-#'  If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
-#'  \code{name.dictionary} (see below). Default is \code{TRUE}.
+#' @param census.surname Deprecated in favor of \code{name_source}. If supplied,
+#'  \code{TRUE} maps to \code{name_source = "mixed"} and \code{FALSE} to
+#'  \code{name_source = "vf_only"}, with a warning. Default \code{NULL}.
+#' @param name_source One of \code{"mixed"} (default; union of the Census and
+#'  voter-file dictionaries, Census winning on overlapping names), \code{"census_only"}
+#'  (Census dictionaries only; errors if middle names are requested), or
+#'  \code{"vf_only"} (augmented voter-file dictionaries only).
 #' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 #'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 #' @param census.geo An optional character vector specifying what level of
@@ -152,7 +155,8 @@
 
 predict_race <- function(
     voter.file,
-    census.surname = TRUE,
+    census.surname = NULL,
+    name_source = c("mixed", "census_only", "vf_only"),
     surname.only = FALSE,
     census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
@@ -197,7 +201,10 @@ predict_race <- function(
   
   census.geo <- tolower(census.geo)
   census.geo <- rlang::arg_match(census.geo)
-  
+
+  name_source <- rlang::arg_match(name_source)
+  name_source <- resolve_name_source(name_source, census.surname)
+
   # block_group is missing, pull from block
   if((surname.only == FALSE) && !(missing(census.geo)) && (census.geo == "block_group") && !("block_group" %in% names(voter.file))) {
     voter.file$block_group <- substring(voter.file$block, 1, 1)
@@ -238,7 +245,7 @@ predict_race <- function(
       retry = retry,
       impute.missing = impute.missing,
       skip_bad_geos = skip_bad_geos,
-      census.surname = census.surname,
+      name_source = name_source,
       use.counties = use.counties,
       ebisg.model = ebisg.model
     )
@@ -258,7 +265,7 @@ predict_race <- function(
                               retry = retry,
                               impute.missing = impute.missing,
                               skip_bad_geos = skip_bad_geos,
-                              census.surname = census.surname,
+                              name_source = name_source,
                               use.counties = use.counties)
   } else {
     ctrl <- list(
@@ -288,7 +295,7 @@ predict_race <- function(
                                  retry = retry,
                                  impute.missing = TRUE,
                                  skip_bad_geos = skip_bad_geos,
-                                 census.surname = census.surname,
+                                 name_source = name_source,
                                  use.counties = use.counties,
                                  model = "BISG",
                                  control = list(verbose=FALSE))
@@ -314,7 +321,7 @@ predict_race <- function(
                              surname.only = surname.only,
                              census.data = census.data, retry = retry,
                              impute.missing = impute.missing,
-                             census.surname = census.surname,
+                             name_source = name_source,
                              use.counties = use.counties, race.init = race.init,
                              ctrl = ctrl)
   }

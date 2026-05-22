@@ -14,7 +14,7 @@
 #'
 #' @inheritParams predict_race
 #' @param voter.file See documentation in \code{race_predict}.
-#' @param census.surname See documentation in \code{race_predict}.
+#' @param name_source See documentation in \code{race_predict}.
 #' @param surname.only See documentation in \code{race_predict}.
 #' @param census.geo See documentation in \code{race_predict}.
 #' @param census.data See documentation in \code{race_predict}.
@@ -55,7 +55,7 @@ predict_race_new <- function(
     retry = 0,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
-    census.surname = FALSE,
+    name_source = "mixed",
     use.counties = FALSE
 ) {
   
@@ -98,11 +98,7 @@ predict_race_new <- function(
 
   first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
   mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
-  if(census.surname){
-    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
-  } else {
-    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
-  }
+  last_c <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
@@ -163,8 +159,9 @@ predict_race_new <- function(
   ## Merge in Pr(Name | Race)
   voter.file <- merge_names(voter.file = voter.file,
                             namesToUse = names.to.use,
-                            census.surname = census.surname, 
-                            table.surnames=name.dictionaries[["surname"]], 
+                            name_source = name_source,
+                            year = year,
+                            table.surnames=name.dictionaries[["surname"]],
                             table.first=name.dictionaries[["first"]],
                             table.middle=name.dictionaries[["middle"]],
                             clean.names = TRUE,
@@ -221,7 +218,7 @@ predict_race_me <- function(
     census.data = NULL,
     retry = 0,
     impute.missing = TRUE,
-    census.surname = FALSE,
+    name_source = "mixed",
     use.counties = FALSE,
     race.init,
     ctrl
@@ -246,11 +243,7 @@ predict_race_me <- function(
   wru_data_preflight()
   path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   
-  if(census.surname){
-    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
-  } else {
-    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
-  }
+  last_c <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   if (!is.null(name.dictionaries[["surname"]])) {
     stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     last_c <- name.dictionaries[["surname"]]
@@ -498,7 +491,7 @@ predict_race_embedding <- function(
     retry = 0,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
-    census.surname = FALSE,
+    name_source = "mixed",
     use.counties = FALSE,
     ebisg.model = "intfloat/multilingual-e5-large"
 ) {
@@ -557,11 +550,7 @@ predict_race_embedding <- function(
 
   first_c <- readRDS(file.path(path, "wru-data-first_c.rds"))
   mid_c <- readRDS(file.path(path, "wru-data-mid_c.rds"))
-  if (census.surname) {
-    last_c <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
-  } else {
-    last_c <- readRDS(file.path(path, "wru-data-last_c.rds"))
-  }
+  last_c <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
@@ -626,7 +615,8 @@ predict_race_embedding <- function(
   voter.file <- merge_names(
     voter.file = voter.file,
     namesToUse = names.to.use,
-    census.surname = census.surname,
+    name_source = name_source,
+    year = year,
     table.surnames = name.dictionaries[["surname"]],
     table.first = name.dictionaries[["first"]],
     table.middle = name.dictionaries[["middle"]],
@@ -636,11 +626,7 @@ predict_race_embedding <- function(
   )
 
   ## Load the surname dictionary to identify which names were actually matched
-  if (census.surname) {
-    last_dict <- readRDS(file.path(path, "wru-data-census_last_c.rds"))
-  } else {
-    last_dict <- readRDS(file.path(path, "wru-data-last_c.rds"))
-  }
+  last_dict <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   known_surnames <- toupper(last_dict[[1]])  # first column is the name
 
   ## Initialized lazily on first use; both the surname and first-name
@@ -654,7 +640,14 @@ predict_race_embedding <- function(
   ## (a non-hyphenated unmatched name ends up as the literal string "NA").
   cleaned_surnames  <- toupper(voter.file$lastname.match)
   original_surnames <- toupper(as.character(voter.file$surname))
-  unmatched_mask    <- !(cleaned_surnames %in% known_surnames)
+  ## merge_names overwrites lastname.match with the literal string "NA" for
+  ## non-hyphenated unmatched surnames. That sentinel collides with the genuine
+  ## surname "NA" (present in the Census dictionary), so a corrupted row would
+  ## otherwise look matched. Treat cleaned == "NA" as unmatched unless the
+  ## original surname really is "NA". (Superseded once merge_names returns an
+  ## authoritative matched flag; see issue #105.)
+  unmatched_mask    <- !(cleaned_surnames %in% known_surnames) |
+                       (cleaned_surnames == "NA" & original_surnames != "NA")
   embed_mask        <- unmatched_mask &
                        !is.na(original_surnames) &
                        original_surnames != ""

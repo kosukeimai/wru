@@ -33,10 +33,9 @@
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-#'  the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
-#'  If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
-#'  \code{name.dictionary} (see below). Default is \code{TRUE}.
+#' @param name_source One of \code{"mixed"}, \code{"census_only"}, or \code{"vf_only"};
+#'  see [predict_race()].
+#' @param year Census vintage, \code{"2020"} (default) or \code{"2010"}.
 #' @param table.surnames An object of class \code{data.frame} provided by the
 #' users as an alternative surname dictionary. It will consist of a list of
 #' U.S. surnames, along with the associated probabilities P(name | ethnicity)
@@ -63,9 +62,9 @@
 #' @importFrom dplyr coalesce
 #' @examples
 #' data(voters)
-#' \dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
+#' \dontrun{try(merge_names(voters, namesToUse = "surname", name_source = "mixed"))}
 #' @keywords internal
-merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
+merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2020", table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
 
   # check the names
   if (namesToUse == "surname") {
@@ -85,9 +84,8 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
 
   nameDict <- load_name_dictionaries(
     namesToUse = namesToUse,
-    name_source = NULL,
-    year = "2020",
-    census.surname = census.surname,
+    name_source = name_source,
+    year = year,
     table.surnames = table.surnames,
     table.first = table.first,
     table.middle = table.middle

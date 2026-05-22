@@ -58,50 +58,37 @@ read_name_dictionaries <- function(year = "2020") {
 #' Load and assemble the name dictionaries for merge_names()
 #'
 #' Selects and stacks the first, middle, and last dictionaries according to
-#' \code{name_source} and \code{year}. When \code{name_source} is \code{NULL} the
-#' legacy \code{census.surname} behavior is used (Census-or-augmented surnames,
-#' voter-file first/middle). \code{name_source = "census_only"} has no Census
-#' middle-name dictionary and errors if middle names are requested.
+#' \code{name_source} and \code{year}. \code{name_source = "census_only"} has no
+#' Census middle-name dictionary and errors if middle names are requested.
 #'
 #' @param namesToUse Which names are in play, e.g. \code{"surname, first"}.
-#' @param name_source One of \code{"mixed"}, \code{"census_only"}, \code{"vf_only"},
-#'   or \code{NULL} for the legacy \code{census.surname} path.
+#' @param name_source One of \code{"mixed"}, \code{"census_only"}, \code{"vf_only"}.
 #' @param year Census vintage passed to [read_name_dictionaries()].
-#' @param census.surname Legacy flag, used only when \code{name_source} is \code{NULL}.
 #' @param table.surnames,table.first,table.middle Optional user dictionaries.
 #' @return A named list with elements \code{first}, \code{middle}, and \code{last}.
 #' @keywords internal
-load_name_dictionaries <- function(namesToUse, name_source = NULL, year = "2020",
-                                   census.surname = TRUE,
+load_name_dictionaries <- function(namesToUse, name_source = "mixed", year = "2020",
                                    table.surnames = NULL, table.first = NULL,
                                    table.middle = NULL) {
-  if (!is.null(name_source) && name_source == "census_only" && grepl("middle", namesToUse)) {
+  if (name_source == "census_only" && grepl("middle", namesToUse)) {
     stop("name_source = \"census_only\" has no Census middle-name dictionary; ",
          "use \"mixed\" or \"vf_only\", or drop middle names.")
   }
 
   raw <- read_name_dictionaries(year)
 
-  if (is.null(name_source)) {
-    lastNameDict <- if (census.surname) raw$census_last else raw$last
-  } else {
-    lastNameDict <- .drop_source_col(
-      stack_name_dictionary(raw$census_last, raw$last, name_source, "last_name")
-    )
-  }
+  lastNameDict <- .drop_source_col(
+    stack_name_dictionary(raw$census_last, raw$last, name_source, "last_name")
+  )
   if (!is.null(table.surnames)) {
     lastNameDict <- .apply_dict_override(table.surnames, raw$last)
   }
 
   firstNameDict <- NULL
   if (grepl("first", namesToUse)) {
-    firstNameDict <- if (is.null(name_source)) {
-      raw$first
-    } else {
-      .drop_source_col(
-        stack_name_dictionary(raw$census_first, raw$first, name_source, "first_name")
-      )
-    }
+    firstNameDict <- .drop_source_col(
+      stack_name_dictionary(raw$census_first, raw$first, name_source, "first_name")
+    )
     if (!is.null(table.first)) {
       firstNameDict <- .apply_dict_override(table.first, raw$first)
     }

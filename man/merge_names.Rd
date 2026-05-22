@@ -7,7 +7,8 @@
 merge_names(
   voter.file,
   namesToUse,
-  census.surname,
+  name_source = "mixed",
+  year = "2020",
   table.surnames = NULL,
   table.first = NULL,
   table.middle = NULL,
@@ -29,10 +30,10 @@ Other options are \code{"last, first"}, indicating that both last and first name
 used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 be used.}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
-If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
-\code{name.dictionary} (see below). Default is \code{TRUE}.}
+\item{name_source}{One of \code{"mixed"}, \code{"census_only"}, or \code{"vf_only"};
+see \code{\link[=predict_race]{predict_race()}}.}
+
+\item{year}{Census vintage, \code{"2020"} (default) or \code{"2010"}.}
 
 \item{table.surnames}{An object of class \code{data.frame} provided by the
 users as an alternative surname dictionary. It will consist of a list of
@@ -94,6 +95,6 @@ probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
 }
 \examples{
 data(voters)
-\dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
+\dontrun{try(merge_names(voters, namesToUse = "surname", name_source = "mixed"))}
 }
 \keyword{internal}

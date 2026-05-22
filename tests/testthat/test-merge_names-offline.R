@@ -22,7 +22,7 @@ test_that("merge_names merges an injected last-name dictionary without network",
   )
 
   vf <- data.frame(surname = c("Smith", "Garcia"), stringsAsFactors = FALSE)
-  out <- merge_names(vf, namesToUse = "surname", census.surname = TRUE,
+  out <- merge_names(vf, namesToUse = "surname", name_source = "mixed",
                      impute.missing = FALSE)
 
   expect_equal(out$c_whi_last[out$surname == "Smith"], 0.60)
