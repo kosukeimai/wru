@@ -287,6 +287,24 @@ predict_race <- function(
     ctrl[names(control)] <- control
     ctrl$usr_seed <- ifelse(is.null(control$seed), FALSE, TRUE)
 
+    ## fBISG cannot initialize or sample rows whose geography is absent from the
+    ## census data. When skip_bad_geos = TRUE, drop those rows up front (using
+    ## the same check census_helper applies) so the BISG-derived race.init and
+    ## predict_race_me operate on an identical, aligned set of rows (#163).
+    if (isTRUE(skip_bad_geos) && surname.only == FALSE) {
+      kept <- suppressMessages(census_helper_new(
+        key = census.key, voter.file = voter.file, states = "all",
+        geo = census.geo, age = age, sex = sex, year = year,
+        census.data = census.data, retry = retry,
+        use.counties = use.counties, skip_bad_geos = TRUE
+      ))
+      n_dropped <- nrow(voter.file) - nrow(kept)
+      if (n_dropped > 0) {
+        message(n_dropped, " record(s) dropped: geographies not found in census data (skip_bad_geos = TRUE).")
+        voter.file <- voter.file[voter.file$caseid %in% kept$caseid, , drop = FALSE]
+      }
+    }
+
     if (is.null(race.init)) {
       if(ctrl$verbose){
         message("Using `predict_race` to obtain initial race prediction priors with BISG model")

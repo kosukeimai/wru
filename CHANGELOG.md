@@ -1,5 +1,9 @@
 # wru (development version)
 
+* `model = "fBISG"` now respects `skip_bad_geos = TRUE`: voter rows whose
+  geography is absent from the census data are dropped (with a message) so the
+  model can initialize and sample on a consistent set of rows, instead of
+  erroring with "Some initial race values are NA" (#163).
 * Fixed `use.counties = TRUE` raising `` `year` must be one of "2020" or "2010", not "3" ``:
   the county-filtered Census download passed arguments positionally with `year`
   omitted, so `retry` was read as `year` (#161).
