@@ -3,11 +3,10 @@
 #' These functions are intended for internal use only. Users should use the
 #' [predict_race()] interface rather any of these functions directly.
 #'
-#' These functions fit different versions of WRU. \code{.predict_race_old} fits
-#' the original WRU model, also known as BISG with census-based surname dictionary.
-#' \code{.predict_race_new} fits a new version of BISG which uses a new, augmented
+#' These functions fit different versions of WRU.
+#' \code{.predict_race_new} fits a version of BISG which uses a new, augmented
 #' surname dictionary, and can also accommodate the use of first and middle
-#' name information. Finally, \code{.predict_race_me} fits a fully Bayesian Improved
+#' name information. \code{.predict_race_me} fits a fully Bayesian Improved
 #' Surname Geocoding model (fBISG), which fits a model with measurement-error
 #' correction of erroneous zeros in census tables, in addition to also accommodating
 #' the augmented surname dictionary, and the first and middle name
@@ -17,7 +16,6 @@
 #' @param voter.file See documentation in \code{race_predict}.
 #' @param census.surname See documentation in \code{race_predict}.
 #' @param surname.only See documentation in \code{race_predict}.
-#' @param surname.year See documentation in \code{race_predict}.
 #' @param census.geo See documentation in \code{race_predict}.
 #' @param census.data See documentation in \code{race_predict}.
 #' @param age See documentation in \code{race_predict}.
@@ -37,233 +35,6 @@
 #'
 #' @name modfuns
 NULL
-
-#' @section .predict_race_old:
-#' Original WRU race prediction function, implementing classical BISG with census-based
-#' surname dictionary.
-#' @importFrom stats rmultinom
-#' @importFrom utils txtProgressBar setTxtProgressBar
-#' @rdname modfuns
-#' @keywords internal
-
-.predict_race_old <- function(
-    voter.file,
-    census.surname = TRUE,
-    surname.only = FALSE,
-    surname.year = 2020,
-    name.dictionaries = NULL,
-    census.geo,
-    census.key = Sys.getenv("CENSUS_API_KEY"),
-    census.data = NULL,
-    age = FALSE,
-    sex = FALSE,
-    year = "2020",
-    party,
-    retry = 3,
-    impute.missing = TRUE,
-    use.counties = FALSE
-) {
-  
-  # warning: 2020 census data only support prediction when both age and sex are equal to FALSE
-  if ((sex == TRUE || age == TRUE) && (year == "2020")) {
-    stop("Warning: only predictions with both age and sex equal to FALSE are supported when using 2020 census data.")
-  }
-  
-  if (!missing(census.geo) && (census.geo == "precinct")) {
-    # geo <- "precinct"
-    stop("Error: census_helper function does not currently support merging precinct-level data.")
-  }
-  
-  vars.orig <- names(voter.file)
-  
-  if (surname.only == TRUE) {
-    message("Proceeding with surname-only predictions...")
-    if (!("surname" %in% names(voter.file))) {
-      stop("Voter data frame needs to have a column named surname")
-    }
-  } else {
-    if (missing(census.geo) || is.null(census.geo) || all(is.na(census.geo)) || census.geo %in% c("county", "tract", "block", "place") == FALSE) {
-      stop("census.geo must be either 'county', 'tract', 'block', or 'place'")
-    } else {
-      message(paste("Proceeding with Census geographic data at", census.geo, "level..."))
-    }
-    if (missing(census.data) || is.null(census.data) || all(is.na(census.data))) {
-      census.key <- validate_key(census.key)
-      message("Downloading Census geographic data using provided API key...")
-    } else {
-      if (!("state" %in% names(voter.file))) {
-        stop("voter.file object needs to have a column named state.")
-      }
-      if (sum(toupper(unique(as.character(voter.file$state))) %in% toupper(names(census.data)) == FALSE) > 0) {
-        message("census.data object does not include all states in voter.file object.")
-        census.key <- validate_key(census.key)
-        message("Downloading Census geographic data for states not included in census.data object...")
-      } else {
-        message("Using Census geographic data from provided census.data object...")
-      }
-    }
-  }
-  
-  eth <- c("whi", "bla", "his", "asi", "oth")
-  
-  ## Merge in Pr(Race | Surname) if necessary
-  if (census.surname) {
-    if (!(surname.year %in% c(2000, 2010, 2020))) {
-      stop(paste(surname.year, "is not a valid surname.year. It should be 2000, 2010 or 2020 (default)."))
-    }
-    voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = NULL, impute.missing = impute.missing)
-  } else {
-    # Check if voter.file has the necessary data
-    if (is.null(name.dictionaries) | !("surname" %in% names(name.dictionaries))) {
-      stop("User must provide a 'name.dictionaries', with named element 'surname'.")
-    }
-    for (k in 1:length(eth)) {
-      if ((paste("c", eth[k], sep = "_") %in% names(name.dictionaries[["surname"]])) == FALSE) {
-        stop(paste("name.dictionaries element 'surname' needs to have columns named ", paste(paste("c", eth, sep = "_"), collapse = " and "), ".", sep = ""))
-      }
-    }
-    name.dictionaries[["surname"]] <- apply(name.dictionaries[["surname"]], 1, function(x) x / sum(x, na.rm = TRUE))
-    name.dictionaries[["surname"]][is.na(name.dictionaries[["surname"]])] <- 0
-    voter.file <- merge_surnames(voter.file, surname.year = surname.year, name.data = name.dictionaries[["surname"]], impute.missing = impute.missing)
-  }
-  
-  ## Surname-Only Predictions
-  if (surname.only) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("p", eth[k], sep = "_")] / apply(voter.file[paste("p", eth, sep = "_")], 1, sum)
-    }
-    pred <- paste("pred", eth, sep = ".")
-    return(voter.file[c(vars.orig, pred)])
-  }
-  
-  ## Merge in Pr(Party | Race) if necessary
-  if (missing(party) == FALSE) {
-    voter.file$PID <- voter.file[, party]
-    voter.file <- merge(voter.file, get("pid")[names(get("pid")) %in% "party" == F], by = "PID", all.x = TRUE)
-  }
-  
-  if (census.geo == "place") {
-    if (!("place" %in% names(voter.file))) {
-      stop("voter.file object needs to have a column named place.")
-    }
-    voter.file <- census_helper(
-      key = census.key,
-      voter.file = voter.file,
-      states = "all",
-      geo = "place",
-      age = age,
-      sex = sex,
-      year = year,
-      census.data = census.data,
-      retry = retry
-    )
-  }
-  
-  if (census.geo == "block_group") {
-    if (!("block_group" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("tract" %in% names(voter.file))) {
-      stop("voter.file object needs to have columns named block, tract, and county.")
-    }
-    voter.file <- census_helper(
-      key = census.key,
-      voter.file = voter.file,
-      states = "all",
-      geo = "block_group",
-      age = age,
-      sex = sex,
-      year = year,
-      census.data = census.data,
-      retry = retry,
-      use.counties = use.counties
-    )
-  }
-  
-  if (census.geo == "block") {
-    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file)) || !("block" %in% names(voter.file))) {
-      stop("voter.file object needs to have columns named block, tract, and county.")
-    }
-    voter.file <- census_helper(
-      key = census.key,
-      voter.file = voter.file,
-      states = "all",
-      geo = "block",
-      age = age,
-      sex = sex,
-      year = year,
-      census.data = census.data,
-      retry = retry,
-      use.counties = use.counties
-    )
-  }
-  
-  if (census.geo == "precinct") {
-    geo <- "precinct"
-    stop("Error: census_helper function does not currently support precinct-level data.")
-  }
-  
-  if (census.geo == "tract") {
-    if (!("tract" %in% names(voter.file)) || !("county" %in% names(voter.file))) {
-      stop("voter.file object needs to have columns named tract and county.")
-    }
-    voter.file <- census_helper(
-      key = census.key,
-      voter.file = voter.file,
-      states = "all",
-      geo = "tract",
-      age = age,
-      sex = sex,
-      year = year,
-      census.data = census.data, 
-      retry = retry,
-      use.counties = use.counties
-    )
-  }
-  
-  if (census.geo == "county") {
-    if (!("county" %in% names(voter.file))) {
-      stop("voter.file object needs to have a column named county.")
-    }
-    voter.file <- census_helper(
-      key = census.key,
-      voter.file = voter.file,
-      states = "all",
-      geo = "county",
-      age = age,
-      sex = sex,
-      year = year,
-      census.data = census.data, 
-      retry = retry
-    )
-  }
-  
-  ## Pr(Race | Surname, Geolocation)
-  if (missing(party)) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = TRUE)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
-  
-  ## Pr(Race | Surname, Geolocation, Party)
-  if (missing(party) == FALSE) {
-    for (k in 1:length(eth)) {
-      voter.file[paste("u", eth[k], sep = "_")] <- voter.file[paste("p", eth[k], sep = "_")] * voter.file[paste("r", eth[k], sep = "_")] * voter.file[paste("r_pid", eth[k], sep = "_")]
-    }
-    voter.file$u_tot <- apply(voter.file[paste("u", eth, sep = "_")], 1, sum, na.rm = TRUE)
-    for (k in 1:length(eth)) {
-      voter.file[paste("q", eth[k], sep = "_")] <- voter.file[paste("u", eth[k], sep = "_")] / voter.file$u_tot
-    }
-  }
-  
-  for (k in 1:length(eth)) {
-    voter.file[paste("pred", eth[k], sep = ".")] <- voter.file[paste("q", eth[k], sep = "_")]
-  }
-  pred <- paste("pred", eth, sep = ".")
-  
-  return(voter.file[c(vars.orig, pred)])
-}
 
 #' @section .predict_race_new :
 #' New race prediction function, implementing classical BISG with augmented
@@ -434,6 +205,7 @@ predict_race_new <- function(
 #' error correction, fully Bayesian model) with augmented
 #' surname dictionary, as well as first and middle name information.
 #' @importFrom dplyr pull
+#' @importFrom utils txtProgressBar setTxtProgressBar
 #' @rdname modfuns
 
 predict_race_me <- function(

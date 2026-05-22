@@ -45,10 +45,9 @@ is four characters. Place is five characters.
 See below for other optional fields.}
 
 \item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-Default is \code{TRUE}.}
+the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
+If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
+\code{name.dictionary} (see below). Default is \code{TRUE}.}
 
 \item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.}

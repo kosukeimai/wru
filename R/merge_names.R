@@ -34,10 +34,9 @@
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
 #' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-#'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-#'  Default is \code{TRUE}.
+#'  the Census-derived surname dictionary is used to merge in Pr(Surname | Race).
+#'  If \code{FALSE}, the augmented surname dictionary is used, or a user-supplied
+#'  \code{name.dictionary} (see below). Default is \code{TRUE}.
 #' @param table.surnames An object of class \code{data.frame} provided by the
 #' users as an alternative surname dictionary. It will consist of a list of
 #' U.S. surnames, along with the associated probabilities P(name | ethnicity)
