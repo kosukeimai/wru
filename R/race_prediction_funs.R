@@ -21,7 +21,6 @@
 #' @param age See documentation in \code{race_predict}.
 #' @param sex See documentation in \code{race_predict}.
 #' @param year See documentation in \code{race_predict}.
-#' @param party See documentation in \code{race_predict}.
 #' @param retry See documentation in \code{race_predict}.
 #' @param impute.missing See documentation in \code{race_predict}.
 #' @param skip_bad_geos See documentation in \code{race_predict}.

@@ -111,8 +111,6 @@ consistency with the Python side. To use a different sentence-transformer,
 pass a named list with elements \code{transformer} (HuggingFace model ID),
 \code{dim} (embedding dimension), and \code{surname_mlp},
 \code{firstname_mlp} (paths to custom .pt checkpoints).}
-
-\item{party}{See documentation in \code{race_predict}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
