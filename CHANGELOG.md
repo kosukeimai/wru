@@ -1,5 +1,8 @@
 # wru (development version)
 
+* Surname-only predictions (`surname.only = TRUE` or `names.to.use = "surname"`)
+  no longer require the first- and middle-name dictionaries to be present; those
+  files are read only when first/middle names are actually used (#160).
 * Added a `wru_progress` option to suppress the Census-download progress bar.
   Set `options(wru_progress = FALSE)` to silence the `furrr` progress bar (which
   bloats batch/non-interactive log files) while keeping the other progress

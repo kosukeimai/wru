@@ -96,17 +96,20 @@ predict_race_new <- function(
 
   path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
 
-  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
-  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
+  ## The first/middle dictionaries are only needed to validate user-supplied
+  ## custom dictionaries; read them lazily so surname-only predictions do not
+  ## require those files to be present (#160).
   last_c <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     }
     if (!is.null(name.dictionaries[["first"]])) {
+      first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
       stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
+      mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
       stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
     }
   }
@@ -548,17 +551,19 @@ predict_race_embedding <- function(
 
   path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
 
-  first_c <- readRDS(file.path(path, "wru-data-first_c.rds"))
-  mid_c <- readRDS(file.path(path, "wru-data-mid_c.rds"))
+  ## Read first/middle dictionaries lazily, only to validate user-supplied
+  ## custom dictionaries, so surname-only eBISG runs don't require them (#160).
   last_c <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
   if (any(!is.null(name.dictionaries))) {
     if (!is.null(name.dictionaries[["surname"]])) {
       stopifnot(identical(names(name.dictionaries[["surname"]]), names(last_c)))
     }
     if (!is.null(name.dictionaries[["first"]])) {
+      first_c <- readRDS(file.path(path, "wru-data-first_c.rds"))
       stopifnot(identical(names(name.dictionaries[["first"]]), names(first_c)))
     }
     if (!is.null(name.dictionaries[["middle"]])) {
+      mid_c <- readRDS(file.path(path, "wru-data-mid_c.rds"))
       stopifnot(identical(names(name.dictionaries[["middle"]]), names(mid_c)))
     }
   }

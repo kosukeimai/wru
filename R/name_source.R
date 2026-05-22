@@ -23,20 +23,25 @@ resolve_name_source <- function(name_source, census.surname = NULL) {
 #' single I/O seam so dictionary-selection logic can be tested without network access.
 #'
 #' @param year Census vintage, \code{"2020"} (default) or \code{"2010"}.
+#' @param namesToUse Which names are in play, e.g. \code{"surname, first"}. The
+#'   first/middle dictionaries are only read when those names are requested, so
+#'   surname-only predictions do not require those files (#160).
 #' @return A named list: \code{census_last}, \code{last}, \code{first}, \code{mid},
-#'   and \code{census_first} (NULL when unavailable).
+#'   and \code{census_first} (NULL when not requested or unavailable).
 #' @keywords internal
-read_name_dictionaries <- function(year = "2020") {
+read_name_dictionaries <- function(year = "2020", namesToUse = "surname, first, middle") {
   wru_data_preflight()
   path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   rd <- function(f) readRDS(file.path(path, f))
+  need_first  <- grepl("first", namesToUse)
+  need_middle <- grepl("middle", namesToUse)
   cf_path <- file.path(path, "wru-data-census_first_c.rds")
   list(
     census_last  = rd("wru-data-census_last_c.rds"),
     last         = rd("wru-data-last_c.rds"),
-    first        = rd("wru-data-first_c.rds"),
-    mid          = rd("wru-data-mid_c.rds"),
-    census_first = if (identical(as.character(year), "2020") && file.exists(cf_path)) {
+    first        = if (need_first) rd("wru-data-first_c.rds") else NULL,
+    mid          = if (need_middle) rd("wru-data-mid_c.rds") else NULL,
+    census_first = if (need_first && identical(as.character(year), "2020") && file.exists(cf_path)) {
       readRDS(cf_path)
     } else {
       NULL
@@ -75,7 +80,7 @@ load_name_dictionaries <- function(namesToUse, name_source = "mixed", year = "20
          "use \"mixed\" or \"vf_only\", or drop middle names.")
   }
 
-  raw <- read_name_dictionaries(year)
+  raw <- read_name_dictionaries(year, namesToUse)
 
   lastNameDict <- .drop_source_col(
     stack_name_dictionary(raw$census_last, raw$last, name_source, "last_name")

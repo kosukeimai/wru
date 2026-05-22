@@ -4,14 +4,18 @@
 \alias{read_name_dictionaries}
 \title{Read raw name dictionaries from disk}
 \usage{
-read_name_dictionaries(year = "2020")
+read_name_dictionaries(year = "2020", namesToUse = "surname, first, middle")
 }
 \arguments{
 \item{year}{Census vintage, \code{"2020"} (default) or \code{"2010"}.}
+
+\item{namesToUse}{Which names are in play, e.g. \code{"surname, first"}. The
+first/middle dictionaries are only read when those names are requested, so
+surname-only predictions do not require those files (#160).}
 }
 \value{
 A named list: \code{census_last}, \code{last}, \code{first}, \code{mid},
-and \code{census_first} (NULL when unavailable).
+and \code{census_first} (NULL when not requested or unavailable).
 }
 \description{
 Downloads (via \code{\link[=wru_data_preflight]{wru_data_preflight()}}) and reads the raw first, middle, and last

@@ -14,7 +14,7 @@ dm <- function(names) {
              c_asi_middle = 0.2, c_oth_middle = 0.2, stringsAsFactors = FALSE)
 }
 mock_raw <- function(census_first = NULL) {
-  function(year) list(
+  function(year, namesToUse = "surname, first, middle") list(
     census_last  = dl(c("SMITH", "GARCIA"), c(0.60, 0.05)),
     last         = dl(c("GARCIA", "OCONNELL"), c(0.90, 0.95)),
     census_first = census_first,
