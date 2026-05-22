@@ -1,3 +1,20 @@
+#' Resolve the effective name_source, mapping the deprecated census.surname flag
+#'
+#' @param name_source The (already validated) name_source value.
+#' @param census.surname Deprecated flag; \code{NULL} when not supplied. If supplied,
+#'   a deprecation warning is emitted and it overrides \code{name_source}:
+#'   \code{TRUE} -> \code{"mixed"}, \code{FALSE} -> \code{"vf_only"}.
+#' @return A single name_source string.
+#' @keywords internal
+resolve_name_source <- function(name_source, census.surname = NULL) {
+  if (!is.null(census.surname)) {
+    warning("`census.surname` is deprecated; use `name_source` instead ",
+            "(TRUE maps to \"mixed\", FALSE maps to \"vf_only\").", call. = FALSE)
+    return(if (isTRUE(census.surname)) "mixed" else "vf_only")
+  }
+  name_source
+}
+
 #' Read raw name dictionaries from disk
 #'
 #' Downloads (via [wru_data_preflight()]) and reads the raw first, middle, and last
