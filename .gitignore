@@ -28,3 +28,19 @@ src/wru.so
 
 # local-only handoff/working docs (not part of the package)
 docs/
+
+# R workspace
+.RData
+
+# build tarballs
+wru_*.tar.gz
+
+# eBISG model weights
+ebisg-firstname-mlp.pt
+ebisg-surname-mlp.pt
+
+# Python cache
+__pycache__/
+
+# test data RDS files
+wru-data-*.rds
