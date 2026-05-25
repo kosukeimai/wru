@@ -37,3 +37,91 @@
 # wru 3.1.0
 
 * New feature release adding the eBISG model.
+
+# wru 3.0.4
+
+* Fixes a bug related to a list of variables not being unnested properly (#151, #153).
+
+# wru 3.0.3
+
+* Fixes a bug that pushed NaN into small population tracts (#151).
+
+# wru 3.0.2
+
+* Fixes a bug that led to overestimation of black and hispanic populations (#145).
+
+# wru 3.0.1
+
+* GitHub has changed their policy on binary formats in releases, need to refer to older version.
+
+# wru 3.0.0
+
+* Adding back age and sex functionality. Other improvements.
+
+# wru 2.0.0
+
+* Updated defaults to 2020 data, specified as next major version 2.0.
+
+# wru 1.0.1
+
+* Bug fixes for census URL and census year.
+
+# wru 1.0.0
+
+* Updates to BISG, inclusion of fBISG and other package improvements.
+
+# wru 0.1.12
+
+* Some Census API improvements (thanks to Silvia Kim).
+
+# wru 0.1.11
+
+* Minor fix requested by CRAN.
+
+# wru 0.1.10
+
+* Fixed minor warning message.
+
+# wru 0.1.9
+
+* Fixed `census_helper.R` so that state field can be lower case in user data.
+
+# wru 0.1.8
+
+* Updated to be compatible with U.S. Census API updates.
+
+# wru 0.1.7
+
+* Added testthat functionality.
+
+# wru 0.1.6
+
+* Removed extraneous documentation, renamed 2010 Surname List object, and added place as geography.
+
+# wru 0.1.5
+
+* Updated http to https to access U.S. Census API.
+
+# wru 0.1.4
+
+* Fixed error in merge_surnames.R and updated relevant documentation.
+
+# wru 0.1.3
+
+* Allows Census data download at level user prefers (block, tract, or county).
+
+# wru 0.1.2
+
+* Updated surname handling, enhanced demographics option, and improved error handling and documentation.
+
+# wru 0.1.1
+
+* New function to pre-download Census data and other minor improvements.
+
+# wru 0.0.2
+
+* Minor improvements.
+
+# wru 0.0.1
+
+* First version on CRAN.
