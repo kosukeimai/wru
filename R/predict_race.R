@@ -81,10 +81,17 @@
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @param model Character string: "BISG" (default), "fBISG" (fully-Bayesian with
-#' error correction), or "eBISG" (embedding-supplemented BISG, which uses
+#' error correction), "eBISG" (embedding-supplemented BISG, which uses
 #' text embeddings to predict race probabilities for names not found
-#' in Census surname lists). The eBISG model requires Python with
-#' sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.
+#' in Census surname lists), or "lBISG" (list-powered BISG, which recovers race
+#' probabilities from group-specific name lists with no name-by-race frequency
+#' table). The eBISG and lBISG models require Python with sentence-transformers
+#' and torch; run \code{\link{setup_ebisg}} or \code{\link{setup_lbisg}} to configure.
+#' @param lists Required when \code{model = "lBISG"}. A named list of character
+#' vectors of surnames, keyed by race abbreviation (any of \code{"whi"},
+#' \code{"bla"}, \code{"his"}, \code{"asi"}); \code{"oth"} is handled as the
+#' residual and needs no list. Each vector is an approximate list of surnames
+#' typical of that group (from expert knowledge or a language model).
 #' @param ebisg.model Character string (HuggingFace model ID) or named list
 #' specifying which embedding model to use when \code{model = "eBISG"}.
 #' The only built-in option is \code{"intfloat/multilingual-e5-large"}
@@ -171,21 +178,31 @@ predict_race <- function(
     name.dictionaries = NULL,
     names.to.use = "surname",
     control = NULL,
-    ebisg.model = "intfloat/multilingual-e5-large"
+    ebisg.model = "intfloat/multilingual-e5-large",
+    lists = NULL
 ) {
-  
+
   message("Predicting race for ", year)
-  
+
   ## Check model type
-  if (!(model %in% c("BISG", "fBISG", "eBISG"))) {
+  if (!(model %in% c("BISG", "fBISG", "eBISG", "lBISG"))) {
     stop(
       paste0(
         "'model' must be one of 'BISG' (for standard BISG results, or results",
         " with all name data without error correction), 'fBISG' (for the",
         " fully Bayesian/error correction model that accommodates all name data),",
-        " or 'eBISG' (for embedding-supplemented BISG)."
+        " 'eBISG' (for embedding-supplemented BISG), or 'lBISG' (for list-powered BISG)."
       )
     )
+  }
+  if (model == "lBISG") {
+    if (is.null(lists)) {
+      stop("model = 'lBISG' requires 'lists': a named list of surname vectors by race group.")
+    }
+    if (isTRUE(surname.only)) {
+      stop("model = 'lBISG' requires geography (the geographic prior identifies the method); ",
+           "set surname.only = FALSE and supply census.geo.")
+    }
   }
   
   if (any(unique(voter.file$state) %in% c("AS","GU","MP","PR","VI"))) {
@@ -222,7 +239,20 @@ predict_race <- function(
     )
   }
   
-  if (model == "eBISG") {
+  if (model == "lBISG") {
+    preds <- predict_race_lbisg(
+      voter.file = voter.file,
+      lists = lists,
+      year = year,
+      census.geo = census.geo,
+      census.key = census.key,
+      census.data = census.data,
+      retry = retry,
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos,
+      ebisg.model = ebisg.model
+    )
+  } else if (model == "eBISG") {
     if (isTRUE(surname.only)) {
       warning("eBISG surname-only mode: embedding predictions will be used for unmatched surnames.")
     }

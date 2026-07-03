@@ -24,7 +24,8 @@ predict_race(
   name.dictionaries = NULL,
   names.to.use = "surname",
   control = NULL,
-  ebisg.model = "intfloat/multilingual-e5-large"
+  ebisg.model = "intfloat/multilingual-e5-large",
+  lists = NULL
 )
 }
 \arguments{
@@ -116,10 +117,12 @@ will break and provide error message with a list of offending geolocations.}
 available in \var{census.data}?}
 
 \item{model}{Character string: "BISG" (default), "fBISG" (fully-Bayesian with
-error correction), or "eBISG" (embedding-supplemented BISG, which uses
+error correction), "eBISG" (embedding-supplemented BISG, which uses
 text embeddings to predict race probabilities for names not found
-in Census surname lists). The eBISG model requires Python with
-sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.}
+in Census surname lists), or "lBISG" (list-powered BISG, which recovers race
+probabilities from group-specific name lists with no name-by-race frequency
+table). The eBISG and lBISG models require Python with sentence-transformers
+and torch; run \code{\link{setup_ebisg}} or \code{\link{setup_lbisg}} to configure.}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
 Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
@@ -151,6 +154,12 @@ consistency with the Python side. To use a different sentence-transformer,
 pass a named list with elements \code{transformer} (HuggingFace model ID),
 \code{dim} (embedding dimension), and \code{surname_mlp},
 \code{firstname_mlp} (paths to custom .pt checkpoints).}
+
+\item{lists}{Required when \code{model = "lBISG"}. A named list of character
+vectors of surnames, keyed by race abbreviation (any of \code{"whi"},
+\code{"bla"}, \code{"his"}, \code{"asi"}); \code{"oth"} is handled as the
+residual and needs no list. Each vector is an approximate list of surnames
+typical of that group (from expert knowledge or a language model).}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
