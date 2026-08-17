@@ -175,7 +175,7 @@ census_helper_new <- function(
       # TODO: Add test that we get the same ratios with legacy and new tables for 2020
       # Old table: Redistricting (Pl-some numbers) (does not have age, sex, or ZCTAs)
       # New table: DHC (does have age, sex, and ZCTA)
-      vars_ <- census_geo_api_names_legacy(year = year)
+      vars_ <- census_geo_api_names_legacy(year = year, nms = names(census))
     } else {
       vars_ <- census_geo_api_names(year)
     }

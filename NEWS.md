@@ -1,5 +1,19 @@
 # wru (development version)
 
+* `format_legacy_data()` now returns an object `predict_race()` can consume, and
+  its output changes shape as a result (#175). It is keyed by state and carries
+  `state`/`age`/`sex`/`year` alongside the `county`, `tract`, `block_group` and
+  `block` tables, matching `get_census_data()`. Three defects are fixed: the
+  population counts were labelled with 2010 SF1 names (`P005003` and friends)
+  rather than the 2020 redistricting names the 2020 code path reads; the
+  block-group table used a `blockGroup` id column that no merge looks for; and
+  the tract, block-group and block ids were cut from the wrong end of the GEOID,
+  so no block-level row ever matched a voter file. Wrapping the result in
+  `list(ST = ...)` is no longer needed.
+* A `census.data` object that carries legacy column names is now recognised by
+  those names rather than by `year`, so an object built for the 2020
+  redistricting tables or by an older `format_legacy_data()` works whichever
+  `year` is requested (#175).
 * `model = "fBISG"` now respects `skip_bad_geos = TRUE`: voter rows whose
   geography is absent from the census data are dropped (with a message) so the
   model can initialize and sample on a consistent set of rows, instead of

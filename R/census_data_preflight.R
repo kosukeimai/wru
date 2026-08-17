@@ -5,12 +5,12 @@
 
 census_data_preflight <- function(census.data, census.geo, year) {
   vars_ <- unlist(census_geo_api_names(year = year))
-  legacy_vars <- unlist(census_geo_api_names_legacy(year = year))
-  
+
   test <- lapply(census.data, function(x) {
     nms_to_test <- names(x[[census.geo]])
+    legacy_vars <- unlist(census_geo_api_names_legacy(year = year, nms = nms_to_test))
     all(vars_ %in% nms_to_test) || all(legacy_vars %in% nms_to_test)
-  }) 
+  })
   missings <- names(test)[!unlist(test)]
   
   if(any(!unlist(test))) {

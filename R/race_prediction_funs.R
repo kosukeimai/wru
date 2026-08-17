@@ -316,7 +316,7 @@ predict_race_me <- function(
       all_names <- names(x[[census.geo]])
       
       if (any(c("P2_005N", "P005003") %in% all_names)) {
-        vars_ <- census_geo_api_names_legacy(year = year)
+        vars_ <- census_geo_api_names_legacy(year = year, nms = all_names)
       }
       
       totals <- x[[census.geo]][, match(c(geo_id_names, unlist(vars_)), all_names)]

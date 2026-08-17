@@ -149,26 +149,33 @@ census_geo_api_names <- function(
   vars
 }
 
-census_geo_api_names_legacy <- function(year) {
-  if (year == 2020) {
-    return(
-      list(
-        r_whi = 'P2_005N',
-        r_bla = 'P2_006N',
-        r_his = 'P2_002N',
-        r_asi = c('P2_008N', 'P2_009N'),
-        r_oth = c('P2_007N', 'P2_010N', 'P2_011N')
-      )
-    )
-  }
-      
-  list(
+census_geo_api_names_legacy <- function(year, nms = NULL) {
+  redistricting <- list(
+    r_whi = 'P2_005N',
+    r_bla = 'P2_006N',
+    r_his = 'P2_002N',
+    r_asi = c('P2_008N', 'P2_009N'),
+    r_oth = c('P2_007N', 'P2_010N', 'P2_011N')
+  )
+
+  sf1 <- list(
     r_whi = 'P005003',
     r_bla = 'P005004',
     r_his = 'P005010',
     r_asi = c('P005006', 'P005007'),
     r_oth = c('P005005', 'P005008', 'P005009')
   )
+
+  # A legacy census.data object carries either naming scheme regardless of the
+  # census year, so trust the columns that are there over `year`.
+  if (!is.null(nms)) {
+    if (all(unlist(redistricting) %in% nms)) return(redistricting)
+    if (all(unlist(sf1) %in% nms)) return(sf1)
+  }
+
+  if (year == 2020) return(redistricting)
+
+  sf1
 }
 
 #' @rdname census_geo_api_names
