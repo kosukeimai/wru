@@ -102,12 +102,11 @@ where \code{\var{sex}} is coded as 0 for males and 1 for females.}
 \item{year}{An optional character vector specifying the year of U.S. Census geographic
 data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
 
-\item{party}{An optional character object specifying party registration field
-in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
-If specified, race/ethnicity predictions will be conditioned
-on individual's party registration (in addition to geolocation).
-Whatever the name of the party registration field in \code{\var{voter.file}},
-it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
+\item{party}{Deprecated and currently has no effect. Party registration was
+used to condition the priors by the pre-2.0 implementation
+(\code{.predict_race_old}), which the "BISG", "fBISG" and "eBISG" models
+replaced; none of them accept it. Supplying it now raises a warning and the
+predictions are unchanged.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
 
@@ -182,7 +181,7 @@ predicted probabilities for each of the five major racial categories:
 \details{
 This function implements the Bayesian race prediction methods outlined in
 Imai and Khanna (2015). The function produces probabilistic estimates of
-individual-level race/ethnicity, based on surname, geolocation, and party.
+individual-level race/ethnicity, based on surname and geolocation.
 }
 \examples{
 \donttest{
@@ -198,7 +197,7 @@ try(predict_race(
 \dontrun{
 CensusObj <- try(get_census_data(state = c("NY", "DC", "NJ")))
 try(predict_race(
-  voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+  voter.file = voters, census.geo = "tract", census.data = CensusObj)
   )
 }
 \dontrun{

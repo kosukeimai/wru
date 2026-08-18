@@ -4,7 +4,7 @@
 #'
 #' This function implements the Bayesian race prediction methods outlined in
 #' Imai and Khanna (2015). The function produces probabilistic estimates of
-#' individual-level race/ethnicity, based on surname, geolocation, and party.
+#' individual-level race/ethnicity, based on surname and geolocation.
 #' @param voter.file An object of class \code{data.frame}.
 #' Must contain a row for each individual being predicted,
 #' as well as a field named \code{\var{surname}} containing each individual's surname.
@@ -69,12 +69,11 @@
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
 #' @param year An optional character vector specifying the year of U.S. Census geographic
 #' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
-#' @param party An optional character object specifying party registration field
-#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
-#' If specified, race/ethnicity predictions will be conditioned
-#' on individual's party registration (in addition to geolocation).
-#' Whatever the name of the party registration field in \code{\var{voter.file}},
-#' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
+#' @param party Deprecated and currently has no effect. Party registration was
+#' used to condition the priors by the pre-2.0 implementation
+#' (\code{.predict_race_old}), which the "BISG", "fBISG" and "eBISG" models
+#' replaced; none of them accept it. Supplying it now raises a warning and the
+#' predictions are unchanged.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param return.unmatched Logical, defaults to FALSE. If TRUE, appends boolean
 #'  columns reporting whether each name was found in the name dictionary:
@@ -145,7 +144,7 @@
 #' \dontrun{
 #' CensusObj <- try(get_census_data(state = c("NY", "DC", "NJ")))
 #' try(predict_race(
-#'   voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+#'   voter.file = voters, census.geo = "tract", census.data = CensusObj)
 #'   )
 #' }
 #' \dontrun{
@@ -187,7 +186,18 @@ predict_race <- function(
 ) {
   
   message("Predicting race for ", year)
-  
+
+  ## `party` is not consumed by any of the current models. Warn rather than
+  ## accept it silently, so a caller expecting party-conditioned priors is not
+  ## misled by predictions that ignored the argument entirely.
+  if (!is.null(party)) {
+    warning(
+      "`party` is not used by the BISG, fBISG or eBISG models and has no ",
+      "effect on predictions. It was only used by the pre-2.0 implementation. ",
+      "Predictions returned here are not conditioned on party registration."
+    )
+  }
+
   ## Check model type
   if (!(model %in% c("BISG", "fBISG", "eBISG"))) {
     stop(
