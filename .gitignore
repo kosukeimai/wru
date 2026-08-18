@@ -44,3 +44,6 @@ __pycache__/
 
 # test data RDS files
 wru-data-*.rds
+
+# release data assets (attached to GitHub releases, not the repo)
+release-data/
