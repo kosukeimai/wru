@@ -151,9 +151,15 @@ surname dictionary, as well as first and middle name information.
 
 \section{.predict_race_embedding}{
 
-eBISG race prediction function, which uses pre-trained text embeddings
-(E5-Large) to predict race probabilities for names not found in Census
-surname lists, rather than falling back to generic population-level priors.
+eBISG (embedding-supplemented BISG) predicts race for surnames that are
+absent from the Census surname list. About 10\% of US voters have such
+surnames. Standard BISG falls back to generic population-level priors
+for these names. eBISG represents each name with a pre-trained text
+embedding. A neural network trained on 2020 Census surname and
+first-name data turns that embedding into race probabilities. For names
+that appear in the Census list, eBISG returns the same predictions as
+standard BISG. Dasanaike and Imai (2026) describe the method at
+\url{https://arxiv.org/abs/2604.22555}.
 }
 
 \keyword{internal}

@@ -205,8 +205,9 @@ predict_race(
 )
 ```
 
-For methodological details, see Dasanaike and Imai (2026),
-“Using Embedding Models to Improve Probabilistic Race Prediction.”
+For methodological details on `eBISG`, see Dasanaike, N. and Imai, K.
+(2026). "[Using Embedding Models to Improve Probabilistic Race
+Prediction](https://arxiv.org/abs/2604.22555)" (arXiv:2604.22555).
 
 ### Downloading census data
 
