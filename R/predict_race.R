@@ -4,7 +4,7 @@
 #'
 #' This function implements the Bayesian race prediction methods outlined in
 #' Imai and Khanna (2015). The function produces probabilistic estimates of
-#' individual-level race/ethnicity, based on surname, geolocation, and party.
+#' individual-level race/ethnicity, based on surname and geolocation.
 #' @param voter.file An object of class \code{data.frame}.
 #' Must contain a row for each individual being predicted,
 #' as well as a field named \code{\var{surname}} containing each individual's surname.
@@ -20,11 +20,13 @@
 #' tract is six characters, block group is usually a single character and block
 #'  is four characters. Place is five characters.
 #' See below for other optional fields.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-#'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-#'  Default is \code{TRUE}.
+#' @param census.surname Deprecated in favor of \code{name_source}. If supplied,
+#'  \code{TRUE} maps to \code{name_source = "mixed"} and \code{FALSE} to
+#'  \code{name_source = "vf_only"}, with a warning. Default \code{NULL}.
+#' @param name_source One of \code{"mixed"} (default; union of the Census and
+#'  voter-file dictionaries, Census winning on overlapping names), \code{"census_only"}
+#'  (Census dictionaries only; errors if middle names are requested), or
+#'  \code{"vf_only"} (augmented voter-file dictionaries only).
 #' @param surname.only A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 #'  only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.
 #' @param census.geo An optional character vector specifying what level of
@@ -67,13 +69,20 @@
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
 #' @param year An optional character vector specifying the year of U.S. Census geographic
 #' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
-#' @param party An optional character object specifying party registration field
-#' in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
-#' If specified, race/ethnicity predictions will be conditioned
-#' on individual's party registration (in addition to geolocation).
-#' Whatever the name of the party registration field in \code{\var{voter.file}},
-#' it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.
+#' @param party Deprecated and currently has no effect. Party registration was
+#' used to condition the priors by the pre-2.0 implementation
+#' (\code{.predict_race_old}), which the "BISG", "fBISG" and "eBISG" models
+#' replaced; none of them accept it. Supplying it now raises a warning and the
+#' predictions are unchanged.
 #' @param retry The number of retries at the census website if network interruption occurs.
+#' @param return.unmatched Logical, defaults to FALSE. If TRUE, appends boolean
+#'  columns reporting whether each name was found in the name dictionary:
+#'  \code{last_matched}, plus \code{first_matched} and \code{middle_matched}
+#'  when those names are used. The flags use the same dictionary match for every
+#'  \code{model}, so results are comparable across models and name selections.
+#'  They are computed before imputation, so a row whose probabilities were only
+#'  imputed (or, for \code{model = "eBISG"}, supplied by the embedding model)
+#'  still reads as unmatched.
 #' @param impute.missing Logical, defaults to TRUE. Should missing be imputed?
 #' @param skip_bad_geos Logical. Option to have the function skip any geolocations that are not present 
 #' in the census data, returning a partial data set. Default is set to \code{FALSE}, in which case it
@@ -135,7 +144,7 @@
 #' \dontrun{
 #' CensusObj <- try(get_census_data(state = c("NY", "DC", "NJ")))
 #' try(predict_race(
-#'   voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+#'   voter.file = voters, census.geo = "tract", census.data = CensusObj)
 #'   )
 #' }
 #' \dontrun{
@@ -153,7 +162,8 @@
 
 predict_race <- function(
     voter.file,
-    census.surname = TRUE,
+    census.surname = NULL,
+    name_source = c("mixed", "census_only", "vf_only"),
     surname.only = FALSE,
     census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
@@ -163,6 +173,7 @@ predict_race <- function(
     year = "2020",
     party = NULL,
     retry = 3,
+    return.unmatched = FALSE,
     impute.missing = TRUE,
     skip_bad_geos = FALSE,
     use.counties = FALSE,
@@ -175,7 +186,18 @@ predict_race <- function(
 ) {
   
   message("Predicting race for ", year)
-  
+
+  ## `party` is not consumed by any of the current models. Warn rather than
+  ## accept it silently, so a caller expecting party-conditioned priors is not
+  ## misled by predictions that ignored the argument entirely.
+  if (!is.null(party)) {
+    warning(
+      "`party` is not used by the BISG, fBISG or eBISG models and has no ",
+      "effect on predictions. It was only used by the pre-2.0 implementation. ",
+      "Predictions returned here are not conditioned on party registration."
+    )
+  }
+
   ## Check model type
   if (!(model %in% c("BISG", "fBISG", "eBISG"))) {
     stop(
@@ -198,7 +220,10 @@ predict_race <- function(
   
   census.geo <- tolower(census.geo)
   census.geo <- rlang::arg_match(census.geo)
-  
+
+  name_source <- rlang::arg_match(name_source)
+  name_source <- resolve_name_source(name_source, census.surname)
+
   # block_group is missing, pull from block
   if((surname.only == FALSE) && !(missing(census.geo)) && (census.geo == "block_group") && !("block_group" %in% names(voter.file))) {
     voter.file$block_group <- substring(voter.file$block, 1, 1)
@@ -239,7 +264,7 @@ predict_race <- function(
       retry = retry,
       impute.missing = impute.missing,
       skip_bad_geos = skip_bad_geos,
-      census.surname = census.surname,
+      name_source = name_source,
       use.counties = use.counties,
       ebisg.model = ebisg.model
     )
@@ -259,7 +284,7 @@ predict_race <- function(
                               retry = retry,
                               impute.missing = impute.missing,
                               skip_bad_geos = skip_bad_geos,
-                              census.surname = census.surname,
+                              name_source = name_source,
                               use.counties = use.counties)
   } else {
     ctrl <- list(
@@ -271,6 +296,24 @@ predict_race <- function(
     ctrl$burnin <- floor(ctrl$iter / 2)
     ctrl[names(control)] <- control
     ctrl$usr_seed <- ifelse(is.null(control$seed), FALSE, TRUE)
+
+    ## fBISG cannot initialize or sample rows whose geography is absent from the
+    ## census data. When skip_bad_geos = TRUE, drop those rows up front (using
+    ## the same check census_helper applies) so the BISG-derived race.init and
+    ## predict_race_me operate on an identical, aligned set of rows (#163).
+    if (isTRUE(skip_bad_geos) && surname.only == FALSE) {
+      kept <- suppressMessages(census_helper_new(
+        key = census.key, voter.file = voter.file, states = "all",
+        geo = census.geo, age = age, sex = sex, year = year,
+        census.data = census.data, retry = retry,
+        use.counties = use.counties, skip_bad_geos = TRUE
+      ))
+      n_dropped <- nrow(voter.file) - nrow(kept)
+      if (n_dropped > 0) {
+        message(n_dropped, " record(s) dropped: geographies not found in census data (skip_bad_geos = TRUE).")
+        voter.file <- voter.file[voter.file$caseid %in% kept$caseid, , drop = FALSE]
+      }
+    }
 
     if (is.null(race.init)) {
       if(ctrl$verbose){
@@ -289,7 +332,7 @@ predict_race <- function(
                                  retry = retry,
                                  impute.missing = TRUE,
                                  skip_bad_geos = skip_bad_geos,
-                                 census.surname = census.surname,
+                                 name_source = name_source,
                                  use.counties = use.counties,
                                  model = "BISG",
                                  control = list(verbose=FALSE))
@@ -315,11 +358,34 @@ predict_race <- function(
                              surname.only = surname.only,
                              census.data = census.data, retry = retry,
                              impute.missing = impute.missing,
-                             census.surname = census.surname,
+                             name_source = name_source,
                              use.counties = use.counties, race.init = race.init,
                              ctrl = ctrl)
   }
   seed_attr <- attr(preds, "RNGseed")
+
+  ## Match flags are computed once, here, from a single merge_names pass rather
+  ## than inside each predictor. This guarantees the same matched/unmatched
+  ## definition regardless of `model`, so flags are comparable across models and
+  ## name selections. merge_names only needs the name columns; impute.missing is
+  ## forced FALSE so the flags reflect dictionary matches, not imputed fills.
+  if (return.unmatched) {
+    flags <- suppressMessages(merge_names(
+      voter.file = voter.file,
+      namesToUse = names.to.use,
+      name_source = name_source,
+      year = year,
+      table.surnames = name.dictionaries[["surname"]],
+      table.first = name.dictionaries[["first"]],
+      table.middle = name.dictionaries[["middle"]],
+      clean.names = TRUE,
+      impute.missing = FALSE,
+      return.unmatched = TRUE
+    ))
+    flag_cols <- grep("_matched$", names(flags), value = TRUE)
+    preds <- merge(preds, flags[, c("caseid", flag_cols)], by = "caseid", sort = FALSE)
+  }
+
   preds <- preds[order(preds$caseid),setdiff(names(preds), "caseid")]
   attr(preds, "RNGseed") <- seed_attr
   preds

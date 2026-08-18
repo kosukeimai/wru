@@ -33,11 +33,9 @@
 #' Other options are \code{"last, first"}, indicating that both last and first names will be
 #' used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 #' be used.
-#' @param census.surname A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-#'  function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-#'  from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-#'  If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-#'  Default is \code{TRUE}.
+#' @param name_source One of \code{"mixed"}, \code{"census_only"}, or \code{"vf_only"};
+#'  see [predict_race()].
+#' @param year Census vintage, \code{"2020"} (default) or \code{"2010"}.
 #' @param table.surnames An object of class \code{data.frame} provided by the
 #' users as an alternative surname dictionary. It will consist of a list of
 #' U.S. surnames, along with the associated probabilities P(name | ethnicity)
@@ -64,9 +62,15 @@
 #' @importFrom dplyr coalesce
 #' @examples
 #' data(voters)
-#' \dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
+#' \dontrun{try(merge_names(voters, namesToUse = "surname", name_source = "mixed"))}
+#' @param return.unmatched A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
+#' boolean columns (\code{last_matched}, and \code{first_matched} /
+#' \code{middle_matched} when those names are used) are appended, reporting
+#' whether each name was found in the dictionary. The flags are computed
+#' before imputation, so they remain \code{FALSE} for names that were only
+#' filled in by imputation. Default is \code{FALSE}.
 #' @keywords internal
-merge_names <- function(voter.file, namesToUse, census.surname, table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG") {
+merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2020", table.surnames = NULL, table.first = NULL, table.middle = NULL, clean.names = TRUE, impute.missing = FALSE, model = "BISG", return.unmatched = FALSE) {
 
   # check the names
   if (namesToUse == "surname") {
@@ -84,46 +88,19 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     }
   }
 
-  wru_data_preflight()
-
-  path <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
-
-  first_c <- readRDS(paste0(path, "/wru-data-first_c.rds"))
-  mid_c <- readRDS(paste0(path, "/wru-data-mid_c.rds"))
-  if(census.surname){
-    last_c <- readRDS(paste0(path, "/wru-data-census_last_c.rds"))
-  } else {
-    last_c <- readRDS(paste0(path, "/wru-data-last_c.rds"))
-  }
-  
-  p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
-  if (is.null(table.surnames)) {
-    lastNameDict <- last_c
-  } else {
-    lastNameDict <- table.surnames
-    names(lastNameDict) <- names(last_c)
-    lastNameDict[is.na(lastNameDict)] <- 0
-  }
-  if (is.null(table.first)) {
-    firstNameDict <- first_c
-  } else {
-    firstNameDict <- table.first
-    firstNameDict[is.na(firstNameDict)] <- 0
-    names(firstNameDict) <- names(first_c)
-  }
-  if (is.null(table.middle)) {
-    middleNameDict <- mid_c
-  } else {
-    middleNameDict <- table.middle
-    middleNameDict[is.na(middleNameDict)] <- 0
-    names(middleNameDict) <- names(mid_c)
-  }
-
-  nameDict <- list(
-    "first" = firstNameDict,
-    "middle" = middleNameDict,
-    "last" = lastNameDict
+  nameDict <- load_name_dictionaries(
+    namesToUse = namesToUse,
+    name_source = name_source,
+    year = year,
+    table.surnames = table.surnames,
+    table.first = table.first,
+    table.middle = table.middle
   )
+  lastNameDict <- nameDict[["last"]]
+  firstNameDict <- nameDict[["first"]]
+  middleNameDict <- nameDict[["middle"]]
+
+  p_eth <- c("c_whi", "c_bla", "c_his", "c_asi", "c_oth")
 
   ## Convert names in voter file to upper case
   df <- voter.file
@@ -146,17 +123,14 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     df <- merge(df, middleNameDict, by.x = "middlename.match", by.y = "middle_name", all.x = TRUE, sort = FALSE)
   }
 
-  if (namesToUse == "surname" && sum(!(df$lastname.upper %in% lastNameDict$last_name)) == 0) {
-    return(df[, c(names(voter.file), "lastname.match", paste0(p_eth, "_last"))])
-  }
-  if (namesToUse == "surname, first" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0) {
-    return(df[, c(names(voter.file), "lastname.match", "firstname.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"))])
-  }
-  if (namesToUse == "surname, first, middle" && sum(!(df$lastname.match %in% lastNameDict$last_name)) == 0 &&
-    sum(!(df$firstname.upper %in% firstNameDict$first_name)) == 0 && sum(!(df$middlename.upper %in% middleNameDict$middle_name)) == 0) {
-    return(df[, c(names(voter.file), "lastname.match", "firstname.match", "middlename.match", paste0(p_eth, "_last"), paste0(p_eth, "_first"), paste0(p_eth, "_middle"))])
-  }
+  ## Match-flag columns appended on the way out (when return.unmatched). The
+  ## all-matched case needs no early return: the cleaning cascade below simply
+  ## runs as a no-op and falls through to the same final return.
+  flag_cols <- if (return.unmatched) {
+    c("last_matched",
+      if (grepl("first", namesToUse)) "first_matched",
+      if (grepl("middle", namesToUse)) "middle_matched")
+  } else character(0)
 
   ## Clean names (if specified by user)
   if (clean.names) {
@@ -279,6 +253,20 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     }
   }
 
+  name_types <- c("last",
+                  if (grepl("first", namesToUse)) "first",
+                  if (grepl("middle", namesToUse)) "middle")
+
+  ## Undo the cascade's "NA" coercion: an unmatched non-hyphenated name ends up
+  ## with a match key of "NA", which then merges against the genuine surname "Na"
+  ## (~97% Asian in the voter-file dictionary). Treat those rows as unmatched so
+  ## they are imputed (or left NA), not assigned "Na" probabilities (#162).
+  for (nt in name_types) {
+    bad <- toupper(df[[paste0(nt, "name.match")]]) == "NA" &
+           toupper(df[[paste0(nt, "name.upper")]]) != "NA"
+    bad[is.na(bad)] <- FALSE
+    if (any(bad)) df[bad, paste0(p_eth, "_", nt)] <- NA
+  }
 
   ## For unmatched names, just fill with an column mean if impute is true, or with constant if false
   c_miss_last <- mean(is.na(df$c_whi_last))
@@ -298,29 +286,34 @@ merge_names <- function(voter.file, namesToUse, census.surname, table.surnames =
     }
   }
 
+  ## Record match flags before imputation so imputed rows still read as
+  ## unmatched. After the cascade and the "NA" cleanup above, a non-NA
+  ## probability means the name was matched (#105).
+  if (return.unmatched) {
+    for (nt in name_types) df[[paste0(nt, "_matched")]] <- !is.na(df[[paste0("c_whi_", nt)]])
+  }
+
+  ## When impute.missing is TRUE, fill unmatched names with the column mean.
+  ## When FALSE, leave them as NA so callers can identify unmatched names (#162).
   if (impute.missing) {
-    impute.vec <- colMeans(df[, grep("c_", names(df), value = TRUE)], na.rm = TRUE)
-    for (i in grep("c_", names(df), value = TRUE)) {
+    impute.vec <- colMeans(df[, grep("^c_", names(df), value = TRUE)], na.rm = TRUE)
+    for (i in grep("^c_", names(df), value = TRUE)) {
       df[, i] <- dplyr::coalesce(df[, i], impute.vec[i])
-    }
-  } else {
-    for (i in grep("c_", names(df), value = TRUE)) {
-      df[, i] <- dplyr::coalesce(df[, i], 1)
     }
   }
 
   # return the data
   if (namesToUse == "surname") {
-    return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"))])
+    return(df[, c(names(voter.file), "lastname.match", paste(p_eth, "last", sep = "_"), flag_cols)])
   } else if (namesToUse == "surname, first") {
     return(df[, c(
       names(voter.file), "lastname.match", "firstname.match",
-      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_")
+      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), flag_cols
     )])
   } else if (namesToUse == "surname, first, middle") {
     return(df[, c(
       names(voter.file), "lastname.match", "firstname.match", "middlename.match",
-      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_")
+      paste(p_eth, "last", sep = "_"), paste(p_eth, "first", sep = "_"), paste(p_eth, "middle", sep = "_"), flag_cols
     )])
   }
 }
@@ -339,7 +332,7 @@ wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
   tryCatch(
     # Oddity of conditions for .token. Ignores token if is ""
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = "v2.0.0"), 
+    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = "v4.0.0"), 
     error = function(e) message("There was an error retrieving data: ", e$message)
   )
 }

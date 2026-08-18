@@ -13,4 +13,12 @@ ChangeLog
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
 ^README\.Rmd$
+^README\.html$
 ^data-raw$
+^release-data$
+^\.RData$
+^wru_.*\.tar\.gz$
+^ebisg-firstname-mlp\.pt$
+^ebisg-surname-mlp\.pt$
+^inst/python/__pycache__$
+wru-data-.*\.rds$

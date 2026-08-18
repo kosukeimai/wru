@@ -25,3 +25,25 @@ src/RcppExports.o
 src/aux_funs.o
 src/sample_me.o
 src/wru.so
+
+# local-only handoff/working docs (not part of the package)
+docs/
+
+# R workspace
+.RData
+
+# build tarballs
+wru_*.tar.gz
+
+# eBISG model weights
+ebisg-firstname-mlp.pt
+ebisg-surname-mlp.pt
+
+# Python cache
+__pycache__/
+
+# test data RDS files
+wru-data-*.rds
+
+# release data assets (attached to GitHub releases, not the repo)
+release-data/

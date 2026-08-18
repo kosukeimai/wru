@@ -2,30 +2,11 @@
 % Please edit documentation in R/race_prediction_funs.R
 \name{modfuns}
 \alias{modfuns}
-\alias{.predict_race_old}
 \alias{predict_race_new}
 \alias{predict_race_me}
 \alias{predict_race_embedding}
 \title{Internal model fitting functions}
 \usage{
-.predict_race_old(
-  voter.file,
-  census.surname = TRUE,
-  surname.only = FALSE,
-  surname.year = 2020,
-  name.dictionaries = NULL,
-  census.geo,
-  census.key = Sys.getenv("CENSUS_API_KEY"),
-  census.data = NULL,
-  age = FALSE,
-  sex = FALSE,
-  year = "2020",
-  party,
-  retry = 3,
-  impute.missing = TRUE,
-  use.counties = FALSE
-)
-
 predict_race_new(
   voter.file,
   names.to.use,
@@ -40,7 +21,7 @@ predict_race_new(
   retry = 0,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE
 )
 
@@ -57,7 +38,7 @@ predict_race_me(
   census.data = NULL,
   retry = 0,
   impute.missing = TRUE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE,
   race.init,
   ctrl
@@ -77,7 +58,7 @@ predict_race_embedding(
   retry = 0,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
-  census.surname = FALSE,
+  name_source = "mixed",
   use.counties = FALSE,
   ebisg.model = "intfloat/multilingual-e5-large"
 )
@@ -85,13 +66,13 @@ predict_race_embedding(
 \arguments{
 \item{voter.file}{See documentation in \code{race_predict}.}
 
-\item{census.surname}{See documentation in \code{race_predict}.}
+\item{names.to.use}{See documentation in \code{race_predict}.}
 
-\item{surname.only}{See documentation in \code{race_predict}.}
+\item{year}{See documentation in \code{race_predict}.}
 
-\item{surname.year}{See documentation in \code{race_predict}.}
+\item{age}{See documentation in \code{race_predict}.}
 
-\item{name.dictionaries}{See documentation in \code{race_predict}.}
+\item{sex}{See documentation in \code{race_predict}.}
 
 \item{census.geo}{See documentation in \code{race_predict}.}
 
@@ -102,25 +83,21 @@ required to download Census geographic data.
 If \code{\link{NULL}}, the default, attempts to find a census key stored in an
 \link[=Sys.getenv]{environment variable} named \code{CENSUS_API_KEY}.}
 
+\item{name.dictionaries}{See documentation in \code{race_predict}.}
+
+\item{surname.only}{See documentation in \code{race_predict}.}
+
 \item{census.data}{See documentation in \code{race_predict}.}
-
-\item{age}{See documentation in \code{race_predict}.}
-
-\item{sex}{See documentation in \code{race_predict}.}
-
-\item{year}{See documentation in \code{race_predict}.}
-
-\item{party}{See documentation in \code{race_predict}.}
 
 \item{retry}{See documentation in \code{race_predict}.}
 
 \item{impute.missing}{See documentation in \code{race_predict}.}
 
-\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
-
-\item{names.to.use}{See documentation in \code{race_predict}.}
-
 \item{skip_bad_geos}{See documentation in \code{race_predict}.}
+
+\item{name_source}{See documentation in \code{race_predict}.}
+
+\item{use.counties}{A logical, defaulting to FALSE. Should census data be filtered by counties available in \var{census.data}?}
 
 \item{race.init}{See documentation in \code{race_predict}.}
 
@@ -150,22 +127,15 @@ These functions are intended for internal use only. Users should use the
 \code{\link[=predict_race]{predict_race()}} interface rather any of these functions directly.
 }
 \details{
-These functions fit different versions of WRU. \code{.predict_race_old} fits
-the original WRU model, also known as BISG with census-based surname dictionary.
-\code{.predict_race_new} fits a new version of BISG which uses a new, augmented
+These functions fit different versions of WRU.
+\code{.predict_race_new} fits a version of BISG which uses a new, augmented
 surname dictionary, and can also accommodate the use of first and middle
-name information. Finally, \code{.predict_race_me} fits a fully Bayesian Improved
+name information. \code{.predict_race_me} fits a fully Bayesian Improved
 Surname Geocoding model (fBISG), which fits a model with measurement-error
 correction of erroneous zeros in census tables, in addition to also accommodating
 the augmented surname dictionary, and the first and middle name
 dictionaries when making predictions.
 }
-\section{.predict_race_old}{
-
-Original WRU race prediction function, implementing classical BISG with census-based
-surname dictionary.
-}
-
 \section{.predict_race_new }{
 
 New race prediction function, implementing classical BISG with augmented
@@ -181,9 +151,15 @@ surname dictionary, as well as first and middle name information.
 
 \section{.predict_race_embedding}{
 
-eBISG race prediction function, which uses pre-trained text embeddings
-(E5-Large) to predict race probabilities for names not found in Census
-surname lists, rather than falling back to generic population-level priors.
+eBISG (embedding-supplemented BISG) predicts race for surnames that are
+absent from the Census surname list. About 10\% of US voters have such
+surnames. Standard BISG falls back to generic population-level priors
+for these names. eBISG represents each name with a pre-trained text
+embedding. A neural network trained on 2020 Census surname and
+first-name data turns that embedding into race probabilities. For names
+that appear in the Census list, eBISG returns the same predictions as
+standard BISG. Dasanaike and Imai (2026) describe the method at
+\url{https://arxiv.org/abs/2604.22555}.
 }
 
 \keyword{internal}

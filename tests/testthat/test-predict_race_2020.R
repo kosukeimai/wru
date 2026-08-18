@@ -4,6 +4,14 @@
 options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
+## v4.0.0: predict_race() defaults to name_source = "mixed", which unions the
+## Census and voter-file surname dictionaries with Census probabilities winning on
+## overlapping names. The expected values below are intentionally unchanged from the
+## previous census-surname default: every fixture surname is present in the Census
+## dictionary, so the union only adds coverage for names absent from Census (none
+## here) and matched names keep their Census-derived probabilities. A shift here
+## would mean the union/precedence logic regressed, not that the values are stale.
+
 test_that("Fails if model is set to anything other than BISG or fBISG", {
   skip_on_cran()
   set.seed(42)

@@ -7,13 +7,15 @@
 merge_names(
   voter.file,
   namesToUse,
-  census.surname,
+  name_source = "mixed",
+  year = "2020",
   table.surnames = NULL,
   table.first = NULL,
   table.middle = NULL,
   clean.names = TRUE,
   impute.missing = FALSE,
-  model = "BISG"
+  model = "BISG",
+  return.unmatched = FALSE
 )
 }
 \arguments{
@@ -29,11 +31,10 @@ Other options are \code{"last, first"}, indicating that both last and first name
 used, and \code{"last, first, middle"}, indicating that last, first, and middle names will all
 be used.}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-Default is \code{TRUE}.}
+\item{name_source}{One of \code{"mixed"}, \code{"census_only"}, or \code{"vf_only"};
+see \code{\link[=predict_race]{predict_race()}}.}
+
+\item{year}{Census vintage, \code{"2020"} (default) or \code{"2010"}.}
 
 \item{table.surnames}{An object of class \code{data.frame} provided by the
 users as an alternative surname dictionary. It will consist of a list of
@@ -55,6 +56,13 @@ in order to increase the chance of finding a match. Default is \code{TRUE}.}
 \item{impute.missing}{See \code{predict_race}.}
 
 \item{model}{See \code{predict_race}.}
+
+\item{return.unmatched}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
+boolean columns (\code{last_matched}, and \code{first_matched} /
+\code{middle_matched} when those names are used) are appended, reporting
+whether each name was found in the dictionary. The flags are computed
+before imputation, so they remain \code{FALSE} for names that were only
+filled in by imputation. Default is \code{FALSE}.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
@@ -95,6 +103,6 @@ probability of 1 for Hispanics/Latinos and 0 for all other racial groups.
 }
 \examples{
 data(voters)
-\dontrun{try(merge_names(voters, namesToUse = "surname", census.surname = TRUE))}
+\dontrun{try(merge_names(voters, namesToUse = "surname", name_source = "mixed"))}
 }
 \keyword{internal}
