@@ -1,5 +1,14 @@
 # wru (development version)
 
+* Surname priors now come from the 2020 Census names files. The
+  `wru-data-census_last_c.rds` dictionary on the v4.0.0 release replaces the
+  2010-vintage table used since v2.0.0, and a Census first-name dictionary
+  (`wru-data-census_first_c.rds`) is published for the first time. Predictions
+  move for every name. The 2020 table covers 156,621 surnames against the 2010
+  table's 162,253, and shifts probability mass toward the Hispanic and
+  multi-race categories. `year` selects Census geography only: the name
+  dictionaries are always the newest vintage, so `year = "2010"` combines 2010
+  geography with 2020 name priors.
 * `format_legacy_data()` now returns an object `predict_race()` can consume, and
   its output changes shape as a result (#175). It is keyed by state and carries
   `state`/`age`/`sex`/`year` alongside the `county`, `tract`, `block_group` and
