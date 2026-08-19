@@ -9,6 +9,12 @@
   multi-race categories. `year` selects Census geography only: the name
   dictionaries are always the newest vintage, so `year = "2010"` combines 2010
   geography with 2020 name priors.
+* A failed name-dictionary download now raises an error naming the files that
+  are missing and the release they were sought from. It previously emitted a
+  message and let execution continue, so the failure surfaced as `cannot open
+  the connection` from `readRDS()` well away from its cause. A download that
+  fails while usable copies are already on disk still reports the error and
+  proceeds.
 * `format_legacy_data()` now returns an object `predict_race()` can consume, and
   its output changes shape as a result (#175). It is keyed by state and carries
   `state`/`age`/`sex`/`year` alongside the `county`, `tract`, `block_group` and
