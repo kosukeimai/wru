@@ -330,9 +330,33 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
 #' @importFrom piggyback pb_download
 wru_data_preflight <- function() {
   dest <- ifelse(getOption("wru_data_wd", default = FALSE), getwd(), tempdir())
+  tag <- "v4.0.0"
+  err <- NULL
   tryCatch(
     # Oddity of conditions for .token. Ignores token if is ""
-    piggyback::pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = "v4.0.0"), 
-    error = function(e) message("There was an error retrieving data: ", e$message)
+    pb_download(repo = "kosukeimai/wru", dest = dest, .token = "", tag = tag),
+    error = function(e) err <<- conditionMessage(e)
   )
+
+  # Every prediction path reads these two. Without them the callers fail later
+  # inside readRDS() with "cannot open the connection", which says nothing about
+  # the download that actually failed.
+  core <- c("wru-data-census_last_c.rds", "wru-data-last_c.rds")
+  absent <- core[!file.exists(file.path(dest, core))]
+  if (length(absent) > 0) {
+    stop("Could not obtain the wru name dictionaries from the ", tag,
+         " release of kosukeimai/wru.\n",
+         "  missing:   ", paste(absent, collapse = ", "), "\n",
+         "  looked in: ", dest, "\n",
+         if (is.null(err)) "" else paste0("  download error: ", err, "\n"),
+         "Check your network connection and GitHub rate limit, then try again.",
+         call. = FALSE)
+  }
+
+  # Download failed but usable copies are already on disk, so this is not fatal.
+  if (!is.null(err)) {
+    message("There was an error retrieving data: ", err,
+            "\nUsing the copies already in ", dest, ".")
+  }
+  invisible(dest)
 }

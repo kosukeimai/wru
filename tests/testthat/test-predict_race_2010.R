@@ -4,13 +4,15 @@
 options("piggyback.verbose" = FALSE)
 options("wru_data_wd" = TRUE)
 
-## v4.0.0: predict_race() defaults to name_source = "mixed", which unions the
-## Census and voter-file surname dictionaries with Census probabilities winning on
-## overlapping names. The expected values below are intentionally unchanged from the
-## previous census-surname default: every fixture surname is present in the Census
-## dictionary, so the union only adds coverage for names absent from Census (none
-## here) and matched names keep their Census-derived probabilities. A shift here
-## would mean the union/precedence logic regressed, not that the values are stale.
+## v4.0.0: the values below are baselined against the 2020 Census surname
+## dictionary (wru-data-census_last_c.rds on the v4.0.0 release), which replaced
+## the 2010-vintage table. `year` selects Census geography only -- the name
+## dictionaries are always the newest vintage, so this file and
+## test-predict_race_2020.R share the same surname priors.
+##
+## Replacing that dictionary moves every value here. If these fail after a
+## dictionary refresh, rebaseline them against the new table. If they fail
+## without one, the prediction path changed.
 
 test_that("Tests surname only predictions", {
   skip_on_cran()
@@ -24,8 +26,8 @@ test_that("Tests surname only predictions", {
   # Test and confirm prediction output is as expected
   expect_equal(dim(x), c(10, 20))
   expect_equal(sum(is.na(x)), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.045, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0272, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.057, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Johnson", "pred.his"], 4), 0.0358, tolerance = 0.01)
 })
 
 test_that("Test BISG NJ at county level", {
@@ -44,10 +46,10 @@ test_that("Test BISG NJ at county level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x)), 0L)
   expect_equal(sum(x$surname == "Johnson"), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0314, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Khanna", "pred.asi"], 4), 0.9367, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Fifield", "pred.whi"], 4), 0.9230, tolerance = 0.01)
-  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.9178, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.0397, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Khanna", "pred.asi"], 4), 0.9283, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Fifield", "pred.whi"], 4), 0.9128, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.9108, tolerance = 0.01)
 })
 
 test_that("Test fBISG NJ at tract level", {
@@ -70,8 +72,8 @@ test_that("Test fBISG NJ at tract level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x)), 0L)
   expect_equal(sum(x$surname == "Johnson"), 0)
-  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.063, tolerance = 0.01) # 0.0644
-  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.78, tolerance = 0.01) # 0.0644
+  expect_equal(round(x[x$surname == "Khanna", "pred.whi"], 4), 0.08, tolerance = 0.01)
+  expect_equal(round(x[x$surname == "Lopez", "pred.his"], 4), 0.769, tolerance = 0.01)
 })
 
 test_that("BISG NJ at block level", {
@@ -93,9 +95,9 @@ test_that("BISG NJ at block level", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0L)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7640, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.1)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.7, tolerance = 0.1)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.7273, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9951, tolerance = 0.1)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.6571, tolerance = 0.1)
 })
 
 test_that("BISG NJ at block_group level", {
@@ -119,9 +121,9 @@ test_that("BISG NJ at block_group level", {
   expect_equal(dim(x), c(7, 21))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9183, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 1.0, tolerance = 0.01)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.75, tolerance = 0.01)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.9087, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9780, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.7360, tolerance = 0.01)
 })
 
 test_that("Fails on territories", {
@@ -184,9 +186,9 @@ test_that("Handles zero-pop. geolocations", {
   expect_equal(dim(x), c(7, 20))
   expect_equal(sum(is.na(x$pred.asi)), 0)
   expect_true(!any(duplicated(x$surname)))
-  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.91, tolerance = 0.01)
-  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.99, tolerance = 0.01)
-  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.92, tolerance = 0.01)
+  expect_equal(x[x$surname == "Khanna", "pred.asi"], 0.8930, tolerance = 0.01)
+  expect_equal(x[x$surname == "Zhou", "pred.asi"], 0.9663, tolerance = 0.01)
+  expect_equal(x[x$surname == "Lopez", "pred.his"], 0.9124, tolerance = 0.01)
 })
 
 test_that("Fixes for issue #68 work as expected", {
@@ -201,11 +203,11 @@ test_that("Fixes for issue #68 work as expected", {
   surname <- c("SULLIVAN", "SULLIVAN", "SULLIVAN")
   three <- predict_race(voter.file=data.frame(surname), year = 2010, surname.only=TRUE)
   
-  expect_equal(one$pred.whi, 0.8397254)
-  expect_equal(two$pred.whi[1], 0.8397254)
-  expect_equal(two$pred.whi[2], 0.8397254)
+  expect_equal(one$pred.whi, 0.83252154)
+  expect_equal(two$pred.whi[1], 0.83252154)
+  expect_equal(two$pred.whi[2], 0.83252154)
   
-  expect_equal(three$pred.whi[1], 0.8397254)
-  expect_equal(three$pred.whi[2], 0.8397254)
-  expect_equal(three$pred.whi[3], 0.8397254)
+  expect_equal(three$pred.whi[1], 0.83252154)
+  expect_equal(three$pred.whi[2], 0.83252154)
+  expect_equal(three$pred.whi[3], 0.83252154)
 })

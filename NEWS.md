@@ -1,5 +1,29 @@
 # wru (development version)
 
+* `predict_race()` gains a `name_source` argument. It selects the dictionaries
+  that supply the name probabilities. The default `"mixed"` combines the Census
+  and voter-file dictionaries. For a name that both hold, the Census
+  probabilities win, and the voter-file dictionary supplies every other name.
+  `"census_only"` uses the Census dictionaries alone, and `"vf_only"` uses the
+  voter-file dictionaries alone. There is no Census middle-name dictionary, so
+  `"census_only"` raises an error for middle names.
+* `census.surname` is deprecated in favor of `name_source`, and its default is
+  now `NULL`. A supplied value still works and raises a warning. `TRUE` maps to
+  `"mixed"`. `FALSE` maps to `"vf_only"`.
+* Surname probabilities now come from the 2020 Census names files. The
+  `wru-data-census_last_c.rds` dictionary on the v4.0.0 release replaces the
+  2010-vintage dictionary used since v2.0.0. A Census first-name dictionary
+  (`wru-data-census_first_c.rds`) is published for the first time. Predictions
+  move for every name, because the 2020 dictionary holds 156,621 surnames
+  against 162,253 in the 2010 dictionary. Probability mass moves toward the
+  Hispanic and multi-race categories. `year` selects Census geography only, so
+  `year = "2010"` combines 2010 geography with 2020 name probabilities.
+* A failed name-dictionary download now raises an error. The error names the
+  files that are missing and the release that holds them. The download
+  previously printed a message and let execution continue. The failure then
+  appeared as `cannot open the connection` from `readRDS()`, far from its
+  cause. If usable copies are already on disk, a failed download reports the
+  error and continues.
 * `format_legacy_data()` now returns an object `predict_race()` can consume, and
   its output changes shape as a result (#175). It is keyed by state and carries
   `state`/`age`/`sex`/`year` alongside the `county`, `tract`, `block_group` and
