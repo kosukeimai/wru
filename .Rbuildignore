@@ -3,7 +3,6 @@
 ^\.travis\.yml$
 wru.png
 .github
-inst
 .travis.yml
 ChangeLog
 .gitignore
