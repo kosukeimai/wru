@@ -47,3 +47,6 @@ wru-data-*.rds
 
 # release data assets (attached to GitHub releases, not the repo)
 release-data/
+src/*.dll
+src/*.o
+*.pyc
