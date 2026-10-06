@@ -46,6 +46,33 @@ test_that("lbisg requires a list for every group but one residual", {
   expect_error(lbisg(s$names, s$geo, s$lists, prior = pr), "only one residual group")
 })
 
+test_that("a coarse group without a list keeps its coarse share", {
+  skip_if_no_lbisg()
+  s <- sim_lists()
+  cp <- cbind(AB = rep(0.9, length(s$names)), Z = 0.1)
+  r <- lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp,
+                                coarse.map = c(a = "AB", b = "AB"))
+  expect_equal(r$prevalence$Z, rep(0.1, 40))
+  expect_equal(r$prevalence$a + r$prevalence$b, rep(0.9, 40), tolerance = 1e-8)
+  cp2 <- cbind(cp, Y = 0)
+  expect_error(
+    lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp2,
+                             coarse.map = c(a = "AB", b = "AB")),
+    "only one coarse group"
+  )
+})
+
+test_that("lbisg accepts any embedding model ID and checks a fixed K", {
+  expect_equal(lbisg_transformer("sentence-transformers/LaBSE"),
+               "sentence-transformers/LaBSE")
+  expect_equal(lbisg_transformer(list(transformer = "x/y", dim = 1L)), "x/y")
+  expect_error(lbisg_transformer(1), "HuggingFace model ID")
+  skip_if_no_lbisg()
+  s <- sim_lists()
+  expect_error(lbisg(s$names, s$geo, s$lists, prior = s$prior, K = 1),
+               "at least the number of groups")
+})
+
 test_that("predict_race lBISG checks its inputs", {
   expect_error(
     predict_race(voter.file = data.frame(surname = "SMITH", state = "NJ"), model = "lBISG",

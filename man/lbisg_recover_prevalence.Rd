@@ -29,7 +29,9 @@ known (Section 3.3). Requires \code{coarse.map}.}
 
 \item{coarse.map}{Named character vector mapping each list group to its
 coarse group (names are list groups, values are columns of
-\code{coarse.prior}). The groups must exhaust each coarse group.}
+\code{coarse.prior}). The list groups within a coarse group must together
+make up that coarse group. One coarse group may have no list group: it is
+not subdivided, keeps its coarse share, and is predicted without a list.}
 
 \item{lambda}{Assumed cross-group list rate (0 for exclusive lists).}
 }

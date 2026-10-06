@@ -37,7 +37,9 @@ known (Section 3.3). Requires \code{coarse.map}.}
 
 \item{coarse.map}{Named character vector mapping each list group to its
 coarse group (names are list groups, values are columns of
-\code{coarse.prior}). The groups must exhaust each coarse group.}
+\code{coarse.prior}). The list groups within a coarse group must together
+make up that coarse group. One coarse group may have no list group: it is
+not subdivided, keeps its coarse share, and is predicted without a list.}
 
 \item{first.names, first.lists}{Optional first names (one per person) and
 first-name lists keyed by the same groups. When supplied, lBISG is applied
@@ -73,7 +75,8 @@ coarse groups, it is first recovered from the list rates in each geography.
 }
 \examples{
 \dontrun{
-fit <- lbisg(voters$surname, voters$tract, lists = my_lists, prior = tract_shares)
+fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
+             prior = tract_shares)
 head(fit$posterior)
 }
 }

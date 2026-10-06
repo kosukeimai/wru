@@ -22,7 +22,8 @@ row per person and one named column per group (rows sum to one).}
 }
 \value{
 A list with \code{Pi} (groups by lists), its diagonal dominance
-\code{D}, and the estimated \code{coverage} and \code{precision} of each list.
+\code{D}, and the estimated \code{coverage} and \code{precision} of each
+list.
 }
 \description{
 Section 4.3 of Chasalow, Dasanaike and Imai. With the geographic prevalence

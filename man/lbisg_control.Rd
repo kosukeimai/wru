@@ -17,9 +17,11 @@ lbisg_control(
 )
 }
 \arguments{
-\item{n.folds}{Number of name folds \eqn{J} for the out-of-fold list scores (Algorithm 1).}
+\item{n.folds}{Number of name folds \eqn{J} for the out-of-fold list scores
+(Algorithm 1).}
 
-\item{geo.folds}{Number of geographic folds \eqn{J} for choosing \eqn{K} (Algorithm 2).}
+\item{geo.folds}{Number of geographic folds \eqn{J} for choosing \eqn{K}
+(Algorithm 2).}
 
 \item{K.grid}{Candidate numbers of clusters for Algorithm 2. The default grid
 runs from 10 to 20,000 and is extended upward while the maximum of
@@ -38,7 +40,9 @@ or at \code{max.epochs}.}
 \item{lambda}{Cross-group list rate for the sensitivity analysis of the
 prevalence recovery (Appendix C); 0 assumes exclusive lists.}
 
-\item{embedding.model}{Sentence-transformer used for the name embeddings.}
+\item{embedding.model}{Sentence-transformer used for the name embeddings:
+any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
+needed, because lBISG trains its own list models.}
 }
 \value{
 A named list.

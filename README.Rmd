@@ -222,7 +222,7 @@ lists <- list(
 out <- predict_race(voter.file = voter_file, census.geo = "block", model = "lBISG", lists = lists)
 ```
 
-lBISG learns from the whole file, so it needs a full voter file (thousands of people across many geographic units) rather than a handful of records. The output below is from a simulated file of 20,000 people over 300 New Jersey census blocks, with lists of 300 surnames per group. The first four people have a surname on the white, Black, Hispanic and Asian list respectively, and the last two have a surname on no list, so their probabilities come from the embedding clusters and the block:
+Unlike BISG, lBISG has no pre-built name table: it trains the list models and estimates the cluster probabilities from the voter file itself, by comparing geographic units. It therefore needs a full voter file, with thousands of people across many geographic units, rather than a handful of records. To predict for a few people, include them in a larger file for their area. The output below is from a simulated file of 20,000 people over 300 New Jersey census blocks, with lists of 300 surnames per group. The first four people have a surname on the white, Black, Hispanic and Asian list respectively, and the last two have a surname on no list, so their probabilities come from the embedding clusters and the block:
 
 ```
     surname block pred.whi pred.bla pred.his pred.asi pred.oth
@@ -252,7 +252,9 @@ head(attr(out, "lbisg")$Q$surname)
 
 In this simulation, the lBISG probabilities match the true group shares on average and discriminate well. Their ROC-AUC is between 0.90 and 0.94 by group, against 0.84 to 0.89 for the geographic prior alone and 0.95 to 0.98 for standard BISG with the true Census surname table.
 
-To also use first names, pass first-name lists alongside the surname lists:
+#### First names (lBIFSG)
+
+As with BIFSG, first names can be added to surnames. lBIFSG applies lBISG separately to each name field, with its own list models, clusters and number of clusters K, and combines the two posteriors as P(race | first-name cluster, geography) times P(race | surname cluster, geography), divided by the geographic prior and normalized. This assumes that the first-name and surname clusters are independent given race and geography, which is weaker than the BIFSG assumption that the names themselves are. Pass a first-name list for each group alongside the surname lists. The data need a `first` column with each person's first name:
 
 ``` r
 predict_race(voter.file = voter_file, census.geo = "block", model = "lBISG",
@@ -269,7 +271,7 @@ predict_race(voter.file = voter_file, census.geo = "block", model = "lBISG", lis
 
 #### Groups beyond the Census categories
 
-`lbisg()` works with any groups and any geographic prior, given as one row per person and one column per group. When the prior is known only for coarse groups, as for Chinese and Japanese within the Census Asian category, the subgroup prior is first recovered from the rates at which people in each geographic unit carry a surname on each list. This requires lists that together exhaust the coarse group and that rarely contain names of other groups:
+`lbisg()` works with any groups and any geographic prior, given as one row per person and one column per group. When the prior is known only for coarse groups, as for Chinese and Japanese within the Census Asian category, the subgroup prior is first recovered from the rates at which people in each geographic unit carry a surname on each list. This requires a list for every subgroup that makes up the coarse group (or a catch-all list for the remaining members), and lists that rarely contain names of other groups:
 
 ``` r
 fit <- lbisg(
@@ -306,7 +308,7 @@ lapply(q, round, 3)
 #> 0.946 0.748 0.904 0.968
 ```
 
-For methodological details on `lBISG`, see Chasalow, K., Dasanaike, N. and Imai, K. (2026). "Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists."
+For methodological details on `lBISG`, see Chasalow, K., Dasanaike, N. and Imai, K. (2026). "[Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists](https://arxiv.org/abs/2610.06273)" (arXiv:2610.06273).
 
 ### Downloading census data
 
