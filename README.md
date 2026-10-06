@@ -7,12 +7,12 @@
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version-last-release/wru)](https://cran.r-project.org/package=wru)
 ![CRAN downloads](http://cranlogs.r-pkg.org/badges/grand-total/wru)
 
-This R package implements the methods proposed in Imai, K. and Khanna,
-K. (2016). “[Improving Ecological Inference by Predicting Individual
-Ethnicity from Voter Registration
-Record](http://imai.princeton.edu/research/race.html).” Political
-Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. [doi:
-10.1093/pan/mpw001](https://dx.doi.org/10.1093/pan/mpw001).
+This R package implements the following methods:
+
+- BISG (see Imai, K. and K. Khanna. (2016). "[Improving Ecological Inference by Predicting Individual Ethnicity from Voter Registration Record](https://imai.fas.harvard.edu/research/race/)." Political Analysis, Vol. 24, No. 2 (Spring), pp. 263-272. [doi: 10.1093/pan/mpw001](https://dx.doi.org/10.1093/pan/mpw001)
+- fBISG (see Imai, K., S. Olivella, and E. T.R. Rosenman. (2022). "[Addressing Census data problems in race imputation via fully Bayesian Improved Surname Geocoding and name supplements](https://imai.fas.harvard.edu/research/racepred/).'' Science Advances, Vol. 8, No. 49 (December), pp. 1-10. [doi: 10.1126/sciadv.adc9824](https://dx.doi.org/10.1126/sciadv.adc9824)
+- eBISG (see Dasanaike, N. and K. Imai. (2026). "[Using Embedding Models to Improve Probabilistic Race Prediction](https://imai.fas.harvard.edu/research/ebisg/)." arXiv preprint. [doi: 10.48550/arXiv.2604.22555](https://doi.org/10.48550/arXiv.2604.22555)
+- lBISG (see Chasalow, K., N. Dasanaike, and K. Imai. (2026). "[Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists]([Chasalow, Kyla, Noah Dasanaike, and Kosuke Imai. (2026). ``Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists.''](https://imai.fas.harvard.edu/research/lbisg/)." arXiv preprint. [doi: 10.48550/arXiv.2610.06273](https://doi.org/10.48550/arXiv.2610.06273)
 
 ## Installation
 
