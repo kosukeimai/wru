@@ -10,7 +10,8 @@ lbisg_recover_prevalence(
   lists,
   coarse.prior = NULL,
   coarse.map = NULL,
-  lambda = 0
+  lambda = 0,
+  exhaustive = FALSE
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ make up that coarse group. One coarse group may have no list group: it is
 not subdivided, keeps its coarse share, and is predicted without a list.}
 
 \item{lambda}{Assumed cross-group list rate (0 for exclusive lists).}
+
+\item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
+make up the whole population being divided; see
+\code{\link{lbisg_control}}.}
 }
 \value{
 A list with \code{prevalence} (a data frame with one row per

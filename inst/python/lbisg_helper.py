@@ -605,10 +605,9 @@ def recover_prevalence(onmat, geo, coarse_prior=None, coarse_of=None,
     for c in np.unique(coarse_of):
         cols = np.flatnonzero(coarse_of == c)
         if len(cols) == 1:
-            # Nothing to recover: the group's share is the coarse share.
+            # Nothing to recover: the group's share is the coarse share, and
+            # its coverage is not estimated (it stays NaN).
             theta[:, cols[0]] = Mc[:, c]
-            coverage[cols[0]] = (rho[:, cols[0]].dot(n)
-                                 / max((Mc[:, c] * n).sum(), 1e-300))
             continue
         theta[:, cols], coverage[cols] = _recover_block(
             rho[:, cols], Mc[:, c], n * Mc[:, c], lam)

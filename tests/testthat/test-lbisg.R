@@ -30,12 +30,14 @@ test_that("lbisg_list_quality recovers coverage without labels", {
 test_that("lbisg_recover_prevalence recovers shares with and without a coarse prior", {
   skip_if_no_lbisg()
   s <- sim_lists()
-  r <- lbisg_recover_prevalence(s$names, s$geo, s$lists)
+  expect_error(lbisg_recover_prevalence(s$names, s$geo, s$lists), "exhaustive = TRUE")
+  r <- lbisg_recover_prevalence(s$names, s$geo, s$lists, exhaustive = TRUE)
   expect_equal(unname(r$coverage), c(0.5, 0.6), tolerance = 0.05)
   expect_gt(stats::cor(r$prevalence$a, s$share_a[r$prevalence$geo]), 0.95)
   expect_equal(rowSums(r$prevalence[, c("a", "b")]), rep(1, 40), ignore_attr = TRUE)
   cp <- cbind(AB = rep(1, length(s$names)))
-  r2 <- lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp, coarse.map = c(a = "AB", b = "AB"))
+  r2 <- lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp, coarse.map = c(a = "AB", b = "AB"),
+                                 exhaustive = TRUE)
   expect_equal(r2$prevalence$a, r$prevalence$a, tolerance = 1e-6)
 })
 
@@ -51,13 +53,13 @@ test_that("a coarse group without a list keeps its coarse share", {
   s <- sim_lists()
   cp <- cbind(AB = rep(0.9, length(s$names)), Z = 0.1)
   r <- lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp,
-                                coarse.map = c(a = "AB", b = "AB"))
+                                coarse.map = c(a = "AB", b = "AB"), exhaustive = TRUE)
   expect_equal(r$prevalence$Z, rep(0.1, 40))
   expect_equal(r$prevalence$a + r$prevalence$b, rep(0.9, 40), tolerance = 1e-8)
   cp2 <- cbind(cp, Y = 0)
   expect_error(
     lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp2,
-                             coarse.map = c(a = "AB", b = "AB")),
+                             coarse.map = c(a = "AB", b = "AB"), exhaustive = TRUE),
     "only one coarse group"
   )
 })

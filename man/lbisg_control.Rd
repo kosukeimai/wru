@@ -13,6 +13,7 @@ lbisg_control(
   batch.size = 512,
   seed = 42,
   lambda = 0,
+  exhaustive = FALSE,
   embedding.model = "intfloat/multilingual-e5-large"
 )
 }
@@ -39,6 +40,15 @@ or at \code{max.epochs}.}
 
 \item{lambda}{Cross-group list rate for the sensitivity analysis of the
 prevalence recovery (Appendix C); 0 assumes exclusive lists.}
+
+\item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
+make up the whole population being divided: every group when no prior is
+given, or each subdivided coarse group when only a coarse prior is given.
+Recovering the prior requires this (Section 3): if some members of a
+coarse group belong to none of the listed subgroups, the recovery assigns
+them to the listed subgroups anyway. Add a residual list for the remaining
+members (for example, the coarse group's names minus those on the
+subgroup lists) before setting it. Not used when the full prior is given.}
 
 \item{embedding.model}{Sentence-transformer used for the name embeddings:
 any HuggingFace model ID (default E5-Large). No eBISG checkpoint is

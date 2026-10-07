@@ -59,7 +59,8 @@ data frame with one column \code{pred.<group>} per group), \code{prior}
 (the geographic prior used), and per name field the selected \code{K}, the
 \code{Q} curve, and the number of training epochs chosen in each fold.
 When the prior was recovered, \code{recovered} holds the estimated list
-coverages.
+coverages (\code{NA} for groups that were not subdivided, whose share is
+the coarse share).
 }
 \description{
 lBISG recovers calibrated group probabilities from short, approximate

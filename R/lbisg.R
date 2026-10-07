@@ -41,7 +41,8 @@
 #'   (the geographic prior used), and per name field the selected \code{K}, the
 #'   \code{Q} curve, and the number of training epochs chosen in each fold.
 #'   When the prior was recovered, \code{recovered} holds the estimated list
-#'   coverages.
+#'   coverages (\code{NA} for groups that were not subdivided, whose share is
+#'   the coarse share).
 #' @examples
 #' \dontrun{
 #' fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
@@ -89,6 +90,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     }
     prior <- prior[, c(groups, unlisted), drop = FALSE]
   } else {
+    lbisg_check_exhaustive(control$exhaustive, coarse.prior)
     onm <- lbisg_list_matrix(names, lists)
     if (is.null(coarse.prior)) {
       if (verbose) {
@@ -177,6 +179,14 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #' @param seed Random seed.
 #' @param lambda Cross-group list rate for the sensitivity analysis of the
 #'   prevalence recovery (Appendix C); 0 assumes exclusive lists.
+#' @param exhaustive Set to \code{TRUE} to state that the groups with lists
+#'   make up the whole population being divided: every group when no prior is
+#'   given, or each subdivided coarse group when only a coarse prior is given.
+#'   Recovering the prior requires this (Section 3): if some members of a
+#'   coarse group belong to none of the listed subgroups, the recovery assigns
+#'   them to the listed subgroups anyway. Add a residual list for the remaining
+#'   members (for example, the coarse group's names minus those on the
+#'   subgroup lists) before setting it. Not used when the full prior is given.
 #' @param embedding.model Sentence-transformer used for the name embeddings:
 #'   any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 #'   needed, because lBISG trains its own list models.
@@ -184,12 +194,13 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #' @export
 lbisg_control <- function(n.folds = 5, geo.folds = 5, K.grid = NULL,
                           max.epochs = 100, patience = 5, batch.size = 512,
-                          seed = 42, lambda = 0,
+                          seed = 42, lambda = 0, exhaustive = FALSE,
                           embedding.model = "intfloat/multilingual-e5-large") {
   list(
     n.folds = n.folds, geo.folds = geo.folds, K.grid = K.grid,
     max.epochs = max.epochs, patience = patience, batch.size = batch.size,
-    seed = seed, lambda = lambda, embedding.model = embedding.model
+    seed = seed, lambda = lambda, exhaustive = exhaustive,
+    embedding.model = embedding.model
   )
 }
 
@@ -206,13 +217,18 @@ lbisg_control <- function(n.folds = 5, geo.folds = 5, K.grid = NULL,
 #'
 #' @inheritParams lbisg
 #' @param lambda Assumed cross-group list rate (0 for exclusive lists).
+#' @param exhaustive Set to \code{TRUE} to state that the groups with lists
+#'   make up the whole population being divided; see
+#'   \code{\link{lbisg_control}}.
 #' @return A list with \code{prevalence} (a data frame with one row per
 #'   geography and one column per group) and \code{coverage} (the estimated
 #'   \eqn{P(L_r = 1 \mid R = r)} of each list).
 #' @export
 lbisg_recover_prevalence <- function(names, geo, lists, coarse.prior = NULL,
-                                     coarse.map = NULL, lambda = 0) {
+                                     coarse.map = NULL, lambda = 0,
+                                     exhaustive = FALSE) {
   lists <- lbisg_check_lists(lists, "lists")
+  lbisg_check_exhaustive(exhaustive, coarse.prior)
   ensure_lbisg_python()
   mod <- get_lbisg_module()
   geo_f <- factor(as.character(geo))
@@ -413,6 +429,26 @@ lbisg_check_coarse <- function(coarse.prior, coarse.map, groups) {
 }
 
 
+# Recovering the prior assumes the listed groups make up the whole population
+# being divided. The software cannot check this, so the user has to state it.
+lbisg_check_exhaustive <- function(exhaustive, coarse.prior) {
+  if (isTRUE(exhaustive)) return(invisible(TRUE))
+  what <- if (is.null(coarse.prior)) {
+    "the listed groups make up the whole population"
+  } else {
+    "the listed subgroups of each subdivided coarse group make up that whole group"
+  }
+  stop(
+    "Recovering geographic prevalence from the lists assumes that ", what,
+    " (Section 3). If some members belong to none of the listed groups, ",
+    "they are assigned to the listed groups anyway. Add a residual list for ",
+    "them (for example, the coarse group's names minus those on the other ",
+    "lists), then set exhaustive = TRUE ",
+    "(control = lbisg_control(exhaustive = TRUE) in lbisg() and predict_race())."
+  )
+}
+
+
 lbisg_clean <- function(x) toupper(trimws(as.character(x)))
 
 
@@ -497,7 +533,10 @@ get_lbisg_module <- function() {
 #' @section .predict_race_lbisg:
 #' lBISG race prediction for \code{predict_race(model = "lBISG")}: the census
 #' race shares at \code{census.geo} are the geographic prior, and
-#' \code{\link{lbisg}} does the rest.
+#' \code{\link{lbisg}} does the rest. A race group given as a list of
+#' subgroup lists is subdivided, with the subgroup prior recovered from the
+#' census share of that group (Section 3.3). Any of whi, bla, his and asi
+#' without a list gets a list built from the Census name table.
 #' @rdname modfuns
 #' @keywords internal
 predict_race_lbisg <- function(
@@ -514,35 +553,27 @@ predict_race_lbisg <- function(
     control = NULL
 ) {
   eth <- c("whi", "bla", "his", "asi", "oth")
+  ctl <- utils::modifyList(
+    lbisg_control(), if (is.null(control)) list() else control
+  )
 
-  ## Lists: list(whi = , bla = , ...) or list(surname = <lists>, first = <lists>)
+  ## Lists: list(whi = , ...) or list(surname = <lists>, first = <lists>)
   first.lists <- NULL
   if (is.list(lists) && "surname" %in% names(lists) &&
       all(names(lists) %in% c("surname", "first"))) {
     first.lists <- lists$first
     lists <- lists$surname
   }
-  if (!is.list(lists) || is.null(names(lists)) || !all(names(lists) %in% eth)) {
-    stop(
-      "'lists' must be a named list of surname vectors keyed by ",
-      "c('whi','bla','his','asi'), optionally with 'oth', or ",
-      "list(surname = ..., first = ...) of such lists."
-    )
-  }
-  need <- c("whi", "bla", "his", "asi")
-  if (!all(need %in% names(lists))) {
-    stop(
-      "lBISG requires a name list for every group (Algorithm 1); missing: ",
-      paste(setdiff(need, names(lists)), collapse = ", "),
-      ". Only 'oth' may be left as the residual group without a list."
-    )
-  }
+  lbisg_check_race_lists(lists, eth, "lists")
   use_first <- grepl("first", names.to.use)
-  if (use_first && is.null(first.lists)) {
-    stop(
-      "names.to.use includes first names; supply ",
-      "lists = list(surname = ..., first = ...)."
-    )
+  if (use_first) {
+    if (is.null(first.lists)) {
+      stop(
+        "names.to.use includes first names; supply ",
+        "lists = list(surname = ..., first = ...)."
+      )
+    }
+    lbisg_check_race_lists(first.lists, eth, "first-name lists")
   }
   if (!("surname" %in% names(voter.file))) {
     stop("voter.file must have a column named 'surname'.")
@@ -587,22 +618,164 @@ predict_race_lbisg <- function(
     paste, c(voter.file[, c("state", geo_id_names), drop = FALSE], sep = "_")
   )
 
-  ctl <- utils::modifyList(
-    lbisg_control(), if (is.null(control)) list() else control
-  )
-  fit <- lbisg(
-    names = voter.file$surname, geo = geo_key, lists = lists, prior = prior,
-    first.names = if (use_first) voter.file$first else NULL,
-    first.lists = if (use_first) first.lists else NULL,
-    control = ctl
-  )
+  ## Fill in Census lists, then flatten subgroups
+  sur <- lbisg_race_lists(lists, prior, year, "last")
+  first <- if (use_first) lbisg_race_lists(first.lists, prior, year, "first")
+  if (use_first && !identical(names(first$lists), names(sur$lists))) {
+    stop(
+      "The first-name lists must subdivide the same groups into the same ",
+      "subgroups as the surname lists."
+    )
+  }
+  subdivided <- unique(sur$coarse[names(sur$coarse) != sur$coarse])
 
-  preds <- as.matrix(fit$posterior[, paste0("pred.", eth)])
-  out <- data.frame(cbind(voter.file[vars.orig], preds))
+  if (length(subdivided) == 0) {
+    fit <- lbisg(
+      names = voter.file$surname, geo = geo_key, lists = sur$lists,
+      prior = prior,
+      first.names = if (use_first) voter.file$first else NULL,
+      first.lists = if (use_first) first$lists else NULL,
+      control = ctl
+    )
+  } else {
+    fit <- lbisg(
+      names = voter.file$surname, geo = geo_key, lists = sur$lists,
+      coarse.prior = prior, coarse.map = sur$coarse,
+      first.names = if (use_first) voter.file$first else NULL,
+      first.lists = if (use_first) first$lists else NULL,
+      control = ctl
+    )
+  }
+
+  ## Standard five columns (a subdivided group is the sum of its subgroups),
+  ## then one column per subgroup
+  post <- fit$posterior
+  preds <- matrix(0, nrow(post), length(eth),
+                  dimnames = list(NULL, paste0("pred.", eth)))
+  for (g in names(sur$coarse)) {
+    col <- paste0("pred.", sur$coarse[[g]])
+    preds[, col] <- preds[, col] + post[[paste0("pred.", g)]]
+  }
+  for (g in setdiff(eth, sur$coarse)) {
+    preds[, paste0("pred.", g)] <- post[[paste0("pred.", g)]]
+  }
+  sub_cols <- paste0("pred.", names(sur$coarse)[names(sur$coarse) != sur$coarse])
+  out <- data.frame(cbind(voter.file[vars.orig], preds, post[sub_cols]))
   attr(out, "lbisg") <- list(
     K = sapply(fit$fields, `[[`, "K"),
     Q = lapply(fit$fields, `[[`, "Q"),
-    epochs = lapply(fit$fields, `[[`, "epochs")
+    epochs = lapply(fit$fields, `[[`, "epochs"),
+    lists = sur$source,
+    coverage = fit$recovered
   )
+  out
+}
+
+
+# Check the structure of the race lists given to predict_race(model = "lBISG").
+lbisg_check_race_lists <- function(lists, eth, what) {
+  ok <- is.list(lists) && !is.null(names(lists)) && length(lists) > 0 &&
+    all(names(lists) %in% eth)
+  if (!ok) {
+    stop(
+      "The ", what, " must be a named list keyed by any of ",
+      "c('whi','bla','his','asi','oth'). Each element is a vector of names, ",
+      "or a named list of name vectors to divide that group into subgroups."
+    )
+  }
+  for (g in names(lists)) {
+    if (is.list(lists[[g]])) {
+      sub <- names(lists[[g]])
+      if (is.null(sub) || any(sub == "") || length(sub) < 2) {
+        stop(
+          "Subgroups of '", g, "' must be a named list of at least two ",
+          "name vectors."
+        )
+      }
+      if (any(sub %in% eth)) {
+        stop("Subgroup names cannot be race abbreviations: ",
+             paste(intersect(sub, eth), collapse = ", "), ".")
+      }
+    }
+  }
+  invisible(TRUE)
+}
+
+
+# Flatten the race lists. Returns the lists keyed by group or subgroup, the
+# race group of each (coarse), and where each list came from (user or Census).
+# Any of whi, bla, his and asi without a list gets a Census list; oth without
+# a list is the residual group.
+lbisg_race_lists <- function(lists, prior, year, field) {
+  out <- list(); coarse <- character(); source <- character()
+  for (g in c("whi", "bla", "his", "asi", "oth")) {
+    x <- lists[[g]]
+    if (is.list(x)) {
+      for (s in names(x)) {
+        out[[s]] <- x[[s]]; coarse[s] <- g; source[s] <- "user"
+      }
+    } else if (!is.null(x)) {
+      out[[g]] <- x; coarse[g] <- g; source[g] <- "user"
+    } else if (g != "oth") {
+      out[[g]] <- NA; coarse[g] <- g; source[g] <- "census"
+    }
+  }
+  auto <- names(source)[source == "census"]
+  if (length(auto) > 0) {
+    message(
+      "Using lists built from the Census ", field, " name table for: ",
+      paste(auto, collapse = ", ")
+    )
+    built <- lbisg_census_lists(auto, prior, year, field)
+    out[auto] <- built[auto]
+  }
+  list(lists = out, coarse = coarse, source = source)
+}
+
+
+#' Name lists built from the Census name tables
+#'
+#' Builds the "Census lists" of Chasalow, Dasanaike and Imai from wru's Census
+#' name tables: names with \eqn{P(R = r \mid S) \ge} \code{floor}, ranked by
+#' their expected contribution, count times \eqn{(P(R = r \mid S) - P(R = r))},
+#' and cut at \code{size}. \eqn{P(R \mid S)} combines the Census
+#' \eqn{P(S \mid R)} with the expected number of people of each race in the
+#' data (the column sums of \code{prior}).
+#'
+#' @param groups Race groups to build lists for (any of whi, bla, his, asi, oth).
+#' @param prior Matrix of \eqn{P(R \mid G)} with columns whi, bla, his, asi, oth
+#'   and one row per person.
+#' @param year Census vintage of the name table.
+#' @param field \code{"last"} or \code{"first"}.
+#' @param floor,size Minimum \eqn{P(R = r \mid S)} and list length.
+#' @return A named list of name vectors.
+#' @keywords internal
+lbisg_census_lists <- function(groups, prior, year = "2020", field = "last",
+                               floor = 0.3, size = 1000) {
+  eth <- c("whi", "bla", "his", "asi", "oth")
+  names_to_use <- if (field == "first") "surname, first" else "surname"
+  dict <- read_name_dictionaries(year, names_to_use)
+  tbl <- if (field == "first") dict$census_first else dict$census_last
+  if (is.null(tbl)) {
+    stop(
+      "There is no Census ", field, " name table for ", year, "; supply ",
+      "first-name lists for every group."
+    )
+  }
+  nm <- toupper(as.character(tbl[[1]]))
+  p_s_r <- as.matrix(tbl[, paste0("c_", eth, "_", field)])
+  n_r <- colSums(prior[, eth, drop = FALSE])
+  counts <- sweep(p_s_r, 2, n_r, `*`)
+  total <- rowSums(counts)
+  keep <- total > 0
+  p_r_s <- counts[keep, , drop = FALSE] / total[keep]
+  base <- n_r / sum(n_r)
+  out <- lapply(stats::setNames(groups, groups), function(g) {
+    p <- p_r_s[, paste0("c_", g, "_", field)]
+    score <- ifelse(p >= floor, total[keep] * (p - base[[g]]), -Inf)
+    ord <- order(-score)
+    ord <- ord[is.finite(score[ord])]
+    nm[keep][utils::head(ord, size)]
+  })
   out
 }
