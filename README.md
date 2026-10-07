@@ -345,6 +345,22 @@ lapply(q, round, 3)
 #> 0.946 0.748 0.904 0.968
 ```
 
+#### Applications outside the US
+
+Nothing in `lbisg()` is specific to the US. The groups, geographic units, and geographic prior can all come from another country setting, and the names can be listed in any script that the embedding model is able to handle. For example, to predict religious sect from surnames and localities in a voter registry, supply a list for each sect and the share of each sect in each locality, and use a multilingual embedding model:
+
+``` r
+fit <- lbisg(
+  names = df$surname, geo = df$locality,
+  lists = list(maronite = maronite_list, sunni = sunni_list, shia = shia_list,
+               druze = druze_list, orthodox = orthodox_list, catholic = catholic_list),
+  prior = locality_shares,      # one row per person, one column per sect
+  control = lbisg_control(embedding.model = "intfloat/multilingual-e5-large")
+)
+```
+
+Any sentence-transformer on HuggingFace can be passed as `embedding.model`. When the geographic shares of the groups are unknown, leave out `prior` and the shares are recovered from the lists, which must then cover every group (`exhaustive = TRUE`). The paper applies lBISG to the Lebanese voter registry in this way.
+
 For methodological details on `lBISG`, see Chasalow, K., Dasanaike, N. and Imai, K. (2026). "[Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists](https://arxiv.org/abs/2610.06273)" (arXiv:2610.06273).
 
 ### Downloading census data
