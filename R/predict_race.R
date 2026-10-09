@@ -90,10 +90,33 @@
 #' @param use.counties A logical, defaulting to FALSE. Should census data be filtered by counties 
 #' available in \var{census.data}?
 #' @param model Character string: "BISG" (default), "fBISG" (fully-Bayesian with
-#' error correction), or "eBISG" (embedding-supplemented BISG, which uses
+#' error correction), "eBISG" (embedding-supplemented BISG, which uses
 #' text embeddings to predict race probabilities for names not found
-#' in Census surname lists). The eBISG model requires Python with
-#' sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.
+#' in Census surname lists), or "lBISG" (list-powered BISG, which recovers race
+#' probabilities from group-specific name lists with no name-by-race frequency
+#' table). The eBISG and lBISG models require Python with sentence-transformers
+#' and torch; run \code{\link{setup_ebisg}} or \code{\link{setup_lbisg}} to configure.
+#' @param lists Required when \code{model = "lBISG"}. A named list keyed by any
+#' of \code{"whi"}, \code{"bla"}, \code{"his"}, \code{"asi"} and \code{"oth"}.
+#' Each element is either a vector of names typical of that group (from expert
+#' knowledge or a language model), or a named list of such vectors that divides
+#' the group into subgroups, for example
+#' \code{asi = list(chinese = ..., japanese = ..., other_asian = ...)}. The
+#' subgroup prior is then recovered from the Census share of the group, which
+#' requires the subgroups to make up the whole group: include a residual list
+#' for its remaining members and set
+#' \code{control = lbisg_control(exhaustive = TRUE)}. Any of \code{"whi"},
+#' \code{"bla"}, \code{"his"} and \code{"asi"} without a list gets a list built
+#' from the Census name table; \code{"oth"} without a list is the residual
+#' group. The output has the usual five columns (a subdivided group is the sum
+#' of its subgroups) plus one \code{pred.<subgroup>} column per subgroup. To
+#' also use first names (\code{names.to.use = "surname, first"}), pass
+#' \code{list(surname = <lists>, first = <lists>)}. The Census race shares at
+#' \code{census.geo} are the geographic prior; the number of clusters is chosen
+#' by \eqn{Q(K)}, and the chosen values are returned in
+#' \code{attr(result, "lbisg")}. Settings are passed through \code{control}
+#' (see \code{\link{lbisg_control}}); see \code{\link{lbisg}} for groups and
+#' priors outside the Census categories.
 #' @param ebisg.model Character string (HuggingFace model ID) or named list
 #' specifying which embedding model to use when \code{model = "eBISG"}.
 #' The only built-in option is \code{"intfloat/multilingual-e5-large"}
@@ -112,7 +135,8 @@
 #' @param race.init Vector of initial race for each observation in voter.file.
 #' Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and 
 #' 5=other. Defaults to values obtained using \code{model="BISG_surname"}.
-#' @param control List of control arguments only used when \code{model="fBISG"}, including
+#' @param control List of control arguments. For \code{model = "lBISG"}, a
+#' list from \code{\link{lbisg_control}}. For \code{model = "fBISG"}, a list including
 #' \describe{
 #'   \item{iter}{Number of MCMC iterations. Defaults to 1000.}
 #'   \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
@@ -182,9 +206,10 @@ predict_race <- function(
     name.dictionaries = NULL,
     names.to.use = "surname",
     control = NULL,
-    ebisg.model = "intfloat/multilingual-e5-large"
+    ebisg.model = "intfloat/multilingual-e5-large",
+    lists = NULL
 ) {
-  
+
   message("Predicting race for ", year)
 
   ## `party` is not consumed by any of the current models. Warn rather than
@@ -199,15 +224,24 @@ predict_race <- function(
   }
 
   ## Check model type
-  if (!(model %in% c("BISG", "fBISG", "eBISG"))) {
+  if (!(model %in% c("BISG", "fBISG", "eBISG", "lBISG"))) {
     stop(
       paste0(
         "'model' must be one of 'BISG' (for standard BISG results, or results",
         " with all name data without error correction), 'fBISG' (for the",
         " fully Bayesian/error correction model that accommodates all name data),",
-        " or 'eBISG' (for embedding-supplemented BISG)."
+        " 'eBISG' (for embedding-supplemented BISG), or 'lBISG' (for list-powered BISG)."
       )
     )
+  }
+  if (model == "lBISG") {
+    if (is.null(lists)) {
+      stop("model = 'lBISG' requires 'lists': a named list of surname vectors by race group.")
+    }
+    if (isTRUE(surname.only)) {
+      stop("model = 'lBISG' requires geography (the geographic prior identifies the method); ",
+           "set surname.only = FALSE and supply census.geo.")
+    }
   }
   
   if (any(unique(voter.file$state) %in% c("AS","GU","MP","PR","VI"))) {
@@ -247,7 +281,21 @@ predict_race <- function(
     )
   }
   
-  if (model == "eBISG") {
+  if (model == "lBISG") {
+    preds <- predict_race_lbisg(
+      voter.file = voter.file,
+      lists = lists,
+      names.to.use = names.to.use,
+      year = year,
+      census.geo = census.geo,
+      census.key = census.key,
+      census.data = census.data,
+      retry = retry,
+      use.counties = use.counties,
+      skip_bad_geos = skip_bad_geos,
+      control = control
+    )
+  } else if (model == "eBISG") {
     if (isTRUE(surname.only)) {
       warning("eBISG surname-only mode: embedding predictions will be used for unmatched surnames.")
     }
@@ -363,6 +411,7 @@ predict_race <- function(
                              ctrl = ctrl)
   }
   seed_attr <- attr(preds, "RNGseed")
+  lbisg_attr <- attr(preds, "lbisg")
 
   ## Match flags are computed once, here, from a single merge_names pass rather
   ## than inside each predictor. This guarantees the same matched/unmatched
@@ -388,6 +437,7 @@ predict_race <- function(
 
   preds <- preds[order(preds$caseid),setdiff(names(preds), "caseid")]
   attr(preds, "RNGseed") <- seed_attr
+  if (!is.null(lbisg_attr)) attr(preds, "lbisg") <- lbisg_attr
   preds
 }
 

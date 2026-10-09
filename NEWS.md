@@ -1,5 +1,19 @@
 # wru (development version)
 
+* `predict_race(model = "lBISG")` now follows Chasalow, Dasanaike and Imai:
+  list scores are estimated out of fold over the distinct names, with a
+  separate model for each list and the number of training epochs chosen by
+  cross-validation within the training data; the number of clusters is chosen
+  by the held-out log-likelihood ratio Q(K); and the cluster probabilities are
+  recovered by one weighted least squares fit. A list is required for each of
+  `whi`, `bla`, `his` and `asi`, and first names are supported through
+  `lists = list(surname = ..., first = ...)`. Settings go through
+  `control = lbisg_control(...)`.
+* New `lbisg()` for arbitrary groups and priors, including subgroups with only
+  a coarse prior and no prior at all; `lbisg_recover_prevalence()` and
+  `lbisg_list_quality()` expose the prevalence recovery and the label-free
+  list quality measure.
+
 * `predict_race()` gains a `name_source` argument. It selects the dictionaries
   that supply the name probabilities. The default `"mixed"` combines the Census
   and voter-file dictionaries. For a name that both hold, the Census
