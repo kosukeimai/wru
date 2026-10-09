@@ -239,7 +239,7 @@ lists <- list(
 out <- predict_race(voter.file = voter_file, census.geo = "block", model = "lBISG", lists = lists)
 ```
 
-Unlike BISG, lBISG has no pre-built name table. Instead, the algorithm trains the list models and estimates the cluster probabilities from the supplied set of individuals, by comparing geographic units. It therefore requires a large number of individuals located in different geographic units. To predict for only a few people, they must be included in a larger file for their area. The output below is from a simulated file of 20,000 people over 300 New Jersey census blocks, with lists of 300 surnames per group. Every person's probabilities are estimated from the cluster of their name and the racial geography of their block; list membership matters only through the list scores, which in turn decide the clusters. The first four people have a surname on the white, Black, Hispanic and Asian list, respectively. The last two have surnames that are on no list, but still receive informative probabilities, because their name embeddings fall into clusters with names on the lists:
+Unlike BISG, lBISG has no prebuilt name table. Instead, the algorithm trains the list models and then uses them to help define clusters. It then estimates the cluster probabilities (i.e., Pr(cluster | group)) from the supplied set of individuals by solving a system of equations based on geographic variation in group prevalence and its correlation with geographic variation in cluster prevalence across geographies. lBISG therefore requires data on individuals located in various geographies, with the number of geographies ideally much larger than the number of groups. Hence, to predict for only a few people, they must be included in a larger file for their area. The output below is from a simulated file of 20,000 people over 300 New Jersey census blocks, with lists of 300 surnames per group. Every person's probabilities are estimated from the cluster of their name and the racial geography of their block; list membership matters only through the list scores, which in turn decide the clusters. The first four people have a surname on the white, Black, Hispanic and Asian list, respectively. The last two have surnames that are on no list, but still receive informative probabilities, because their name embeddings fall into clusters with names on the lists:
 
 ```
     surname block pred.whi pred.bla pred.his pred.asi pred.oth
@@ -286,7 +286,7 @@ out <- predict_race(voter.file = voter_file, census.geo = "tract", model = "lBIS
 
 The output has the usual `pred.whi` to `pred.oth` columns, where `pred.asi` is the sum of its subgroups, plus `pred.chinese`, `pred.japanese` and `pred.other_asian`.
 
-Dividing a category this way assumes that the subgroups with lists make up the whole category. If only Chinese and Japanese lists were provided, every predicted Asian person would be split between those two groups, regardless of how many Korean, Vietnamese, Indian, or other Asian ethnic groups were found in the area. `lBISG` therefore refuses to divide a category until it is stated that the subgroups are completely defined with `lbisg_control(exhaustive = TRUE)`. Before doing so, include a residual list for everyone else in the category, like `other_asian` above. The names provided on this residual list should be names typical of the broader (e.g., Asian) category that are on none of the subgroup lists, and should not contain names found on the explicitly defined subgroup lists.
+Dividing a category this way assumes that the subgroups with lists make up the whole category. If only Chinese and Japanese lists were provided, every predicted Asian person would be split between those two groups, regardless of how many Korean, Vietnamese, Indian, or other Asian ethnic groups were found in the area. `lBISG` therefore refuses to divide a category until it is stated that the subgroups are completely defined with `lbisg_control(exhaustive = TRUE)`. Without it, the function stops with an error explaining this assumption. Before setting `exhaustive = TRUE`, include a residual list for everyone else in the category, like `other_asian` above. The names provided on this residual list should be typical of the broader (e.g., Asian) category that are on none of the subgroup lists, and should not contain names found on the explicitly defined subgroup lists.
 
 #### First names (lBIFSG)
 
@@ -305,23 +305,49 @@ predict_race(voter.file = voter_file, census.geo = "block", model = "lBISG", lis
              control = lbisg_control(max.epochs = 50, K.grid = c(10, 20, 50, 100, 200)))
 ```
 
-#### Groups beyond the Census categories
+#### Specifying or learning geographic prevalence
 
-`lbisg()` works with any groups and any geographic prior. When the prior is known only for coarse groups, the subgroup prior is first recovered from the rates at which people in each geographic unit carry a surname on each list, as in the previous subsection. This requires a list for every subgroup that makes up the coarse group (or a catch-all list for the remaining members), and lists that rarely contain names of other groups:
+Like BISG, lBISG needs the share of each group in each geographic unit (the geographic prior). These can either be passed directly where known, or inferred from the lists where unknown.
+
+**US Census race categories.** `predict_race()` uses the shares from the Census at `census.geo`, as in the examples above.
+
+**Own shares for every group.** More generally, where geographic shares are known, they can be passed to `lbisg()` as `prior`, with one row per person and one column per group. Each row must sum to 1, so the columns must cover everyone, including a residual group if needed. For example, with estimates of the Japanese share of each tract, `prior` would hold a column for Japanese and columns for every other group, each with a list except at most one residual group:
+
+``` r
+fit <- lbisg(names = df$surname, geo = df$tract, lists = my_lists, prior = tract_shares)
+```
+
+**Shares for coarse groups only.** Where geography is known for coarse groups but not subgroups (e.g., the geographic distribution of Asians is known, but not that of Chinese or Japanese), the subgroup shares can be recovered from the lists. With `predict_race()`, use the nested `lists` syntax shown in the subgroups section above. With `lbisg()`, pass the coarse shares as `coarse.prior` and the coarse group of each list as `coarse.map`. Each row of `coarse.prior` must also sum to 1, so every coarse group needs a column; one coarse group (here `other`) may be left without a list and keeps its coarse share:
 
 ``` r
 fit <- lbisg(
   names = df$surname, geo = df$county,
-  lists = list(chinese = chinese_list, japanese = japanese_list,
-               white = white_list, black = black_list),
-  coarse.prior = df[, c("asian", "white", "black")],
-  coarse.map = c(chinese = "asian", japanese = "asian", white = "white", black = "black"),
+  lists = list(chinese = chinese_list, japanese = japanese_list, other_asian = other_asian_list,
+               white = white_list, black = black_list, hispanic = hispanic_list),
+  coarse.prior = df[, c("asian", "white", "black", "hispanic", "other")],
+  coarse.map = c(chinese = "asian", japanese = "asian", other_asian = "asian",
+                 white = "white", black = "black", hispanic = "hispanic"),
   control = lbisg_control(exhaustive = TRUE)
 )
 head(fit$posterior)
 ```
 
-With no prior at all, leave out both `prior` and `coarse.prior`, and the prior is similarly recovered from the lists alone; the lists must then cover every group, which should again be acknowledged with `exhaustive = TRUE`. `lbisg_recover_prevalence()` returns the recovered prior on its own.
+**No shares at all.** Where no geographic distribution is known for any group, either coarse groups or subgroups, leave out both `prior` and `coarse.prior`, and the shares can be recovered from list hit-rates alone. The lists must then cover every group, which is again stated with `exhaustive = TRUE`.
+
+``` r
+fit <- lbisg(
+  names = df$surname, geo = df$district,
+  lists = list(group_a = list_a, group_b = list_b, group_c = list_c,
+               other = other_list),     # together, the lists cover everyone
+  control = lbisg_control(exhaustive = TRUE)
+)
+head(fit$prior)       # recovered share of each group in each person's district
+fit$recovered         # estimated coverage of each list
+```
+
+`lbisg_recover_prevalence()` returns the recovered shares on their own.
+
+#### Checking list quality
 
 When the prior is known, `lbisg_list_quality()` estimates how well each list separates the groups without any group labels. For the simulated file above:
 
@@ -358,6 +384,18 @@ fit <- lbisg(
   control = lbisg_control(embedding.model = "intfloat/multilingual-e5-large")
 )
 ```
+
+Here `locality_shares` has one row per person, giving the share of each sect in that person's locality, and each row sums to 1 (illustrative values):
+
+``` r
+head(locality_shares, 3)
+#>   maronite sunni shia druze orthodox catholic
+#> 1     0.62  0.05 0.02  0.00     0.21     0.10
+#> 2     0.62  0.05 0.02  0.00     0.21     0.10
+#> 3     0.01  0.55 0.40  0.00     0.03     0.01
+```
+
+As in the US, it is also possible to supply only a `coarse.prior` table together with a `coarse.map` argument specifying which sects belong to which coarse groups.
 
 Any sentence-transformer on HuggingFace can be passed as `embedding.model`. When the geographic shares of the groups are unknown, leave out `prior` and the shares are recovered from the lists, which must then cover every group (`exhaustive = TRUE`). The paper applies lBISG to the Lebanese voter registry in this way.
 

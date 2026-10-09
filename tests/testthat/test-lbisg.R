@@ -75,6 +75,19 @@ test_that("lbisg accepts any embedding model ID and checks a fixed K", {
                "at least the number of groups")
 })
 
+test_that("priors whose rows do not sum to one are rejected", {
+  skip_if_no_lbisg()
+  s <- sim_lists()
+  expect_error(lbisg(s$names, s$geo, s$lists, prior = s$prior * 0.8),
+               "must sum to 1")
+  cp <- cbind(AB = rep(0.7, length(s$names)))
+  expect_error(
+    lbisg_recover_prevalence(s$names, s$geo, s$lists, coarse.prior = cp,
+                             coarse.map = c(a = "AB", b = "AB"), exhaustive = TRUE),
+    "must sum to 1"
+  )
+})
+
 test_that("predict_race lBISG checks its inputs", {
   expect_error(
     predict_race(voter.file = data.frame(surname = "SMITH", state = "NJ"), model = "lBISG",

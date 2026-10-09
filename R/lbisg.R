@@ -68,6 +68,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
   recovered <- NULL
   if (!is.null(prior)) {
     prior <- as.matrix(prior)
+    lbisg_check_shares(prior, "prior")
     if (nrow(prior) != n || is.null(colnames(prior))) {
       stop(
         "'prior' must have one row per person and one named column ",
@@ -411,6 +412,7 @@ lbisg_geo_rows <- function(x, geo_idx) {
 
 
 lbisg_check_coarse <- function(coarse.prior, coarse.map, groups) {
+  lbisg_check_shares(coarse.prior, "coarse.prior")
   if (is.null(coarse.map) || !all(groups %in% names(coarse.map))) {
     stop("'coarse.map' must give the coarse group of every list group.")
   }
@@ -423,6 +425,25 @@ lbisg_check_coarse <- function(coarse.prior, coarse.map, groups) {
       "Algorithm 1 requires a name list for every group; only one coarse ",
       "group may be left without a list (as the residual group). Coarse ",
       "groups without a list: ", paste(unlisted, collapse = ", "), "."
+    )
+  }
+  invisible(TRUE)
+}
+
+
+# Each row of a prior holds the shares of every group in one geography, so it
+# must sum to one. A row that sums to less usually means a group was left out,
+# and rescaling it would silently inflate the other groups.
+lbisg_check_shares <- function(x, arg) {
+  if (!is.numeric(x) || anyNA(x) || any(x < 0)) {
+    stop("'", arg, "' must contain non-negative shares with no missing values.")
+  }
+  off <- abs(rowSums(x) - 1) > 1e-3
+  if (any(off)) {
+    stop(
+      "Each row of '", arg, "' must sum to 1, with one column for every ",
+      "group (including a residual group for everyone else); ", sum(off),
+      " of ", nrow(x), " rows do not."
     )
   }
   invisible(TRUE)
