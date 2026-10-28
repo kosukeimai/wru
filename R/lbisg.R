@@ -305,6 +305,206 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 }
 
 
+#' Downstream inference with lBISG probabilities
+#'
+#' Cross-fitted estimator of the mean outcome of each group, \eqn{\mu_{g,r} =
+#' E[Y \mid R = r, G = g]}, under the BIRDiE assumption that the outcome is
+#' independent of the name given group and geography. The geographic units are
+#' split into \code{V} folds; for each fold, the clusters and \eqn{P(B = b
+#' \mid R = r)} are fit on the other folds (Steps 7-10 of Algorithm 1, with
+#' the list scores of \code{fit}) and applied to the fold. The estimating
+#' equation is Neyman-orthogonal in \eqn{P(B = b \mid R = r)}. Errors in the
+#' estimate of \eqn{P(B = b \mid R = r)} therefore do not bias the estimated
+#' mean outcome to first order. The standard errors are computed from the
+#' influence function.
+#'
+#' With both surname and first name, the clusters of the two fields are taken
+#' as independent given the group and geography (the lBIFSG assumption), and
+#' the moment is written for each pair of surname and first-name clusters,
+#' with a correction term for each field. This two-field moment extends the
+#' estimator that Chasalow, Dasanaike and Imai derive for a single name
+#' field.
+#'
+#' @param fit An object from \code{\link{lbisg}}.
+#' @param outcome The outcome, one value per person: a numeric vector, a
+#'   numeric matrix (columns estimated jointly), or a factor or character
+#'   vector, which is expanded into one indicator per level.
+#' @param geo The vector of geographic units passed to \code{\link{lbisg}}.
+#' @param by Optional vector, one value per person and constant within each
+#'   geographic unit, defining the aggregates to estimate (for example
+#'   county or state). Each aggregate estimate is the mean outcome among the
+#'   expected members of the group, \eqn{\sum_g n_g P(R = r \mid G = g)
+#'   \mu_{g,r} / \sum_g n_g P(R = r \mid G = g)}. The default is one
+#'   aggregate over all geographic units.
+#' @param fields The name fields whose clusters are used: any of
+#'   \code{"surname"} and \code{"first"}. Defaults to every field in
+#'   \code{fit}.
+#' @param V Number of geographic folds for cross-fitting.
+#' @param K Number of clusters in each fold, one value per field. Defaults to
+#'   the \eqn{K} selected for each field in \code{fit}.
+#' @param reselect.K Choose \eqn{K} by Algorithm 2 within each fold's training
+#'   sample, as in the cross-fitting algorithm. This option is slower.
+#' @param control A list from \code{\link{lbisg_control}} (uses
+#'   \code{geo.folds}, \code{K.grid} and \code{seed}).
+#' @param verbose Print progress.
+#'
+#' @return A list with \code{estimates} (a data frame with one row per
+#'   aggregate, group and outcome: the estimate, the standard error of the
+#'   estimate and the
+#'   expected number of group members \code{N}), \code{vcov} (one covariance
+#'   matrix per aggregate over all groups and outcomes), \code{mu} (an array of
+#'   geographic unit by group by outcome estimates of \eqn{\mu_{g,r}},
+#'   \code{NA} where the prior is zero) and the clusters used in each fold.
+#' @examples
+#' \dontrun{
+#' fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
+#'              prior = tract_shares)
+#' ds <- lbisg_downstream(fit, voters$party, voters$tract, by = voters$state)
+#' lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
+#' }
+#' @export
+lbisg_downstream <- function(fit, outcome, geo, by = NULL,
+                             fields = names(fit$fields), V = 5, K = NULL,
+                             reselect.K = FALSE, control = lbisg_control(),
+                             verbose = TRUE) {
+  control <- utils::modifyList(lbisg_control(), control)
+  if (!inherits(fit, "lbisg")) stop("'fit' must be an object from lbisg().")
+  missing_fields <- setdiff(fields, names(fit$fields))
+  if (length(fields) == 0 || length(missing_fields) > 0) {
+    stop("'fit' has no name field: ", paste(missing_fields, collapse = ", "),
+         ".")
+  }
+  flds <- fit$fields[fields]
+  if (any(vapply(flds, function(f) is.null(f$scores), logical(1)))) {
+    stop("'fit' does not store the list scores; refit it with this version.")
+  }
+  n <- nrow(flds[[1]]$scores)
+  if (length(geo) != n) stop("'geo' must have one value per person in 'fit'.")
+  if (NROW(outcome) != n) {
+    stop("'outcome' must have one value per person in 'fit'.")
+  }
+
+  if (is.factor(outcome) || is.character(outcome)) {
+    outcome <- factor(outcome)
+    if (anyNA(outcome)) stop("'outcome' must not have missing values.")
+    Y <- vapply(levels(outcome), function(l) as.numeric(outcome == l),
+                numeric(n))
+    Y <- matrix(Y, nrow = n, dimnames = list(NULL, levels(outcome)))
+  } else {
+    Y <- as.matrix(outcome)
+    if (!is.numeric(Y) || anyNA(Y)) {
+      stop("'outcome' must be numeric with no missing values, or a factor.")
+    }
+    if (is.null(colnames(Y))) {
+      colnames(Y) <- if (ncol(Y) == 1) "y" else paste0("y", seq_len(ncol(Y)))
+    }
+  }
+
+  geo_f <- factor(as.character(geo))
+  geo_idx <- as.integer(geo_f) - 1L
+  if (is.null(by)) {
+    by_f <- factor(rep("all", nlevels(geo_f)))
+  } else {
+    if (length(by) != n) stop("'by' must have one value per person.")
+    by <- as.character(by)
+    first <- !duplicated(geo_idx)
+    by_geo <- by[first][order(geo_idx[first])]
+    if (any(by != by_geo[geo_idx + 1])) {
+      stop("'by' must be constant within each geographic unit.")
+    }
+    by_f <- factor(by_geo)
+  }
+  if (is.null(K) && !reselect.K) {
+    K <- vapply(flds, function(f) as.integer(f$K), integer(1))
+  }
+  if (!is.null(K) && length(K) != length(flds)) {
+    stop("'K' must have one value per name field.")
+  }
+
+  ensure_lbisg_python()
+  mod <- get_lbisg_module()
+  res <- mod$downstream_crossfit(
+    F = unname(lapply(flds, `[[`, "scores")), geo = geo_idx,
+    prior = fit$prior, Y = Y, by = as.integer(by_f) - 1L,
+    K = if (is.null(K)) NULL else as.list(as.integer(K)),
+    V = as.integer(V), reselect_K = reselect.K,
+    grid = if (is.null(control$K.grid)) NULL else as.integer(control$K.grid),
+    J = as.integer(control$geo.folds), seed = as.integer(control$seed),
+    verbose = verbose
+  )
+
+  aggs <- levels(by_f)
+  groups <- colnames(fit$prior)
+  outs <- colnames(Y)
+  R <- length(groups)
+  P <- length(outs)
+  theta <- array(res$theta, c(length(aggs), R, P),
+                 dimnames = list(aggs, groups, outs))
+  N <- matrix(res$N, length(aggs), R, dimnames = list(aggs, groups))
+  # The covariance of each aggregate is indexed by group, then outcome
+  lab <- paste(rep(groups, each = P), rep(outs, R), sep = ":")
+  vc <- array(res$vcov, c(length(aggs), R * P, R * P))
+  vcov <- lapply(stats::setNames(seq_along(aggs), aggs), function(h) {
+    matrix(vc[h, , ], R * P, R * P, dimnames = list(lab, lab))
+  })
+
+  # One row per aggregate, group and outcome
+  est <- expand.grid(outcome = outs, group = groups, by = aggs,
+                     stringsAsFactors = FALSE)[, c("by", "group", "outcome")]
+  cell <- as.matrix(est)
+  est$estimate <- theta[cell]
+  est$se <- mapply(function(b, l) sqrt(max(vcov[[b]][l, l], 0)),
+                   est$by, paste(est$group, est$outcome, sep = ":"),
+                   USE.NAMES = FALSE)
+  est$N <- N[cell[, c("by", "group")]]
+
+  mu <- array(res$mu, c(nlevels(geo_f), R, P),
+              dimnames = list(levels(geo_f), groups, outs))
+  K_used <- matrix(as.integer(res$K), ncol = length(flds),
+                   dimnames = list(paste0("fold", seq_len(V)), fields))
+  list(estimates = est, vcov = vcov, mu = mu, K = K_used)
+}
+
+
+#' Ratio of downstream estimates
+#'
+#' The share of one outcome among several for each group and aggregate, for
+#' example the Democratic share of two-party registration, with standard
+#' errors by the delta method.
+#'
+#' @param x An object from \code{\link{lbisg_downstream}} with a factor
+#'   outcome.
+#' @param num The outcome level in the numerator.
+#' @param den The outcome levels summed in the denominator.
+#' @return A data frame with one row per aggregate and group.
+#' @export
+lbisg_downstream_share <- function(x, num, den) {
+  est <- x$estimates
+  outs <- unique(est$outcome)
+  if (!all(c(num, den) %in% outs)) {
+    stop("'num' and 'den' must be outcome levels of 'x'.")
+  }
+  rows <- unique(est[, c("by", "group")])
+  out <- lapply(seq_len(nrow(rows)), function(i) {
+    lab_num <- paste(rows$group[i], num, sep = ":")
+    lab_den <- paste(rows$group[i], den, sep = ":")
+    V <- x$vcov[[rows$by[i]]]
+    th <- stats::setNames(
+      est$estimate[est$by == rows$by[i] & est$group == rows$group[i]],
+      paste(rows$group[i], outs, sep = ":")
+    )
+    a <- th[lab_num]
+    d <- sum(th[lab_den])
+    grad <- stats::setNames(numeric(nrow(V)), rownames(V))
+    grad[lab_den] <- -a / d^2
+    grad[lab_num] <- grad[lab_num] + 1 / d
+    data.frame(by = rows$by[i], group = rows$group[i], share = unname(a / d),
+               se = sqrt(max(drop(t(grad) %*% V %*% grad), 0)))
+  })
+  do.call(rbind, out)
+}
+
+
 #' @export
 print.lbisg <- function(x, ...) {
   cat("lBISG posterior for", nrow(x$posterior), "people over groups:",
@@ -374,7 +574,8 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     K = res$K,
     K.used = res$K_used,
     Q = Q,
-    epochs = unlist(res$epochs)
+    epochs = unlist(res$epochs),
+    scores = as.matrix(res$scores)
   )
 }
 
