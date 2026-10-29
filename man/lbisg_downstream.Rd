@@ -8,11 +8,14 @@ lbisg_downstream(
   fit,
   outcome,
   geo,
+  folds = NULL,
+  pool = NULL,
   by = NULL,
   fields = names(fit$fields),
   V = 5,
   K = NULL,
-  reselect.K = FALSE,
+  constraint = NULL,
+  jackknife = TRUE,
   control = lbisg_control(),
   verbose = TRUE
 )
@@ -26,64 +29,78 @@ vector, which is expanded into one indicator per level.}
 
 \item{geo}{The vector of geographic units passed to \code{\link{lbisg}}.}
 
+\item{folds}{Optional vector, one value per person and constant within each
+geographic unit, defining the folds for cross-fitting (for example the
+state). The default is \code{V} folds of geographic units with
+approximately equal numbers of people.}
+
+\item{pool}{Optional vector, one value per person and constant within each
+geographic unit, defining the units within which the group means are the
+same (for example the county). Each pooling unit must lie within one
+aggregate of \code{by}. The default is one pooling unit per aggregate.}
+
 \item{by}{Optional vector, one value per person and constant within each
-geographic unit, defining the aggregates to estimate (for example
-county or state). Each aggregate estimate is the mean outcome among the
-expected members of the group, \eqn{\sum_g n_g P(R = r \mid G = g)
-  \mu_{g,r} / \sum_g n_g P(R = r \mid G = g)}. The default is one
-aggregate over all geographic units.}
+geographic unit, defining the aggregates to estimate. Each aggregate
+estimate is the mean outcome among the expected members of the group,
+\eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the sum
+of the prior \eqn{P(R = r \mid G)} over the people of pooling unit
+\eqn{c}. The default is one aggregate over all geographic units.}
 
 \item{fields}{The name fields whose clusters are used: any of
 \code{"surname"} and \code{"first"}. Defaults to every field in
 \code{fit}.}
 
-\item{V}{Number of geographic folds for cross-fitting.}
+\item{V}{Number of folds when \code{folds} is \code{NULL}.}
 
-\item{K}{Number of clusters in each fold, one value per field. Defaults to
-the \eqn{K} selected for each field in \code{fit}.}
+\item{K}{Number of clusters, one value per field. Defaults to the \eqn{K}
+selected for each field in \code{fit}.}
 
-\item{reselect.K}{Choose \eqn{K} by Algorithm 2 within each fold's training
-sample, as in the cross-fitting algorithm. This option is slower.}
+\item{constraint}{\code{"simplex"}, \code{"box"} or \code{"none"}. The
+default is \code{"simplex"} for a factor outcome, \code{"box"} for a
+numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.}
 
-\item{control}{A list from \code{\link{lbisg_control}} (uses
-\code{geo.folds}, \code{K.grid} and \code{seed}).}
+\item{jackknife}{Compute the jackknife standard errors.}
+
+\item{control}{A list from \code{\link{lbisg_control}} (uses \code{seed}).}
 
 \item{verbose}{Print progress.}
 }
 \value{
 A list with \code{estimates} (a data frame with one row per
-aggregate, group and outcome: the estimate, the standard error of the
-estimate and the
-expected number of group members \code{N}), \code{vcov} (one covariance
-matrix per aggregate over all groups and outcomes), \code{mu} (an array of
-geographic unit by group by outcome estimates of \eqn{\mu_{g,r}},
-\code{NA} where the prior is zero) and the clusters used in each fold.
+aggregate, group and outcome: the estimate, the jackknife standard error
+of the estimate and the expected number of group members \code{N}),
+\code{vcov} (the jackknife covariance matrix of each aggregate over all
+groups and outcomes), \code{mu} (an array of pooling unit by group by
+outcome means, \code{NA} where the group has no prior mass) and the
+number of clusters used in each field.
 }
 \description{
-Cross-fitted estimator of the mean outcome of each group, \eqn{\mu_{g,r} =
-E[Y \mid R = r, G = g]}, under the BIRDiE assumption that the outcome is
-independent of the name given group and geography. The geographic units are
-split into \code{V} folds; for each fold, the clusters and \eqn{P(B = b
-\mid R = r)} are fit on the other folds (Steps 7-10 of Algorithm 1, with
-the list scores of \code{fit}) and applied to the fold. The estimating
-equation is Neyman-orthogonal in \eqn{P(B = b \mid R = r)}. Errors in the
-estimate of \eqn{P(B = b \mid R = r)} therefore do not bias the estimated
-mean outcome to first order. The standard errors are computed from the
-influence function.
+Cross-fitted estimator of the mean outcome of each group under the BIRDiE
+assumption that the outcome is independent of the name given the group and
+geography. Within each pooling unit (for example the county), the group
+means are estimated by least squares of the outcome on the lBISG posterior
+probabilities. The posterior of each person uses \eqn{P(B = b \mid R = r)}
+fit without the person's fold of geographies (for example the person's
+state), with the clusters of \code{fit}.
 }
 \details{
+With many groups, groups with similar names and geography make the least
+squares close to singular. The group means are therefore constrained to the
+simplex for a factor outcome, or to \eqn{[0, 1]} for a binary one. The
+standard errors come from the delete-one-fold jackknife, which refits
+\eqn{P(B = b \mid R = r)} without the deleted fold. The jackknife requires
+each aggregate to span several folds.
+
 With both surname and first name, the clusters of the two fields are taken
 as independent given the group and geography (the lBIFSG assumption), and
-the moment is written for each pair of surname and first-name clusters,
-with a correction term for each field. This two-field moment extends the
-estimator that Chasalow, Dasanaike and Imai derive for a single name
-field.
+the posterior combines both fields.
 }
 \examples{
 \dontrun{
 fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
              prior = tract_shares)
-ds <- lbisg_downstream(fit, voters$party, voters$tract, by = voters$state)
+ds <- lbisg_downstream(fit, voters$party, voters$tract,
+                       folds = voters$state, pool = voters$county)
 lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
 }
 }

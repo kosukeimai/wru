@@ -101,8 +101,9 @@ test_that("predict_race lBISG checks its inputs", {
 })
 
 ## A fitted lbisg object with simulated list scores for one or two name
-## fields: three groups over 100 geographies, with scores that depend only on
-## the group and a three-level outcome that depends only on the group
+## fields: three groups over 100 geographies in 20 counties and 5 states, with
+## scores that depend only on the group and a three-level outcome that depends
+## only on the group
 sim_downstream <- function(n_geo = 100, seed = 1) {
   set.seed(seed)
   M <- t(replicate(n_geo, { x <- stats::rgamma(3, 0.7); x / sum(x) }))
@@ -118,12 +119,14 @@ sim_downstream <- function(n_geo = 100, seed = 1) {
   p_dem <- c(0.8, 0.5, 0.3)[grp]
   p_rep <- c(0.15, 0.4, 0.5)[grp]
   u <- stats::runif(n)
+  county <- (gi - 1) %/% (n_geo / 20)
   list(
     fit = structure(list(prior = M[gi, ], fields = list(
       surname = list(scores = scores(), K = 30L),
       first = list(scores = scores(), K = 20L))), class = "lbisg"),
     geo = sprintf("g%03d", gi),
-    state = ifelse(gi <= n_geo / 2, "S1", "S2"),
+    county = sprintf("c%02d", county),
+    state = sprintf("s%d", county %/% 4),
     party = ifelse(u < p_dem, "DEM", ifelse(u < p_dem + p_rep, "REP", "OTH")),
     share = c(a = 0.8 / 0.95, b = 0.5 / 0.9, c = 0.3 / 0.8)
   )
@@ -133,12 +136,13 @@ test_that("lbisg_downstream recovers group shares with one and two name fields",
   skip_if_no_lbisg()
   s <- sim_downstream()
   for (fields in list("surname", c("surname", "first"))) {
-    ds <- lbisg_downstream(s$fit, s$party, s$geo, by = s$state,
-                           fields = fields, verbose = FALSE)
-    expect_equal(nrow(ds$estimates), 2 * 3 * 3)
+    ds <- lbisg_downstream(s$fit, s$party, s$geo, folds = s$state,
+                           pool = s$county, fields = fields, verbose = FALSE)
+    expect_equal(nrow(ds$estimates), 3 * 3)
     expect_true(all(ds$estimates$se > 0))
-    expect_equal(dim(ds$mu), c(100, 3, 3))
-    expect_equal(dim(ds$K), c(5, length(fields)))
+    expect_true(all(ds$estimates$estimate >= 0 & ds$estimates$estimate <= 1))
+    expect_equal(dim(ds$mu), c(20, 3, 3))
+    expect_equal(length(ds$K), length(fields))
     sh <- lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
     expect_equal(sh$share, unname(s$share[sh$group]), tolerance = 0.05)
     expect_true(all(abs(sh$share - s$share[sh$group]) < 4 * sh$se))
@@ -147,16 +151,21 @@ test_that("lbisg_downstream recovers group shares with one and two name fields",
 
 test_that("lbisg_downstream checks its inputs", {
   skip_if_no_lbisg()
-  s <- sim_downstream(n_geo = 20)
+  s <- sim_downstream(n_geo = 40)
   expect_error(lbisg_downstream(s$fit, s$party, s$geo, fields = "middle"),
                "no name field")
   expect_error(lbisg_downstream(s$fit, s$party, s$geo, K = c(10L, 10L, 10L)),
                "one value per name field")
   by_person <- rep(c("x", "y"), length.out = length(s$geo))
-  expect_error(lbisg_downstream(s$fit, s$party, s$geo, by = by_person),
+  expect_error(lbisg_downstream(s$fit, s$party, s$geo, folds = by_person),
                "constant within each geographic unit")
+  expect_error(lbisg_downstream(s$fit, s$party, s$geo, pool = s$state,
+                                by = s$county),
+               "within one aggregate")
   expect_error(lbisg_downstream(s$fit, s$party[-1], s$geo),
                "one value per person")
+  expect_error(lbisg_downstream(s$fit, s$party, s$geo, constraint = "simplex",
+                                fields = "surname", verbose = FALSE), NA)
 })
 
 test_that("kmeans_occupied leaves every cluster with a fitting observation", {
