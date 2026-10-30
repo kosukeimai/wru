@@ -149,6 +149,22 @@ test_that("lbisg_downstream recovers group shares with one and two name fields",
   }
 })
 
+test_that("lbisg_downstream by EM with a county jackknife recovers group shares", {
+  skip_if_no_lbisg()
+  s <- sim_downstream()
+  ds <- lbisg_downstream(s$fit, s$party, s$geo, folds = s$state,
+                         pool = s$county, method = "em", weights = "prior",
+                         jack.groups = s$county, verbose = FALSE)
+  expect_true(all(abs(apply(ds$mu, c(1, 2), sum) - 1) < 1e-6, na.rm = TRUE))
+  sh <- lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
+  expect_equal(sh$share, unname(s$share[sh$group]), tolerance = 0.05)
+  expect_true(all(sh$se > 0))
+  expect_error(lbisg_downstream(s$fit, as.numeric(s$party == "DEM"), s$geo,
+                                method = "em",
+                                verbose = FALSE),
+               "requires a factor outcome")
+})
+
 test_that("lbisg_downstream checks its inputs", {
   skip_if_no_lbisg()
   s <- sim_downstream(n_geo = 40)

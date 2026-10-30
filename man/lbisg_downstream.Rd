@@ -15,7 +15,10 @@ lbisg_downstream(
   V = 5,
   K = NULL,
   constraint = NULL,
+  method = c("ls", "em"),
+  weights = NULL,
   jackknife = TRUE,
+  jack.groups = NULL,
   control = lbisg_control(),
   verbose = TRUE
 )
@@ -41,10 +44,10 @@ aggregate of \code{by}. The default is one pooling unit per aggregate.}
 
 \item{by}{Optional vector, one value per person and constant within each
 geographic unit, defining the aggregates to estimate. Each aggregate
-estimate is the mean outcome among the expected members of the group,
-\eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the sum
-of the prior \eqn{P(R = r \mid G)} over the people of pooling unit
-\eqn{c}. The default is one aggregate over all geographic units.}
+estimate is the mean outcome among the members of the group,
+\eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the
+group members of pooling unit \eqn{c} given by \code{weights}. The
+default is one aggregate over all geographic units.}
 
 \item{fields}{The name fields whose clusters are used: any of
 \code{"surname"} and \code{"first"}. Defaults to every field in
@@ -59,7 +62,21 @@ selected for each field in \code{fit}.}
 default is \code{"simplex"} for a factor outcome, \code{"box"} for a
 numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.}
 
+\item{method}{\code{"ls"} (constrained least squares) or \code{"em"}
+(maximum likelihood by EM, for a factor outcome).}
+
+\item{weights}{\code{"posterior"} or \code{"prior"}: the group members of
+each pooling unit used to combine pooling units into aggregates, as the
+sum of the posterior or of the prior \eqn{P(R = r \mid G)} over the
+people of the unit. The default is \code{"prior"} with \code{method =
+  "ls"} and \code{"posterior"} with \code{method = "em"}.}
+
 \item{jackknife}{Compute the jackknife standard errors.}
+
+\item{jack.groups}{Optional vector, one value per person and constant
+within each geographic unit, defining the groups deleted one at a time by
+the jackknife. The default is \code{folds}. More groups give a more
+stable variance, and each group adds one refit.}
 
 \item{control}{A list from \code{\link{lbisg_control}} (uses \code{seed}).}
 
@@ -78,8 +95,9 @@ number of clusters used in each field.
 Cross-fitted estimator of the mean outcome of each group under the BIRDiE
 assumption that the outcome is independent of the name given the group and
 geography. Within each pooling unit (for example the county), the group
-means are estimated by least squares of the outcome on the lBISG posterior
-probabilities. The posterior of each person uses \eqn{P(B = b \mid R = r)}
+means are estimated from the outcome and the lBISG posterior
+probabilities, by least squares or by maximum likelihood. The posterior of
+each person uses \eqn{P(B = b \mid R = r)}
 fit without the person's fold of geographies (for example the person's
 state), with the clusters of \code{fit}.
 }
@@ -87,9 +105,9 @@ state), with the clusters of \code{fit}.
 With many groups, groups with similar names and geography make the least
 squares close to singular. The group means are therefore constrained to the
 simplex for a factor outcome, or to \eqn{[0, 1]} for a binary one. The
-standard errors come from the delete-one-fold jackknife, which refits
-\eqn{P(B = b \mid R = r)} without the deleted fold. The jackknife requires
-each aggregate to span several folds.
+standard errors come from the delete-one-group jackknife, which refits
+\eqn{P(B = b \mid R = r)} without the deleted group. The jackknife requires
+each aggregate to span several groups.
 
 With both surname and first name, the clusters of the two fields are taken
 as independent given the group and geography (the lBIFSG assumption), and

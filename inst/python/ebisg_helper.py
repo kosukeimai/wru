@@ -36,11 +36,18 @@ Next steps for maintainers:
     final Linear -> Softmax). To support different architectures, modify
     NameMLP and the load_mlp() reconstruction logic.
 """
+from __future__ import annotations
+
 from functools import lru_cache
+from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
+import numpy.typing as npt
 import torch
 import torch.nn as nn
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 
 class NameMLP(nn.Module):
@@ -58,9 +65,10 @@ class NameMLP(nn.Module):
         dropout: dropout probability (used during training; inactive in eval).
     """
 
-    def __init__(self, input_dim, hidden_dims, n_classes=6, dropout=0.3):
+    def __init__(self, input_dim: int, hidden_dims: Sequence[int],
+                 n_classes: int = 6, dropout: float = 0.3) -> None:
         super().__init__()
-        layers = []
+        layers: list[nn.Module] = []
         prev = input_dim
         for h in hidden_dims:
             layers += [nn.Linear(prev, h), nn.ReLU(), nn.Dropout(dropout)]
@@ -68,12 +76,13 @@ class NameMLP(nn.Module):
         layers.append(nn.Linear(prev, n_classes))
         self.net = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
 
 @lru_cache(maxsize=None)
-def get_embedding_model(model_name="intfloat/multilingual-e5-large", cache_dir=None):
+def get_embedding_model(model_name: str = "intfloat/multilingual-e5-large",
+                        cache_dir: str | None = None) -> SentenceTransformer:
     """Load a sentence-transformer model, caching across calls within the
     Python session.
 
@@ -84,14 +93,16 @@ def get_embedding_model(model_name="intfloat/multilingual-e5-large", cache_dir=N
     use downloads from HuggingFace Hub and subsequent sessions load from disk.
     """
     from sentence_transformers import SentenceTransformer
-    kwargs = {"device": "cpu"}
+    kwargs: dict[str, Any] = {"device": "cpu"}
     if cache_dir is not None:
         kwargs["cache_folder"] = cache_dir
     return SentenceTransformer(model_name, **kwargs)
 
 
-def embed_names(names, model_name="intfloat/multilingual-e5-large",
-                cache_dir=None, batch_size=256):
+def embed_names(names: Sequence[str],
+                model_name: str = "intfloat/multilingual-e5-large",
+                cache_dir: str | None = None,
+                batch_size: int = 256) -> npt.NDArray[np.float32]:
     """Embed a list of name strings with a sentence-transformer model.
 
     Args:
@@ -105,15 +116,15 @@ def embed_names(names, model_name="intfloat/multilingual-e5-large",
     """
     model = get_embedding_model(model_name, cache_dir)
     embeddings = model.encode(
-        names,
+        list(names),
         batch_size=batch_size,
         show_progress_bar=len(names) > 1000,
         normalize_embeddings=True,
     )
-    return embeddings.astype(np.float32)
+    return np.asarray(embeddings, dtype=np.float32)
 
 
-def load_mlp(checkpoint_path):
+def load_mlp(checkpoint_path: str) -> tuple[NameMLP, dict[str, Any]]:
     """Load a NameMLP from a .pt checkpoint.
 
     The checkpoint is a dict with two keys: `state_dict` (tensors) and
@@ -145,7 +156,8 @@ def load_mlp(checkpoint_path):
 EBISG_RACE_COLS = ("whi", "bla", "his", "asi", "aian", "oth")
 
 
-def predict_mlp(embeddings, model, batch_size=10000):
+def predict_mlp(embeddings: npt.ArrayLike, model: NameMLP,
+                batch_size: int = 10000) -> npt.NDArray[np.float32]:
     """Run MLP forward pass, returning softmax probabilities.
 
     Args:
@@ -163,6 +175,7 @@ def predict_mlp(embeddings, model, batch_size=10000):
         numpy array (N, 6) of probabilities, with columns ordered as
         EBISG_RACE_COLS (whi, bla, his, asi, aian, oth).
     """
+    embeddings = np.asarray(embeddings)
     probs = []
     with torch.no_grad():
         for start in range(0, len(embeddings), batch_size):

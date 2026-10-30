@@ -310,17 +310,18 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 #' Cross-fitted estimator of the mean outcome of each group under the BIRDiE
 #' assumption that the outcome is independent of the name given the group and
 #' geography. Within each pooling unit (for example the county), the group
-#' means are estimated by least squares of the outcome on the lBISG posterior
-#' probabilities. The posterior of each person uses \eqn{P(B = b \mid R = r)}
+#' means are estimated from the outcome and the lBISG posterior
+#' probabilities, by least squares or by maximum likelihood. The posterior of
+#' each person uses \eqn{P(B = b \mid R = r)}
 #' fit without the person's fold of geographies (for example the person's
 #' state), with the clusters of \code{fit}.
 #'
 #' With many groups, groups with similar names and geography make the least
 #' squares close to singular. The group means are therefore constrained to the
 #' simplex for a factor outcome, or to \eqn{[0, 1]} for a binary one. The
-#' standard errors come from the delete-one-fold jackknife, which refits
-#' \eqn{P(B = b \mid R = r)} without the deleted fold. The jackknife requires
-#' each aggregate to span several folds.
+#' standard errors come from the delete-one-group jackknife, which refits
+#' \eqn{P(B = b \mid R = r)} without the deleted group. The jackknife requires
+#' each aggregate to span several groups.
 #'
 #' With both surname and first name, the clusters of the two fields are taken
 #' as independent given the group and geography (the lBIFSG assumption), and
@@ -341,10 +342,10 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 #'   aggregate of \code{by}. The default is one pooling unit per aggregate.
 #' @param by Optional vector, one value per person and constant within each
 #'   geographic unit, defining the aggregates to estimate. Each aggregate
-#'   estimate is the mean outcome among the expected members of the group,
-#'   \eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the sum
-#'   of the prior \eqn{P(R = r \mid G)} over the people of pooling unit
-#'   \eqn{c}. The default is one aggregate over all geographic units.
+#'   estimate is the mean outcome among the members of the group,
+#'   \eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the
+#'   group members of pooling unit \eqn{c} given by \code{weights}. The
+#'   default is one aggregate over all geographic units.
 #' @param fields The name fields whose clusters are used: any of
 #'   \code{"surname"} and \code{"first"}. Defaults to every field in
 #'   \code{fit}.
@@ -354,7 +355,18 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 #' @param constraint \code{"simplex"}, \code{"box"} or \code{"none"}. The
 #'   default is \code{"simplex"} for a factor outcome, \code{"box"} for a
 #'   numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.
+#' @param method \code{"ls"} (constrained least squares) or \code{"em"}
+#'   (maximum likelihood by EM, for a factor outcome).
+#' @param weights \code{"posterior"} or \code{"prior"}: the group members of
+#'   each pooling unit used to combine pooling units into aggregates, as the
+#'   sum of the posterior or of the prior \eqn{P(R = r \mid G)} over the
+#'   people of the unit. The default is \code{"prior"} with \code{method =
+#'   "ls"} and \code{"posterior"} with \code{method = "em"}.
 #' @param jackknife Compute the jackknife standard errors.
+#' @param jack.groups Optional vector, one value per person and constant
+#'   within each geographic unit, defining the groups deleted one at a time by
+#'   the jackknife. The default is \code{folds}. More groups give a more
+#'   stable variance, and each group adds one refit.
 #' @param control A list from \code{\link{lbisg_control}} (uses \code{seed}).
 #' @param verbose Print progress.
 #'
@@ -376,8 +388,14 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 #' @export
 lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
                              by = NULL, fields = names(fit$fields), V = 5,
-                             K = NULL, constraint = NULL, jackknife = TRUE,
+                             K = NULL, constraint = NULL,
+                             method = c("ls", "em"),
+                             weights = NULL,
+                             jackknife = TRUE, jack.groups = NULL,
                              control = lbisg_control(), verbose = TRUE) {
+  method <- match.arg(method)
+  if (is.null(weights)) weights <- if (method == "ls") "prior" else "posterior"
+  weights <- match.arg(weights, c("posterior", "prior"))
   control <- utils::modifyList(lbisg_control(), control)
   if (!inherits(fit, "lbisg")) stop("'fit' must be an object from lbisg().")
   missing_fields <- setdiff(fields, names(fit$fields))
@@ -415,6 +433,9 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
     }
   }
   constraint <- match.arg(constraint, c("simplex", "box", "none"))
+  if (method == "em" && constraint != "simplex") {
+    stop("method = \"em\" requires a factor outcome.")
+  }
   if (constraint == "simplex" && any(abs(rowSums(Y) - 1) > 1e-8)) {
     stop("constraint = \"simplex\" requires outcome indicators that sum to one.")
   }
@@ -424,6 +445,7 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
   folds_f <- lbisg_geo_factor(folds, geo_idx, "folds")
   by_f <- lbisg_geo_factor(by, geo_idx, "by")
   pool_f <- if (is.null(pool)) by_f else lbisg_geo_factor(pool, geo_idx, "pool")
+  jack_f <- lbisg_geo_factor(jack.groups, geo_idx, "jack.groups")
   if (is.null(K)) {
     K <- vapply(flds, function(f) as.integer(f$K), integer(1))
   }
@@ -440,7 +462,9 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
     pool = as.integer(pool_f) - 1L, by = as.integer(by_f) - 1L,
     K = as.list(as.integer(K)), V = as.integer(V),
     constraint = if (constraint == "none") NULL else constraint,
-    jackknife = jackknife, seed = as.integer(control$seed),
+    method = method, weights = weights, jackknife = jackknife,
+    jack_groups = if (is.null(jack_f)) NULL else as.integer(jack_f) - 1L,
+    seed = as.integer(control$seed),
     verbose = verbose
   )
 
@@ -489,7 +513,7 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
 lbisg_geo_factor <- function(x, geo_idx, arg) {
   n_geo <- max(geo_idx) + 1L
   if (is.null(x)) {
-    if (arg == "folds") return(NULL)
+    if (arg %in% c("folds", "jack.groups")) return(NULL)
     return(factor(rep("all", n_geo)))
   }
   if (length(x) != length(geo_idx)) {

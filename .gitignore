@@ -50,3 +50,9 @@ release-data/
 src/*.dll
 src/*.o
 *.pyc
+
+# Python tooling
+.venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
