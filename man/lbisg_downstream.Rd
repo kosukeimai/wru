@@ -15,10 +15,12 @@ lbisg_downstream(
   V = 5,
   K = NULL,
   constraint = NULL,
-  method = c("ls", "em"),
-  weights = NULL,
-  jackknife = TRUE,
-  jack.groups = NULL,
+  correct = FALSE,
+  se = NULL,
+  n.boot = 100,
+  n.split = 10,
+  n.seeds = 3,
+  fold.clusters = FALSE,
   control = lbisg_control(),
   verbose = TRUE
 )
@@ -46,7 +48,8 @@ aggregate of \code{by}. The default is one pooling unit per aggregate.}
 geographic unit, defining the aggregates to estimate. Each aggregate
 estimate is the mean outcome among the members of the group,
 \eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the
-group members of pooling unit \eqn{c} given by \code{weights}. The
+prior group members of pooling unit \eqn{c}, the sum of
+\eqn{P(R = r \mid G)} over the unit's people. The
 default is one aggregate over all geographic units.}
 
 \item{fields}{The name fields whose clusters are used: any of
@@ -62,21 +65,31 @@ selected for each field in \code{fit}.}
 default is \code{"simplex"} for a factor outcome, \code{"box"} for a
 numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.}
 
-\item{method}{\code{"ls"} (constrained least squares) or \code{"em"}
-(maximum likelihood by EM, for a factor outcome).}
+\item{correct}{If \code{TRUE}, the least squares with the orthogonal
+correction, without pooling, in place of the empirical-Bayes pooling.}
 
-\item{weights}{\code{"posterior"} or \code{"prior"}: the group members of
-each pooling unit used to combine pooling units into aggregates, as the
-sum of the posterior or of the prior \eqn{P(R = r \mid G)} over the
-people of the unit. The default is \code{"prior"} with \code{method =
-  "ls"} and \code{"posterior"} with \code{method = "em"}.}
+\item{se}{How to compute the standard errors, with the geographies held
+fixed. \code{"bootstrap"} (the default with \code{correct = FALSE}) adds
+the error of the fitted cluster probabilities, from \code{n.boot}
+replicates that resample the folds with replacement, which needs many
+folds (for example the states), and the error from the people given those
+probabilities, from \code{n.split} random splits of the people into halves.
+\code{"if"} (the default with \code{correct = TRUE}) is the influence
+function of the corrected estimator. The confidence intervals use the
+standard error of the unprojected aggregate and are cut at the constraint.
+\code{"none"} skips them.}
 
-\item{jackknife}{Compute the jackknife standard errors.}
+\item{n.boot}{Bootstrap replicates of the cluster probabilities.}
 
-\item{jack.groups}{Optional vector, one value per person and constant
-within each geographic unit, defining the groups deleted one at a time by
-the jackknife. The default is \code{folds}. More groups give a more
-stable variance, and each group adds one refit.}
+\item{n.split}{Half splits of the people.}
+
+\item{n.seeds}{K-means seeds to average over, starting at
+\code{control$seed}.}
+
+\item{fold.clusters}{If \code{TRUE}, the clusters of each fold are fit on
+the other folds, so that a person's posterior uses nothing from their own
+fold. If \code{FALSE} (the default), one clustering of all people is used
+for each seed.}
 
 \item{control}{A list from \code{\link{lbisg_control}} (uses \code{seed}).}
 
@@ -84,30 +97,54 @@ stable variance, and each group adds one refit.}
 }
 \value{
 A list with \code{estimates} (a data frame with one row per
-aggregate, group and outcome: the estimate, the jackknife standard error
-of the estimate and the expected number of group members \code{N}),
-\code{vcov} (the jackknife covariance matrix of each aggregate over all
-groups and outcomes), \code{mu} (an array of pooling unit by group by
-outcome means, \code{NA} where the group has no prior mass) and the
-number of clusters used in each field.
+  aggregate, group and outcome: the estimate, the estimate before the
+  projection onto the constraint \code{estimate.raw}, its standard error,
+  the 95\% interval \code{lower} and \code{upper} cut at the constraint,
+  and the expected number of group members \code{N}),
+  \code{vcov} (the covariance matrix of each aggregate over all
+  groups and outcomes), \code{mu} (an array of pooling unit by group by
+  outcome means, \code{NA} where the group has no prior mass) and the
+  number of clusters used in each field \code{K} (a matrix with one row per
+  seed, or an array of seed by fold by field when \code{fold.clusters} is
+  \code{TRUE}), and \code{pooling}, the empirical-Bayes fit of each seed
+  (\code{NULL} entries with \code{correct = TRUE}).
 }
 \description{
 Cross-fitted estimator of the mean outcome of each group under the BIRDiE
 assumption that the outcome is independent of the name given the group and
-geography. Within each pooling unit (for example the county), the group
-means are estimated from the outcome and the lBISG posterior
-probabilities, by least squares or by maximum likelihood. The posterior of
-each person uses \eqn{P(B = b \mid R = r)}
-fit without the person's fold of geographies (for example the person's
-state), with the clusters of \code{fit}.
+geography. The estimand is the mean outcome of each group in each pooling
+unit (for example the county), \eqn{E[Y \mid R = r, c]}, and its
+aggregates over pooling units weighted by the group's prior members in each
+unit. Within each pooling unit, the group means solve the least squares of
+the outcome on the lBISG posterior probabilities. The posterior of each
+person uses \eqn{P(B = b \mid R = r)} fit without the person's fold of
+geographies. Folds should be spatial blocks, such as states.
 }
 \details{
-With many groups, groups with similar names and geography make the least
-squares close to singular. The group means are therefore constrained to the
-simplex for a factor outcome, or to \eqn{[0, 1]} for a binary one. The
-standard errors come from the delete-one-group jackknife, which refits
-\eqn{P(B = b \mid R = r)} without the deleted group. The jackknife requires
-each aggregate to span several groups.
+With many groups whose names and geography are similar, each pooling unit's
+least squares is close to singular. By default, the means of the pooling
+units are therefore pooled toward the means of their aggregate by empirical
+Bayes: each group's means are pulled toward the aggregate in proportion to
+how little the unit's own data identify them, with the pooling estimated
+from the data.
+
+With \code{correct = TRUE}, the means of each pooling unit are instead the
+least squares with the orthogonal correction of the paper's estimating
+equation, without pooling. The correction removes the first-order
+sensitivity to the error of the fitted \eqn{P(B = b \mid R = r)}. It needs
+that error to be small in every direction, which holds for a few groups with
+distinct names and geography. With many similar groups, the estimates and
+standard errors break down.
+
+A constraint on the means (the simplex for a factor outcome, \eqn{[0, 1]}
+for a binary one) is imposed on the reported aggregates only: each aggregate
+is projected onto the constraint. A group whose unprojected aggregate
+(\code{estimate.raw}) lies far outside the constraint, with a large standard
+error, is not identified by the data.
+
+The estimate depends on the random start of K-means. The clusters are fit
+with \code{n.seeds} seeds and the estimates averaged, and the spread across
+seeds enters the covariance.
 
 With both surname and first name, the clusters of the two fields are taken
 as independent given the group and geography (the lBIFSG assumption), and

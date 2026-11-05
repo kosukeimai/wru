@@ -309,24 +309,22 @@ def test_pool_grams_match_a_direct_sum() -> None:
     pool = np.arange(10) // 4
     phis = {v: [rng.dirichlet(np.ones(5), 3)] for v in (0, 1)}
     people = np.arange(400)
-    A, B, mass = lb._pool_grams(people, geo, bins, M, Y, pool, 3, fold, phis,
-                                chunk=50)
+    fulls = {v: [rng.dirichlet(np.ones(5), 3)] for v in (0, 1)}
+    A, B, mass, C, c0 = lb._pool_grams(people, geo, bins, M, Y, pool, 3,
+                                       fold, phis, chunk=50, fulls=fulls)
     post = lb._posteriors(people, geo, bins, M, fold, phis)
+    dpi = lb._posteriors(people, geo, bins, M, fold, fulls) - post
     for c in range(3):
         s = pool[geo] == c
         np.testing.assert_allclose(A[c], post[s].T @ post[s])
         np.testing.assert_allclose(B[c], post[s].T @ Y[s])
         np.testing.assert_allclose(mass[c], post[s].sum(0))
-
-
-def test_em_means_recover_means_from_expected_counts() -> None:
-    rng = np.random.default_rng(0)
-    post = rng.dirichlet(np.full(3, 0.5), 200)
-    mu = GROUP_MEANS
-    counts = 1000 * (post @ mu)
-    est = lb._em_means(post, counts, max_iter=20000, tol=1e-12)
-    np.testing.assert_allclose(est.sum(1), 1)
-    np.testing.assert_allclose(est, mu, atol=1e-3)
+        np.testing.assert_allclose(C[c], dpi[s].T @ post[s]
+                                   + post[s].T @ dpi[s])
+        np.testing.assert_allclose(c0[c], dpi[s].T @ Y[s])
+    # without deltas the correction terms are zero
+    out = lb._pool_grams(people, geo, bins, M, Y, pool, 3, fold, phis)
+    assert not out[3].any() and not out[4].any()
 
 
 def test_simplex_rows_projects_onto_the_simplex() -> None:
@@ -351,43 +349,82 @@ def test_project_applies_each_constraint() -> None:
     np.testing.assert_allclose(lb._project(X, "simplex").sum(), 1)
 
 
-def test_solve_constrained_meets_the_optimality_conditions() -> None:
-    rng = np.random.default_rng(0)
-    Pm = rng.dirichlet(np.ones(3), 40)
-    A = Pm.T @ Pm
-    # unconstrained: the least squares solution
-    B = Pm.T @ rng.normal(size=(40, 2))
-    np.testing.assert_allclose(lb._solve_constrained(A, B, None),
-                               np.linalg.solve(A, B))
-    # an interior solution needs no constraint
-    mu = GROUP_MEANS
-    B_in = A @ mu
-    np.testing.assert_allclose(lb._solve_constrained(A, B_in, "simplex"), mu,
-                               atol=1e-6)
-    # on the boundary: grad'(q - x) >= 0 for every feasible q
-    B_out = Pm.T @ np.eye(3)[rng.integers(0, 3, 40)] * 3 - A
-    for constraint, draw in (("simplex", lambda: rng.dirichlet(np.ones(3),
-                                                               (3,))),
-                             ("box", lambda: rng.random((3, 3)))):
-        x = lb._solve_constrained(A, B_out, constraint, tol=1e-12)
-        np.testing.assert_allclose(lb._project(x, constraint), x, atol=1e-9)
-        grad = 2 * (A @ x - B_out)
-        for _ in range(200):
-            assert np.sum(grad * (draw() - x)) >= -1e-6
-
-
 def test_solve_pools_skips_groups_absent_from_a_pool() -> None:
     rng = np.random.default_rng(0)
     Pm = rng.dirichlet(np.ones(3), (2, 30))
     A = np.einsum("cnr,cns->crs", Pm, Pm)
     B = np.einsum("cnr,np->crp", Pm, np.eye(2)[rng.integers(0, 2, 30)])
     solve = np.array([[True, True, True], [True, False, True]])
-    mu = lb._solve_pools(A, B, solve, "simplex")
+    mu = lb._solve_pools(A, B, solve)
     assert np.all(np.isnan(mu[1, 1])) and not np.any(np.isnan(mu[0]))
+    np.testing.assert_allclose(mu[0], np.linalg.solve(A[0], B[0]))
     k = [0, 2]
     np.testing.assert_allclose(
-        mu[1, k], lb._solve_constrained(A[1][np.ix_(k, k)], B[1, k],
-                                        "simplex"))
+        mu[1, k], np.linalg.solve(A[1][np.ix_(k, k)], B[1, k]))
+
+
+def _eb_data(seed: int = 0, n_pool: int = 30, n_per: int = 400,
+             spread: float = 0.05) -> dict[str, Any]:
+    """Pooling units in two aggregates with unit means spread around the
+    aggregate means, and the sums _eb_pools() takes."""
+    rng = np.random.default_rng(seed)
+    by_pool = np.arange(n_pool) % 2
+    m = np.stack([GROUP_MEANS, GROUP_MEANS[::-1]])
+    mu = np.stack([lb._simplex_rows(m[s] + rng.normal(0, spread, (3, 3)))
+                   for s in by_pool])
+    A = np.zeros((n_pool, 3, 3))
+    B = np.zeros((n_pool, 3, 3))
+    yy = np.zeros((n_pool, 3))
+    for c in range(n_pool):
+        pi = rng.dirichlet(np.full(3, 0.6), n_per)
+        p = pi @ mu[c]
+        y = np.eye(3)[(rng.random(n_per)[:, None] > np.cumsum(p, 1)).sum(1)
+                      .clip(0, 2)]
+        A[c], B[c], yy[c] = pi.T @ pi, pi.T @ y, y.sum(0)
+    return dict(A=A, B=B, yy=yy, by_pool=by_pool, mu=mu, m=m,
+                solve=np.ones((n_pool, 3), bool))
+
+
+def test_eb_pools_is_a_ridge_toward_the_aggregate() -> None:
+    d = _eb_data(n_per=4000)
+    mu, fit = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"], d["by_pool"],
+                           2, "simplex")
+    # the posterior mean solves (A_c + Lambda) mu_c = B_c + Lambda m_s
+    lam = fit["sigma2"] / fit["tau2"]
+    for c in range(len(mu)):
+        lhs = (d["A"][c] + np.diag(lam)) @ mu[c]
+        rhs = d["B"][c] + lam[:, None] * fit["m"][d["by_pool"][c]]
+        np.testing.assert_allclose(lhs, rhs, atol=1e-8)
+    # the aggregate means are recovered
+    target = np.stack([d["mu"][d["by_pool"] == s].mean(0) for s in (0, 1)])
+    np.testing.assert_allclose(fit["m"], target, atol=0.03)
+    # pooling beats the least squares of each unit
+    ls = lb._solve_pools(d["A"], d["B"], d["solve"])
+    assert (np.mean((mu - d["mu"]) ** 2)
+            < np.mean((ls - d["mu"]) ** 2))
+
+
+def test_eb_pools_bound_caps_the_pooling_variance() -> None:
+    # units with almost no data: without the bound, tau can be implausible
+    d = _eb_data(n_per=15, spread=0.0)
+    _, fit = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"], d["by_pool"],
+                          2, "simplex")
+    mp = np.stack([lb._simplex_rows(x) for x in fit["m"]])
+    cap = (mp * (1 - mp)).mean((0, 2))
+    assert np.all(fit["tau2"] <= cap + 1e-12)
+    _, free = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"],
+                           d["by_pool"], 2, None)
+    assert np.all(np.isfinite(free["tau2"]))
+
+
+def test_eb_pools_skips_groups_absent_from_a_pool() -> None:
+    d = _eb_data()
+    solve = d["solve"].copy()
+    solve[3, 1] = False
+    mu, _ = lb._eb_pools(d["A"], d["B"], d["yy"], solve, d["by_pool"], 2,
+                         "simplex")
+    assert np.all(np.isnan(mu[3, 1]))
+    assert np.isfinite(np.delete(mu.reshape(-1, 3), 3 * 3 + 1, 0)).all()
 
 
 def test_aggregate_is_the_weighted_mean_over_pools() -> None:
@@ -398,54 +435,191 @@ def test_aggregate_is_the_weighted_mean_over_pools() -> None:
     np.testing.assert_allclose(theta[:, :, 0], [[0.5, 0.5], [0.9, 0.1]])
 
 
+def test_fold_phis_leave_out_each_fold() -> None:
+    rng = np.random.default_rng(0)
+    XtWX = rng.random((4, 3, 3)) + np.eye(3) * 5
+    XtWY = rng.random((4, 3, 6))
+    tot = {v: [(XtWX, XtWY)] for v in (0, 2)}
+    wt = np.array([1.0, 2.0, 0.0, 1.0])
+    phis = lb._fold_phis(tot, [0, 2], wt)
+    np.testing.assert_allclose(
+        phis[0][0], lb._phi_from_sums(2 * XtWX[1] + XtWX[3],
+                                      2 * XtWY[1] + XtWY[3]))
+    full = lb._fold_phis(tot, [0, 2], np.ones(4), leave_out=False)
+    np.testing.assert_allclose(full[2][0], lb._phi_from_sums(XtWX.sum(0),
+                                                             XtWY.sum(0)))
+
+
+def test_combine_clusterings_averages_and_adds_the_spread() -> None:
+    theta = [np.array([[[0.2, 0.8]]]), np.array([[[0.4, 0.6]]])]
+    res = [dict(mu=t, theta_raw=t, vcov=np.eye(2)[None] * 0.01,
+                N=np.ones((1, 1)), K=np.array([[5]]), pooling=[None])
+           for t in theta]
+    out = lb.combine_clusterings(res, "simplex")
+    np.testing.assert_allclose(out["theta"][0, 0], [0.3, 0.7])
+    # mean covariance plus the covariance across clusterings over m
+    between = np.cov(np.array([[0.2, 0.8], [0.4, 0.6]]).T, ddof=1) / 2
+    np.testing.assert_allclose(out["vcov"][0], 0.01 * np.eye(2) + between)
+    assert out["K"].shape == (2, 1)
+
+
 # ---------------------------------------------------------------------------
 # Downstream estimator
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("method", ["ls", "em"])
+@pytest.mark.parametrize("correct", [False, True])
 @pytest.mark.parametrize("n_fields", [1, 2])
 def test_downstream_crossfit_recovers_group_means(
-        sim: dict[str, Any], method: str, n_fields: int) -> None:
+        sim: dict[str, Any], correct: bool, n_fields: int) -> None:
     out = lb.downstream_crossfit(sim["fields"][:n_fields], sim["geo"],
                                  sim["prior"], sim["Y"], fold=sim["state"],
                                  pool=sim["county"], K=[30, 20][:n_fields],
-                                 method=method, jackknife=False,
+                                 correct=correct, se=None, n_seeds=1,
                                  verbose=False)
     assert out["theta"].shape == (1, 3, 3) and out["vcov"] is None
-    assert out["mu"].shape == (20, 3, 3) and len(out["K"]) == n_fields
+    assert out["mu"].shape == (20, 3, 3)
+    assert out["K"].shape == (1, n_fields)
     np.testing.assert_allclose(out["theta"][0].sum(1), 1)
     np.testing.assert_allclose(out["theta"][0], GROUP_MEANS, atol=0.05)
+    # the aggregate is the projection of the unprojected aggregate
+    np.testing.assert_allclose(out["theta"][0],
+                               lb._simplex_rows(out["theta_raw"][0]))
+    assert (out["pooling"][0] is None) == correct
 
 
-def test_downstream_crossfit_jackknife(sim: dict[str, Any]) -> None:
+def test_downstream_crossfit_pools_toward_the_aggregate(
+        sim: dict[str, Any]) -> None:
     kw: dict[str, Any] = dict(fold=sim["state"], pool=sim["county"], K=30,
-                              verbose=False)
+                              se=None, n_seeds=1, verbose=False)
+    eb = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
+                                sim["Y"], **kw)
+    ls = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
+                                sim["Y"], correct=True, **kw)
+    # the true means are the same in every county: pooling is closer
+    assert (np.nanmean((eb["mu"] - GROUP_MEANS) ** 2)
+            < np.nanmean((ls["mu"] - GROUP_MEANS) ** 2))
+    fit = eb["pooling"][0]
+    assert fit["m"].shape == (1, 3, 3) and fit["tau2"].shape == (3,)
+
+
+def test_downstream_crossfit_bootstrap_se(sim: dict[str, Any]) -> None:
     out = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
-                                 sim["Y"], **kw)
+                                 sim["Y"], fold=sim["state"],
+                                 pool=sim["county"], K=30, n_boot=20,
+                                 n_split=4, n_seeds=1, verbose=False)
     v = out["vcov"][0]
     assert v.shape == (9, 9)
-    np.testing.assert_allclose(v, v.T)
+    np.testing.assert_allclose(v, v.T, atol=1e-12)
     assert np.all(np.diag(v) > 0)
-    county = lb.downstream_crossfit(sim["fields"][0], sim["geo"],
-                                    sim["prior"], sim["Y"],
-                                    jack_groups=sim["county"], **kw)
-    assert np.all(np.isfinite(county["vcov"][0]))
-    np.testing.assert_allclose(county["theta"], out["theta"])
+    se = np.sqrt(np.diag(v)).reshape(3, 3)
+    assert np.all(np.abs(out["theta_raw"][0] - GROUP_MEANS) < 4 * se + 0.01)
 
 
-def test_downstream_crossfit_weights_default_by_method(
+def test_downstream_crossfit_averages_over_seeds(
         sim_small: dict[str, Any]) -> None:
     s = sim_small
-    geo, _, _, w, M = lb._geo_setup(s["geo"], s["prior"])
-    prior_N = (w[:, None] * M).sum(0)
-    kw: dict[str, Any] = dict(fold=s["state"], K=10, jackknife=False,
+    kw: dict[str, Any] = dict(fold=s["state"], K=10, n_boot=5, n_split=2,
                               verbose=False)
-    ls = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
-                                **kw)
-    np.testing.assert_allclose(ls["N"][0], prior_N)
-    em = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
-                                method="em", **kw)
-    assert not np.allclose(em["N"][0], prior_N)
-    np.testing.assert_allclose(em["N"][0].sum(), len(geo))
+    two = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                 s["Y"], n_seeds=2, **kw)
+    one = [lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                  s["Y"], n_seeds=1, seed=k, **kw)
+           for k in (0, 1)]
+    assert two["K"].shape == (2, 1) and len(two["pooling"]) == 2
+    np.testing.assert_allclose(two["theta_raw"],
+                               (one[0]["theta_raw"] + one[1]["theta_raw"]) / 2)
+    comb = lb.combine_clusterings(one, "simplex")
+    np.testing.assert_allclose(two["vcov"], comb["vcov"])
+
+
+def test_downstream_crossfit_fold_clusters_leave_out_the_fold(
+        sim_small: dict[str, Any]) -> None:
+    s = sim_small
+    kw: dict[str, Any] = dict(fold=s["state"], K=10, se=None, n_seeds=1,
+                              verbose=False)
+    per = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                 s["Y"], fold_clusters=True, **kw)
+    one = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                 s["Y"], **kw)
+    assert per["K"].ndim == 3 and one["K"].ndim == 2
+    # with one clustering, the result matches the clustering passed as bins
+    bins, _ = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
+                                 np.arange(len(s["geo"])), 10)
+    given = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                   s["Y"], bins=bins[None], **kw)
+    np.testing.assert_allclose(given["theta"], one["theta"])
+    # the people of a fold get the clusters fit without that fold
+    fold_p = s["state"][s["geo"]]
+    v = int(fold_p[0])
+    b_v, _ = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
+                                np.flatnonzero(fold_p != v), 10)
+    alone = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                   s["Y"], bins=b_v[None], **kw)
+    assert np.all(np.isfinite(per["theta"]))
+    assert not np.allclose(alone["theta"], one["theta"])
+
+
+def _if_direct(sim: dict[str, Any], bins: Any, out: dict[str, Any]) -> Any:
+    """The influence-function covariance of the pooled aggregate computed
+    directly, person by person, for one name field and one clustering."""
+    geo, _, n_geo, w, M = lb._geo_setup(sim["geo"], sim["prior"])
+    Y, fold, pool = sim["Y"], sim["state"], sim["county"]
+    n, P = Y.shape
+    R, K = M.shape[1], int(bins.max()) + 1
+    V = int(fold.max()) + 1
+    XtWX, XtWY = lb._fold_stats(bins, geo, M, w, fold, V, K)
+    phis = {v: [lb._phi_from_sums(XtWX[np.arange(V) != v].sum(0),
+                                  XtWY[np.arange(V) != v].sum(0))]
+            for v in range(V)}
+    ph = lb._phi_from_sums(XtWX.sum(0), XtWY.sum(0))
+    G = XtWX.sum(0)
+    fold_p, pc = fold[geo], pool[geo]
+    post = lb._posteriors(np.arange(n), geo, bins[None], M, fold_p, phis)
+    pm = np.zeros((pool.max() + 1, R))
+    np.add.at(pm, pool, w[:, None] * M)
+    U = np.linalg.solve(G, M.T).T
+    IF = np.zeros((n, R, P))
+    for c in range(pool.max() + 1):
+        s = np.flatnonzero(pc == c)
+        Phi = phis[int(fold_p[s[0]])][0]
+        pi, y = post[s], Y[s]
+        S = (np.einsum("ir,rs->irs", pi, np.eye(R))
+             - pi[:, :, None] * pi[:, None, :])
+        dS = S / Phi[:, bins[s]].T[:, None, :]
+        full = M[geo[s]] * ph[:, bins[s]].T
+        dpi = full / full.sum(1, keepdims=True) - pi
+        H = (pi.T @ pi + dpi.T @ pi + pi.T @ dpi)
+        mu = out["mu"][c]
+        e = y - pi @ mu
+        t = (np.einsum("irs,ip->irps", dS, e)
+             - np.einsum("ir,iqs,qp->irps", pi, dS, mu))
+        Tc = np.zeros((K, R, P, R))
+        np.add.at(Tc, bins[s], t)
+        contrib = np.einsum("irps,is->irp", Tc[bins], U[geo])
+        contrib[s] += pi[:, :, None] * e[:, None, :]
+        om = pm[c] / pm.sum(0)
+        IF += om[None, :, None] * np.einsum("rs,isp->irp",
+                                            np.linalg.inv(H), contrib)
+    IF = IF.reshape(n, R * P)
+    Sg = np.zeros((n_geo, R * P))
+    np.add.at(Sg, geo, IF)
+    n_g = np.bincount(geo, minlength=n_geo)
+    return IF.T @ IF - Sg.T @ (Sg / np.maximum(n_g, 1)[:, None])
+
+
+def test_downstream_crossfit_if_se_matches_a_direct_computation(
+        sim: dict[str, Any]) -> None:
+    bins, _ = lb.kmeans_occupied(lb.logodds(sim["fields"][0]),
+                                 np.arange(len(sim["geo"])), 15)
+    out = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
+                                 sim["Y"], fold=sim["state"],
+                                 pool=sim["county"], bins=bins[None],
+                                 correct=True, chunk=700, verbose=False)
+    v = out["vcov"][0]
+    assert v.shape == (9, 9)
+    np.testing.assert_allclose(v, v.T, atol=1e-12)
+    assert np.all(np.diag(v) > 0)
+    np.testing.assert_allclose(v, _if_direct(sim, bins, out), rtol=1e-6,
+                               atol=1e-12)
 
 
 def test_downstream_crossfit_by_aggregate(sim_small: dict[str, Any]) -> None:
@@ -453,10 +627,11 @@ def test_downstream_crossfit_by_aggregate(sim_small: dict[str, Any]) -> None:
     out = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
                                  s["Y"][:, 0], fold=s["state"],
                                  pool=s["county"], by=s["state"], K=10,
-                                 constraint="box", jackknife=False,
+                                 constraint="box", se=None, n_seeds=1,
                                  verbose=False)
     assert out["theta"].shape == (5, 3, 1)
     assert np.nanmin(out["theta"]) >= 0 and np.nanmax(out["theta"]) <= 1
+    assert out["pooling"][0]["m"].shape == (5, 3, 1)
 
 
 def test_downstream_crossfit_accepts_external_fold_stats(
@@ -466,31 +641,35 @@ def test_downstream_crossfit_accepts_external_fold_stats(
     bins, K_used = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
                                       np.arange(len(geo)), 10)
     kw: dict[str, Any] = dict(fold=s["state"], bins=bins[None],
-                              jackknife=False, verbose=False)
+                              n_boot=5, n_split=2, verbose=False)
     base = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
                                   s["Y"], **kw)
     stats = [lb._fold_stats(bins, geo, M, w, s["state"], 5, K_used)]
     ext = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
                                  s["Y"], fold_stats=stats, **kw)
     np.testing.assert_allclose(ext["theta"], base["theta"])
+    np.testing.assert_allclose(ext["vcov"], base["vcov"])
 
 
 @pytest.mark.parametrize("kw, message", [
-    (dict(method="ml"), "method must be"),
-    (dict(weights="mass"), "weights must be"),
-    (dict(method="em", Y_cont=True), "one indicator per category"),
+    (dict(constraint="unit"), "constraint must be"),
+    (dict(Y_col=True), "one column per category"),
     (dict(fold_stats=[(None, None)]), "fold_stats requires"),
     (dict(fold="single"), "at least two folds"),
     (dict(pool="state", by="county"), "within one aggregate"),
     (dict(K=[10, 10]), "one value per name field"),
+    (dict(se="parametric"), "se must be"),
+    (dict(se="if"), "se 'if' requires"),
+    (dict(se="bootstrap", correct=True), "se 'bootstrap' requires"),
+    (dict(n_seeds=0), "n_seeds must be"),
 ])
 def test_downstream_crossfit_checks_its_inputs(
         sim_small: dict[str, Any], kw: dict[str, Any], message: str) -> None:
     s = sim_small
     args: dict[str, Any] = dict(fold=s["state"], K=10, verbose=False)
     Y = s["Y"]
-    if kw.pop("Y_cont", False):
-        Y = Y * 0.5
+    if kw.pop("Y_col", False):
+        Y = Y[:, 0]
     if kw.get("fold") == "single":
         kw["fold"] = np.zeros_like(s["state"])
     if kw.get("pool") == "state":

@@ -119,7 +119,12 @@ sim_downstream <- function(n_geo = 100, seed = 1) {
   p_dem <- c(0.8, 0.5, 0.3)[grp]
   p_rep <- c(0.15, 0.4, 0.5)[grp]
   u <- stats::runif(n)
+  party <- ifelse(u < p_dem, "DEM", ifelse(u < p_dem + p_rep, "REP", "OTH"))
   county <- (gi - 1) %/% (n_geo / 20)
+  # the Democratic share among the members each group actually has
+  realized <- vapply(1:3, function(r) {
+    sum(party[grp == r] == "DEM") / sum(party[grp == r] %in% c("DEM", "REP"))
+  }, numeric(1))
   list(
     fit = structure(list(prior = M[gi, ], fields = list(
       surname = list(scores = scores(), K = 30L),
@@ -127,8 +132,9 @@ sim_downstream <- function(n_geo = 100, seed = 1) {
     geo = sprintf("g%03d", gi),
     county = sprintf("c%02d", county),
     state = sprintf("s%d", county %/% 4),
-    party = ifelse(u < p_dem, "DEM", ifelse(u < p_dem + p_rep, "REP", "OTH")),
-    share = c(a = 0.8 / 0.95, b = 0.5 / 0.9, c = 0.3 / 0.8)
+    party = party,
+    share = c(a = 0.8 / 0.95, b = 0.5 / 0.9, c = 0.3 / 0.8),
+    realized = stats::setNames(realized, c("a", "b", "c"))
   )
 }
 
@@ -137,32 +143,33 @@ test_that("lbisg_downstream recovers group shares with one and two name fields",
   s <- sim_downstream()
   for (fields in list("surname", c("surname", "first"))) {
     ds <- lbisg_downstream(s$fit, s$party, s$geo, folds = s$state,
-                           pool = s$county, fields = fields, verbose = FALSE)
+                           pool = s$county, fields = fields, n.boot = 10,
+                           n.split = 2, n.seeds = 2, verbose = FALSE)
     expect_equal(nrow(ds$estimates), 3 * 3)
     expect_true(all(ds$estimates$se > 0))
     expect_true(all(ds$estimates$estimate >= 0 & ds$estimates$estimate <= 1))
+    expect_true(all(ds$estimates$lower >= 0 & ds$estimates$upper <= 1))
+    expect_true(all(ds$estimates$lower <= ds$estimates$upper))
+    expect_true(all(is.finite(ds$estimates$estimate.raw)))
     expect_equal(dim(ds$mu), c(20, 3, 3))
-    expect_equal(length(ds$K), length(fields))
+    expect_equal(dim(ds$K), c(2, length(fields)))
     sh <- lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
     expect_equal(sh$share, unname(s$share[sh$group]), tolerance = 0.05)
+    # the standard errors target the mean of each group, E[Y | R = r]
     expect_true(all(abs(sh$share - s$share[sh$group]) < 4 * sh$se))
   }
 })
 
-test_that("lbisg_downstream by EM with a county jackknife recovers group shares", {
+test_that("lbisg_downstream with the orthogonal correction recovers group shares", {
   skip_if_no_lbisg()
   s <- sim_downstream()
   ds <- lbisg_downstream(s$fit, s$party, s$geo, folds = s$state,
-                         pool = s$county, method = "em", weights = "prior",
-                         jack.groups = s$county, verbose = FALSE)
-  expect_true(all(abs(apply(ds$mu, c(1, 2), sum) - 1) < 1e-6, na.rm = TRUE))
+                         pool = s$county, correct = TRUE, n.seeds = 1,
+                         fields = "surname", verbose = FALSE)
   sh <- lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
   expect_equal(sh$share, unname(s$share[sh$group]), tolerance = 0.05)
   expect_true(all(sh$se > 0))
-  expect_error(lbisg_downstream(s$fit, as.numeric(s$party == "DEM"), s$geo,
-                                method = "em",
-                                verbose = FALSE),
-               "requires a factor outcome")
+  expect_null(ds$pooling[[1]])
 })
 
 test_that("lbisg_downstream checks its inputs", {
@@ -181,7 +188,13 @@ test_that("lbisg_downstream checks its inputs", {
   expect_error(lbisg_downstream(s$fit, s$party[-1], s$geo),
                "one value per person")
   expect_error(lbisg_downstream(s$fit, s$party, s$geo, constraint = "simplex",
-                                fields = "surname", verbose = FALSE), NA)
+                                fields = "surname", se = "none", n.seeds = 1,
+                                verbose = FALSE), NA)
+  expect_error(lbisg_downstream(s$fit, s$party, s$geo, se = "if"),
+               "requires correct = TRUE")
+  expect_error(lbisg_downstream(s$fit, s$party, s$geo, correct = TRUE,
+                                se = "bootstrap"),
+               "requires correct = FALSE")
 })
 
 test_that("kmeans_occupied leaves every cluster with a fitting observation", {
