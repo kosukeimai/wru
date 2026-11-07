@@ -189,7 +189,7 @@ lBISG race prediction for \code{predict_race(model = "lBISG")}: the census
 race shares at \code{census.geo} are the geographic prior, and
 \code{\link{lbisg}} does the rest. A race group given as a list of
 subgroup lists is subdivided, with the subgroup prior recovered from the
-census share of that group (Section 3.3). Any of whi, bla, his and asi
+census share of that group (Section 3.2). Any of whi, bla, his and asi
 without a list gets a list built from the Census name table.
 }
 

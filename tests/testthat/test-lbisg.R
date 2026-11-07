@@ -75,6 +75,19 @@ test_that("lbisg accepts any embedding model ID and checks a fixed K", {
                "at least the number of groups")
 })
 
+test_that("lbisg_control sets and checks the Algorithm 2 and sensitivity options", {
+  ctl <- lbisg_control()
+  expect_equal(ctl$K.method, "split")
+  expect_equal(ctl$val.frac, 0.2)
+  expect_equal(ctl$split.seed, 0)
+  expect_equal(ctl$gamma, 0)
+  expect_equal(lbisg_control(K.method = "crossfit")$K.method, "crossfit")
+  expect_error(lbisg_control(K.method = "other"))
+  expect_error(lbisg_control(val.frac = 1), "between 0 and 1")
+  expect_error(lbisg_control(lambda = 0.01, gamma = 0.02), "between 0 and 'lambda'")
+  expect_error(lbisg_control(lambda = 1), "in \\[0, 1\\)")
+})
+
 test_that("priors whose rows do not sum to one are rejected", {
   skip_if_no_lbisg()
   s <- sim_lists()

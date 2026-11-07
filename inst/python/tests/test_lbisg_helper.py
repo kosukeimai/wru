@@ -193,7 +193,41 @@ def test_select_k_needs_j_geographies() -> None:
     geo = np.repeat(np.arange(2), 50)
     with pytest.raises(ValueError, match="geographic units"):
         lb.select_K(np.random.default_rng(0).random((100, 3)), geo,
-                    np.full((100, 2), 0.5), J=5, verbose=False)
+                    np.full((100, 2), 0.5), J=5, verbose=False,
+                    method="crossfit")
+
+
+def test_split_units_is_the_papers_split() -> None:
+    # each unit is in the validation set with probability 0.2, seed 0
+    expected = (np.random.default_rng(0).random(500) < 0.2).astype(int)
+    np.testing.assert_array_equal(lb.split_units(500, 0.2, 0), expected)
+    assert 0.15 < expected.mean() < 0.25
+
+
+def test_select_k_split_is_the_mean_over_the_validation_units(
+        sim_small: dict[str, Any]) -> None:
+    F = sim_small["fields"][0]
+    Z = lb.logodds(F)
+    geo, _, n_geo, w, M = lb._geo_setup(sim_small["geo"], sim_small["prior"])
+    fold = lb.split_units(n_geo, 0.2, 0)
+    total, _ = lb.fold_term(Z, geo, M, w, n_geo, 5, 1, fold, 0)
+    _, curve = lb.select_K(F, sim_small["geo"], sim_small["prior"], grid=[5],
+                           extend=False, verbose=False)
+    assert curve[0][1] == pytest.approx(total / (fold[geo] == 1).sum())
+    _, cross = lb.select_K(F, sim_small["geo"], sim_small["prior"], grid=[5],
+                           J=3, extend=False, verbose=False,
+                           method="crossfit")
+    assert np.isfinite(cross[0][1]) and cross[0][1] != curve[0][1]
+
+
+def test_select_k_split_needs_both_sets() -> None:
+    geo = np.zeros(100, int)
+    with pytest.raises(ValueError, match="validation"):
+        lb.select_K(np.random.default_rng(0).random((100, 3)), geo,
+                    np.full((100, 2), 0.5), verbose=False)
+    with pytest.raises(ValueError, match="method"):
+        lb.select_K(np.random.default_rng(0).random((100, 3)), geo,
+                    np.full((100, 2), 0.5), verbose=False, method="other")
 
 
 def test_fit_posterior_sharpens_the_prior(sim: dict[str, Any]) -> None:
@@ -285,6 +319,70 @@ def test_recover_prevalence_within_coarse_groups() -> None:
     assert np.isnan(coverage[2])
     with pytest.raises(ValueError, match="coarse_of"):
         lb.recover_prevalence(onmat, geo, coarse_prior=coarse)
+
+
+# Four listed groups in two coarse groups and a fifth coarse group with no
+# list, over six geographies
+SHARES5 = np.array([[0.3, 0.1, 0.2, 0.1, 0.3], [0.1, 0.3, 0.1, 0.2, 0.3],
+                    [0.2, 0.2, 0.3, 0.1, 0.2], [0.1, 0.1, 0.2, 0.4, 0.2],
+                    [0.4, 0.1, 0.1, 0.1, 0.3], [0.2, 0.3, 0.2, 0.2, 0.1]])
+COVERAGE4 = np.array([0.5, 0.6, 0.4, 0.7])
+COARSE_OF = np.array([0, 0, 1, 1])
+
+
+def rates_with(lam: float, gamma: float) -> np.ndarray:
+    """P(L_l = 1 | R = r) with own coverage, lam within a coarse group and
+    gamma across coarse groups; the unlisted fifth group is at gamma."""
+    rates = np.full((5, 4), gamma)
+    for r in range(4):
+        for l in range(4):
+            if COARSE_OF[r] == COARSE_OF[l]:
+                rates[r, l] = COVERAGE4[r] if r == l else lam
+    return rates
+
+
+@pytest.mark.parametrize("lam,gamma", [(0.05, 0.0), (0.05, 0.02),
+                                       (0.05, 0.05)])
+def test_recover_prevalence_with_lambda_and_gamma(lam: float,
+                                                  gamma: float) -> None:
+    geo, _, onmat = people_from_shares(SHARES5, rates_with(lam, gamma),
+                                       per_geo=10000)
+    coarse = np.column_stack([SHARES5[:, :2].sum(1), SHARES5[:, 2:4].sum(1),
+                              SHARES5[:, 4]])
+    theta, coverage = lb.recover_prevalence(onmat, geo, coarse_prior=coarse,
+                                            coarse_of=COARSE_OF, lam=lam,
+                                            gamma=gamma)
+    np.testing.assert_allclose(theta, SHARES5[:, :4], atol=1e-8)
+    np.testing.assert_allclose(coverage, COVERAGE4, atol=1e-8)
+
+
+def test_recover_joint_with_every_coarse_group_listed() -> None:
+    # gamma = lam: the first result of Appendix A6.2, every cross rate lam
+    lam = 0.04
+    shares = SHARES5[:, :4] / SHARES5[:, :4].sum(1, keepdims=True)
+    Pi = np.diag(COVERAGE4 - lam) + lam
+    coarse = np.column_stack([shares[:, :2].sum(1), shares[:, 2:].sum(1)])
+    theta, coverage = lb._recover_joint(shares @ Pi, coarse, COARSE_OF,
+                                        np.ones(6), lam, lam)
+    np.testing.assert_allclose(theta, shares, atol=1e-8)
+    np.testing.assert_allclose(coverage, COVERAGE4, atol=1e-8)
+
+
+def test_recover_prevalence_checks_lambda_and_gamma() -> None:
+    geo, _, onmat = people_from_shares(SHARES, np.diag(COVERAGE))
+    coarse = np.column_stack([SHARES[:, :2].sum(1), SHARES[:, 2]])
+    with pytest.raises(ValueError, match="gamma must be between"):
+        lb.recover_prevalence(onmat, geo, coarse_prior=coarse,
+                              coarse_of=[0, 0, 1], lam=0.01, gamma=0.02)
+    with pytest.raises(ValueError, match="requires a coarse prior"):
+        lb.recover_prevalence(onmat, geo, lam=0.02, gamma=0.01)
+    with pytest.raises(ValueError, match="lambda"):
+        lb.recover_prevalence(onmat, geo, lam=1.0)
+
+
+def test_coverage_outside_its_range_warns() -> None:
+    with pytest.warns(UserWarning, match="lists \\[1\\]"):
+        lb._check_coverage(np.array([0.5, 0.04]), np.ones(2), 0.05)
 
 
 # ---------------------------------------------------------------------------

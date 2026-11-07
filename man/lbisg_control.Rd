@@ -6,6 +6,9 @@
 \usage{
 lbisg_control(
   n.folds = 5,
+  K.method = c("split", "crossfit"),
+  val.frac = 0.2,
+  split.seed = 0,
   geo.folds = 5,
   K.grid = NULL,
   max.epochs = 100,
@@ -13,6 +16,7 @@ lbisg_control(
   batch.size = 512,
   seed = 42,
   lambda = 0,
+  gamma = 0,
   exhaustive = FALSE,
   embedding.model = "intfloat/multilingual-e5-large"
 )
@@ -21,8 +25,20 @@ lbisg_control(
 \item{n.folds}{Number of name folds \eqn{J} for the out-of-fold list scores
 (Algorithm 1).}
 
+\item{K.method}{How Algorithm 2 holds out geographic units when choosing
+\eqn{K}: \code{"split"} (default, as in the paper) splits the units once at
+random, each going to the validation set with probability
+\code{val.frac}; \code{"crossfit"} deals the units into \code{geo.folds}
+folds of approximately equal numbers of people and holds out each fold in
+turn.}
+
+\item{val.frac}{Probability that a geographic unit is in the validation set
+(\code{K.method = "split"}).}
+
+\item{split.seed}{Seed of the random split (\code{K.method = "split"}).}
+
 \item{geo.folds}{Number of geographic folds \eqn{J} for choosing \eqn{K}
-(Algorithm 2).}
+(\code{K.method = "crossfit"}).}
 
 \item{K.grid}{Candidate numbers of clusters for Algorithm 2. The default grid
 runs from 10 to 20,000 and is extended upward while the maximum of
@@ -39,7 +55,12 @@ or at \code{max.epochs}.}
 \item{seed}{Random seed.}
 
 \item{lambda}{Cross-group list rate for the sensitivity analysis of the
-prevalence recovery (Appendix C); 0 assumes exclusive lists.}
+prevalence recovery (Appendix A6); 0 assumes exclusive lists. With a
+coarse prior, the rate between groups of the same coarse group.}
+
+\item{gamma}{With a coarse prior, the list rate between groups of different
+coarse groups, between 0 and \code{lambda} (Appendix A6.2); 0 assumes the
+coarse groups are separated by the lists.}
 
 \item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
 make up the whole population being divided: every group when no prior is

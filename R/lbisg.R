@@ -21,7 +21,7 @@
 #' @param coarse.prior Optional matrix or data frame of coarse group shares
 #'   \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 #'   group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-#'   known (Section 3.3). Requires \code{coarse.map}.
+#'   known (Section 3.2). Requires \code{coarse.map}.
 #' @param coarse.map Named character vector mapping each list group to its
 #'   coarse group (names are list groups, values are columns of
 #'   \code{coarse.prior}). The list groups within a coarse group must together
@@ -30,7 +30,7 @@
 #' @param first.names,first.lists Optional first names (one per person) and
 #'   first-name lists keyed by the same groups. When supplied, lBISG is applied
 #'   separately to each name field and the posteriors are combined under the
-#'   lBIFSG assumption (Section 2.5).
+#'   lBIFSG assumption (Section 2.6).
 #' @param K Optional number of clusters. If \code{NULL} (default), \eqn{K} is
 #'   chosen by Algorithm 2 for each name field.
 #' @param control A list from \code{\link{lbisg_control}}.
@@ -96,23 +96,24 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     if (is.null(coarse.prior)) {
       if (verbose) {
         message("Recovering geographic prevalence from the list rates ",
-                "(Section 3.2)...")
+                "(Section 3.1)...")
       }
       rec <- mod$recover_prevalence(
-        onmat = onm, geo = geo_idx, lam = control$lambda
+        onmat = onm, geo = geo_idx, lam = control$lambda,
+        gamma = control$gamma
       )
     } else {
       coarse.prior <- as.matrix(coarse.prior)
       lbisg_check_coarse(coarse.prior, coarse.map, groups)
       if (verbose) {
         message("Recovering subgroup prevalence from the coarse prevalence ",
-                "(Section 3.3)...")
+                "(Section 3.2)...")
       }
       rec <- mod$recover_prevalence(
         onmat = onm, geo = geo_idx,
         coarse_prior = lbisg_geo_rows(coarse.prior, geo_idx),
         coarse_of = match(coarse.map[groups], colnames(coarse.prior)) - 1L,
-        lam = control$lambda
+        lam = control$lambda, gamma = control$gamma
       )
     }
     prior <- as.matrix(rec[[1]])[geo_idx + 1, , drop = FALSE]
@@ -166,8 +167,17 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #'
 #' @param n.folds Number of name folds \eqn{J} for the out-of-fold list scores
 #'   (Algorithm 1).
+#' @param K.method How Algorithm 2 holds out geographic units when choosing
+#'   \eqn{K}: \code{"split"} (default, as in the paper) splits the units once at
+#'   random, each going to the validation set with probability
+#'   \code{val.frac}; \code{"crossfit"} deals the units into \code{geo.folds}
+#'   folds of approximately equal numbers of people and holds out each fold in
+#'   turn.
+#' @param val.frac Probability that a geographic unit is in the validation set
+#'   (\code{K.method = "split"}).
+#' @param split.seed Seed of the random split (\code{K.method = "split"}).
 #' @param geo.folds Number of geographic folds \eqn{J} for choosing \eqn{K}
-#'   (Algorithm 2).
+#'   (\code{K.method = "crossfit"}).
 #' @param K.grid Candidate numbers of clusters for Algorithm 2. The default grid
 #'   runs from 10 to 20,000 and is extended upward while the maximum of
 #'   \eqn{Q(K)} sits at its top; values below the number of groups or at least
@@ -179,7 +189,11 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #' @param batch.size Minibatch size, in distinct names, for the list models.
 #' @param seed Random seed.
 #' @param lambda Cross-group list rate for the sensitivity analysis of the
-#'   prevalence recovery (Appendix C); 0 assumes exclusive lists.
+#'   prevalence recovery (Appendix A6); 0 assumes exclusive lists. With a
+#'   coarse prior, the rate between groups of the same coarse group.
+#' @param gamma With a coarse prior, the list rate between groups of different
+#'   coarse groups, between 0 and \code{lambda} (Appendix A6.2); 0 assumes the
+#'   coarse groups are separated by the lists.
 #' @param exhaustive Set to \code{TRUE} to state that the groups with lists
 #'   make up the whole population being divided: every group when no prior is
 #'   given, or each subdivided coarse group when only a coarse prior is given.
@@ -193,14 +207,25 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #'   needed, because lBISG trains its own list models.
 #' @return A named list.
 #' @export
-lbisg_control <- function(n.folds = 5, geo.folds = 5, K.grid = NULL,
-                          max.epochs = 100, patience = 5, batch.size = 512,
-                          seed = 42, lambda = 0, exhaustive = FALSE,
+lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
+                          val.frac = 0.2, split.seed = 0, geo.folds = 5,
+                          K.grid = NULL, max.epochs = 100, patience = 5,
+                          batch.size = 512, seed = 42, lambda = 0,
+                          gamma = 0, exhaustive = FALSE,
                           embedding.model = "intfloat/multilingual-e5-large") {
+  K.method <- match.arg(K.method)
+  if (!(val.frac > 0 && val.frac < 1)) {
+    stop("'val.frac' must be between 0 and 1.")
+  }
+  if (!(lambda >= 0 && lambda < 1)) stop("'lambda' must be in [0, 1).")
+  if (!(gamma >= 0 && gamma <= lambda)) {
+    stop("'gamma' must be between 0 and 'lambda'.")
+  }
   list(
-    n.folds = n.folds, geo.folds = geo.folds, K.grid = K.grid,
+    n.folds = n.folds, K.method = K.method, val.frac = val.frac,
+    split.seed = split.seed, geo.folds = geo.folds, K.grid = K.grid,
     max.epochs = max.epochs, patience = patience, batch.size = batch.size,
-    seed = seed, lambda = lambda, exhaustive = exhaustive,
+    seed = seed, lambda = lambda, gamma = gamma, exhaustive = exhaustive,
     embedding.model = embedding.model
   )
 }
@@ -211,13 +236,21 @@ lbisg_control <- function(n.folds = 5, geo.folds = 5, K.grid = NULL,
 #' Section 3 of Chasalow, Dasanaike and Imai. Without any geographic prevalence
 #' (\code{coarse.prior = NULL}), the lists must be exhaustive and exclusive and
 #' \eqn{P(R \mid G)} is recovered from the list rates in each geography (Section
-#' 3.2). With coarse group prevalence, the subgroup shares are recovered within
+#' 3.1). With coarse group prevalence, the subgroup shares are recovered within
 #' each coarse group by non-negative least squares weighted by the expected
 #' number of coarse group members and normalized to the coarse share (Section
-#' 3.3). \code{lambda > 0} gives the sensitivity analysis of Appendix C.
+#' 3.2). \code{lambda > 0} and \code{gamma > 0} give the sensitivity analysis
+#' of Appendix A6. With \code{gamma > 0}, all groups with a list are recovered
+#' jointly, and the members of a coarse group without a list are assumed to
+#' have a name on each list at rate \code{gamma}. A warning means the
+#' estimated coverages are outside \eqn{(\lambda, 1]}, so the assumptions do
+#' not hold at these values.
 #'
 #' @inheritParams lbisg
-#' @param lambda Assumed cross-group list rate (0 for exclusive lists).
+#' @param lambda Assumed cross-group list rate (0 for exclusive lists); with a
+#'   coarse prior, the rate between groups of the same coarse group.
+#' @param gamma Assumed list rate between groups of different coarse groups,
+#'   between 0 and \code{lambda} (coarse prior only).
 #' @param exhaustive Set to \code{TRUE} to state that the groups with lists
 #'   make up the whole population being divided; see
 #'   \code{\link{lbisg_control}}.
@@ -227,7 +260,7 @@ lbisg_control <- function(n.folds = 5, geo.folds = 5, K.grid = NULL,
 #' @export
 lbisg_recover_prevalence <- function(names, geo, lists, coarse.prior = NULL,
                                      coarse.map = NULL, lambda = 0,
-                                     exhaustive = FALSE) {
+                                     gamma = 0, exhaustive = FALSE) {
   lists <- lbisg_check_lists(lists, "lists")
   lbisg_check_exhaustive(exhaustive, coarse.prior)
   ensure_lbisg_python()
@@ -237,7 +270,8 @@ lbisg_recover_prevalence <- function(names, geo, lists, coarse.prior = NULL,
   onm <- lbisg_list_matrix(names, lists)
 
   if (is.null(coarse.prior)) {
-    rec <- mod$recover_prevalence(onmat = onm, geo = geo_idx, lam = lambda)
+    rec <- mod$recover_prevalence(onmat = onm, geo = geo_idx, lam = lambda,
+                                  gamma = gamma)
   } else {
     coarse.prior <- as.matrix(coarse.prior)
     lbisg_check_coarse(coarse.prior, coarse.map, names(lists))
@@ -245,7 +279,7 @@ lbisg_recover_prevalence <- function(names, geo, lists, coarse.prior = NULL,
       onmat = onm, geo = geo_idx,
       coarse_prior = lbisg_geo_rows(coarse.prior, geo_idx),
       coarse_of = match(coarse.map[names(lists)], colnames(coarse.prior)) - 1L,
-      lam = lambda
+      lam = lambda, gamma = gamma
     )
   }
 
@@ -362,7 +396,10 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     patience = as.integer(control$patience),
     batch_size = as.integer(control$batch.size),
     seed = as.integer(control$seed),
-    verbose = verbose
+    verbose = verbose,
+    k_method = control$K.method,
+    val_frac = as.numeric(control$val.frac),
+    split_seed = as.integer(control$split.seed)
   )
 
   Q <- NULL
@@ -556,7 +593,7 @@ get_lbisg_module <- function() {
 #' race shares at \code{census.geo} are the geographic prior, and
 #' \code{\link{lbisg}} does the rest. A race group given as a list of
 #' subgroup lists is subdivided, with the subgroup prior recovered from the
-#' census share of that group (Section 3.3). Any of whi, bla, his and asi
+#' census share of that group (Section 3.2). Any of whi, bla, his and asi
 #' without a list gets a list built from the Census name table.
 #' @rdname modfuns
 #' @keywords internal

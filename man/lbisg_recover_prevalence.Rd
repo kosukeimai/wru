@@ -11,6 +11,7 @@ lbisg_recover_prevalence(
   coarse.prior = NULL,
   coarse.map = NULL,
   lambda = 0,
+  gamma = 0,
   exhaustive = FALSE
 )
 }
@@ -26,7 +27,7 @@ Every group in \code{prior} needs a list, except at most one residual group
 \item{coarse.prior}{Optional matrix or data frame of coarse group shares
 \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-known (Section 3.3). Requires \code{coarse.map}.}
+known (Section 3.2). Requires \code{coarse.map}.}
 
 \item{coarse.map}{Named character vector mapping each list group to its
 coarse group (names are list groups, values are columns of
@@ -34,7 +35,11 @@ coarse group (names are list groups, values are columns of
 make up that coarse group. One coarse group may have no list group: it is
 not subdivided, keeps its coarse share, and is predicted without a list.}
 
-\item{lambda}{Assumed cross-group list rate (0 for exclusive lists).}
+\item{lambda}{Assumed cross-group list rate (0 for exclusive lists); with a
+coarse prior, the rate between groups of the same coarse group.}
+
+\item{gamma}{Assumed list rate between groups of different coarse groups,
+between 0 and \code{lambda} (coarse prior only).}
 
 \item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
 make up the whole population being divided; see
@@ -49,8 +54,13 @@ geography and one column per group) and \code{coverage} (the estimated
 Section 3 of Chasalow, Dasanaike and Imai. Without any geographic prevalence
 (\code{coarse.prior = NULL}), the lists must be exhaustive and exclusive and
 \eqn{P(R \mid G)} is recovered from the list rates in each geography (Section
-3.2). With coarse group prevalence, the subgroup shares are recovered within
+3.1). With coarse group prevalence, the subgroup shares are recovered within
 each coarse group by non-negative least squares weighted by the expected
 number of coarse group members and normalized to the coarse share (Section
-3.3). \code{lambda > 0} gives the sensitivity analysis of Appendix C.
+3.2). \code{lambda > 0} and \code{gamma > 0} give the sensitivity analysis
+of Appendix A6. With \code{gamma > 0}, all groups with a list are recovered
+jointly, and the members of a coarse group without a list are assumed to
+have a name on each list at rate \code{gamma}. A warning means the
+estimated coverages are outside \eqn{(\lambda, 1]}, so the assumptions do
+not hold at these values.
 }

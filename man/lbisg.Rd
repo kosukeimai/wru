@@ -33,7 +33,7 @@ row per person and one named column per group (rows sum to one).}
 \item{coarse.prior}{Optional matrix or data frame of coarse group shares
 \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-known (Section 3.3). Requires \code{coarse.map}.}
+known (Section 3.2). Requires \code{coarse.map}.}
 
 \item{coarse.map}{Named character vector mapping each list group to its
 coarse group (names are list groups, values are columns of
@@ -44,7 +44,7 @@ not subdivided, keeps its coarse share, and is predicted without a list.}
 \item{first.names, first.lists}{Optional first names (one per person) and
 first-name lists keyed by the same groups. When supplied, lBISG is applied
 separately to each name field and the posteriors are combined under the
-lBIFSG assumption (Section 2.5).}
+lBIFSG assumption (Section 2.6).}
 
 \item{K}{Optional number of clusters. If \code{NULL} (default), \eqn{K} is
 chosen by Algorithm 2 for each name field.}

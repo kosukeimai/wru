@@ -16,25 +16,29 @@ Pipeline (Algorithm 1 of the paper, per name field):
      The number of training epochs is chosen by cross-validation within the
      training folds before the model is fit to all of them.
   3. select_K() (Algorithm 2): choose the number of clusters K by the
-     held-out log-likelihood ratio Q(K) over population-balanced folds of
-     the geographic units.
+     held-out log-likelihood ratio Q(K), either on one random split of the
+     geographic units into training and validation sets (method="split", as
+     in the paper) or cross-fitted over population-balanced folds of the
+     units (method="crossfit").
   4. fit_posterior(): K-means on the log-odds list scores, cluster
      proportions within each geography, weighted least squares for
      P(B = b | R = r), and Bayes' rule with the geographic prior.
 
 Also provided:
   - combine_fields(): first-name and surname posteriors combined as
-    P_F * P_S / P(R | G) (lBIFSG, Section 2.5).
+    P_F * P_S / P(R | G) (lBIFSG, Section 2.6).
   - recover_prevalence(): the geographic prior recovered from the list rates
-    when it is unavailable (Section 3.2) or available only for coarse groups
-    (Section 3.3), with the lambda sensitivity analysis of Appendix C.
+    when it is unavailable (Section 3.1) or available only for coarse groups
+    (Section 3.2), with the lambda and gamma sensitivity analysis of
+    Appendix A6.
   - list_quality(): the label-free list quality measure of Section 4.3.
 
 Numerical details that are not in the paper: the weighted least squares adds
 1e-9 to the diagonal of M'WM, and negative estimates are floored at 1e-9
 rather than 0, so that P(B | G) is never exactly zero; K-means centres with no
 member among the fitting observations are dropped, so every cluster used has
-members.
+members; Algorithm 2 extends its candidate grid upward by a factor of 1.5
+while the maximum of Q(K) sits at the top of the grid.
 
 To run standalone for debugging:
   >>> import numpy as np
@@ -44,6 +48,7 @@ To run standalone for debugging:
 """
 from __future__ import annotations
 
+import warnings
 from typing import Any, Sequence
 
 import numpy as np
@@ -373,7 +378,7 @@ def geo_folds(geo: IntArray, J: int) -> IntArray:
     """J folds of geographic units with approximately equal numbers of people.
 
     The units are taken from largest to smallest and dealt round-robin
-    (Algorithm 2, Step 1).
+    (the cross-fitted version of Algorithm 2, Step 1).
     """
     n_geo = int(np.max(geo)) + 1
     w = np.bincount(geo, minlength=n_geo).astype(float)
@@ -382,10 +387,23 @@ def geo_folds(geo: IntArray, J: int) -> IntArray:
     return fold
 
 
+def split_units(n_geo: int, frac: float = 0.2, seed: int = 0) -> IntArray:
+    """One random split of the geographic units (Algorithm 2, Step 1).
+
+    Each unit goes to the validation set (1) with probability `frac` and to
+    the training set (0) otherwise.
+    """
+    return (np.random.default_rng(seed).random(n_geo) < frac).astype(int)
+
+
 def fold_term(Z: Array, geo: IntArray, M: Array, w: Array, n_geo: int,
               K: int, j: int, fold: IntArray,
               seed: int = 0) -> tuple[float, int]:
-    """One fold's contribution to Q(K) (Algorithm 2, Steps 4-6)."""
+    """Sum of the held-out log ratios in Q(K) for the units with fold == j.
+
+    Algorithm 2, Steps 3-7: clusters and P(B = b | R = r) from the units with
+    fold != j, evaluated on the observations in the units with fold == j.
+    """
     obs_fold = fold[geo]
     train = np.flatnonzero(obs_fold != j)
     test = np.flatnonzero(obs_fold == j)
@@ -402,9 +420,18 @@ def fold_term(Z: Array, geo: IntArray, M: Array, w: Array, n_geo: int,
 
 def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
              grid: Sequence[int] | None = None, J: int = 5, seed: int = 0,
-             extend: bool = True,
-             verbose: bool = True) -> tuple[int, list[tuple[int, float]]]:
+             extend: bool = True, verbose: bool = True,
+             method: str = "split", val_frac: float = 0.2,
+             split_seed: int = 0) -> tuple[int, list[tuple[int, float]]]:
     """Choose the number of clusters by Q(K) (Algorithm 2).
+
+    With method="split" (the paper), the geographic units are split once at
+    random: each goes to the validation set with probability `val_frac`, the
+    clusters and P(B = b | R = r) are fit on the training units, and Q(K) is
+    the mean log ratio over the validation observations. With
+    method="crossfit", the units are dealt into J folds of approximately
+    equal numbers of people, each fold is held out in turn, and Q(K) is the
+    mean log ratio over all observations.
 
     The candidate grid is restricted to R <= K < the number of distinct score
     vectors among the training observations. While the maximum of Q(K) sits
@@ -415,10 +442,14 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
         geo: (N,) 0-based geography of each person.
         prior: (N, R) P(R = r | G) per person; rows sum to one.
         grid: candidate values of K (default DEFAULT_GRID).
-        J: number of geographic folds.
+        J: number of geographic folds (method="crossfit" only).
         seed: random seed for K-means.
         extend: extend the grid upward while the maximum is at its top.
         verbose: print Q(K) as it is computed.
+        method: "split" or "crossfit".
+        val_frac: probability that a unit is in the validation set
+            (method="split" only).
+        split_seed: seed of the split (method="split" only).
 
     Returns:
         (K_star, curve): the selected K and a sorted list of (K, Q(K)).
@@ -426,11 +457,24 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
     Z = logodds(F)
     geo, prior, n_geo, w, M = _geo_setup(geo, prior)
     R = M.shape[1]
-    fold = geo_folds(geo, J)
-    if len(np.unique(fold)) < J:
-        raise ValueError(f"Algorithm 2 needs at least J = {J} geographic units")
+    if method == "split":
+        fold = split_units(n_geo, val_frac, split_seed)
+        held = [1]
+        if not ((fold[geo] == 1).any() and (fold[geo] == 0).any()):
+            raise ValueError(
+                "Algorithm 2 needs geographic units in both the training and "
+                "the validation set; use more units or another val_frac")
+    elif method == "crossfit":
+        fold = geo_folds(geo, J)
+        held = list(range(J))
+        if len(np.unique(fold)) < J:
+            raise ValueError(
+                f"Algorithm 2 needs at least J = {J} geographic units")
+    else:
+        raise ValueError("method must be 'split' or 'crossfit'")
+    n_held = int(sum((fold[geo] == j).sum() for j in held))
     limit = min(len(np.unique(Z[fold[geo] != j], axis=0))
-                for j in range(J)) - 1
+                for j in held) - 1
     grid = sorted({int(k) for k in (grid or DEFAULT_GRID)
                    if R <= int(k) <= limit})
     if not grid:
@@ -443,8 +487,8 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
             if K in done:
                 continue
             terms = [fold_term(Z, geo, M, w, n_geo, K, j, fold, seed)
-                     for j in range(J)]
-            curve.append((int(K), sum(t[0] for t in terms) / len(Z)))
+                     for j in held]
+            curve.append((int(K), sum(t[0] for t in terms) / n_held))
             done.add(K)
             _log(verbose, f"  Q(K = {K}) = {curve[-1][1]:.6f}")
 
@@ -487,7 +531,9 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
                 grid: Sequence[int] | None = None, n_folds: int = 5,
                 geo_folds_J: int = 5, max_epochs: int = 100,
                 patience: int = 5, batch_size: int = 512, seed: int = 42,
-                verbose: bool = True) -> dict[str, Any]:
+                verbose: bool = True, k_method: str = "split",
+                val_frac: float = 0.2,
+                split_seed: int = 0) -> dict[str, Any]:
     """lBISG for one name field (Algorithm 1, with Algorithm 2 for K).
 
     Args:
@@ -499,9 +545,12 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
         K: number of clusters, or None to choose it by Algorithm 2.
         grid: candidate values of K for Algorithm 2.
         n_folds: number of name folds for the list scores.
-        geo_folds_J: number of geographic folds for Algorithm 2.
+        geo_folds_J: number of geographic folds for Algorithm 2 when
+            k_method="crossfit".
         max_epochs, patience, batch_size, seed: see list_scores_oof().
         verbose: print progress.
+        k_method, val_frac, split_seed: see select_K() (method, val_frac,
+            split_seed).
 
     Returns:
         dict with posterior (N, R), K, K_used, Q (list of (K, Q(K)) or None),
@@ -526,7 +575,9 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
     curve: list[tuple[int, float]] | None = None
     if K is None:
         K, curve = select_K(F, geo, prior, grid=grid, J=int(geo_folds_J),
-                            verbose=verbose)
+                            verbose=verbose, method=k_method,
+                            val_frac=float(val_frac),
+                            split_seed=int(split_seed))
         _log(verbose, f"  selected K = {K}")
     post, _, K_used, _ = fit_posterior(F, geo, prior, int(K))
     return dict(posterior=post, K=int(K), K_used=int(K_used), Q=curve,
@@ -536,7 +587,7 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
 
 def combine_fields(posteriors: Sequence[npt.ArrayLike],
                    prior: npt.ArrayLike) -> Array:
-    """Combine name fields under the lBIFSG assumption (Section 2.5).
+    """Combine name fields under the lBIFSG assumption (Section 2.6).
 
     P(R | B_F, B_S, G) is proportional to
     P(R | B_F, G) * P(R | B_S, G) / P(R | G).
@@ -571,23 +622,56 @@ def _list_rates(onmat: Array, geo: IntArray,
     return rho / np.maximum(w, 1)[:, None], w
 
 
+def _normalize_to(theta: Array, target: Array) -> Array:
+    """Scale each geography's shares so that they sum to `target`.
+
+    Geographies whose estimates are all zero get the overall mix of the
+    block.
+    """
+    total = theta.sum(1)
+    positive = total > 1e-12
+    if positive.any():
+        mix = theta[positive].sum(0) / max(theta[positive].sum(), 1e-12)
+    else:
+        mix = np.full(theta.shape[1], 1 / theta.shape[1])
+    theta = np.where(positive[:, None],
+                     theta / np.maximum(total, 1e-12)[:, None],
+                     mix[None, :])
+    return theta * target[:, None]
+
+
+def _check_coverage(pi: Array, a: Array, lam: float) -> None:
+    """Warn when the estimated coverages violate the assumptions.
+
+    Appendix A6 requires lam < pi_r <= 1 for every list, which in turn
+    requires every element of a = (B'WB)^{-1} B'W M 1 to be positive.
+    """
+    bad = ~np.isfinite(pi) | (a <= 0) | (pi <= lam) | (pi > 1 + 1e-9)
+    if bad.any():
+        warnings.warn(
+            f"estimated coverage outside (lambda, 1] for lists "
+            f"{np.flatnonzero(bad).tolist()}: the assumptions of the "
+            f"prevalence recovery do not hold at lambda = {lam}",
+            stacklevel=3)
+
+
 def _recover_block(rho: Array, target: Array, weights: Array,
                    lam: float = 0.0) -> tuple[Array, Array]:
     """Recover the group shares within one block of groups.
 
     With lam = 0 (exclusive lists), the inverse coverages u = 1 / pi solve a
-    non-negative least squares problem weighted by `weights` (Appendix C.3).
-    With lam > 0 (homogeneous non-separation, Appendix C.1-C.2),
-    a = (B'WB)^{-1} B'W target, pi_r = lam + (1 - lam * sum(a)) / a_r and
-    Theta = B Pi^{-1}, with negative entries set to zero. The shares are then
-    normalized to `target` in each geography; geographies whose estimates
-    are all zero get the overall mix.
+    non-negative least squares problem weighted by `weights` (Appendix A6.3).
+    With lam > 0 (homogeneous non-separation within the block, Appendix
+    A6.1, and the gamma = 0 case of A6.2), a = (B'WB)^{-1} B'W target,
+    pi_r = lam + (1 - lam * sum(a)) / a_r and Theta = B Pi^{-1}, with
+    negative entries set to zero. The shares are then normalized to `target`
+    in each geography.
 
     Args:
         rho: (G, Rc) list rates of the groups in the block.
         target: (G,) total share of the block in each geography.
         weights: (G,) weight of each geography.
-        lam: assumed cross-group list rate.
+        lam: assumed cross-group list rate within the block.
 
     Returns:
         (Theta, coverage): the (G, Rc) recovered shares and the estimated
@@ -600,36 +684,81 @@ def _recover_block(rho: Array, target: Array, weights: Array,
         coverage = np.where(u > 0, 1 / np.maximum(u, 1e-300), np.nan)
     else:
         a = np.linalg.lstsq(rho * sw[:, None], target * sw, rcond=None)[0]
-        pi = lam + (1 - lam * a.sum()) / a
+        with np.errstate(divide="ignore", invalid="ignore"):
+            pi = lam + (1 - lam * a.sum()) / a
+        _check_coverage(pi, a, lam)
         Pi = np.diag(pi - lam) + lam * np.ones((len(pi), len(pi)))
         theta = np.maximum(rho @ np.linalg.inv(Pi), 0)
         coverage = pi
-    total = theta.sum(1)
-    positive = total > 1e-12
-    if positive.any():
-        mix = theta[positive].sum(0) / max(theta[positive].sum(), 1e-12)
-    else:
-        mix = np.full(theta.shape[1], 1 / theta.shape[1])
-    theta = np.where(positive[:, None],
-                     theta / np.maximum(total, 1e-12)[:, None],
-                     mix[None, :])
-    return theta * target[:, None], coverage
+    return _normalize_to(theta, target), coverage
+
+
+def _recover_joint(rho: Array, Mc: Array, coarse_of: IntArray,
+                   weights: Array, lam: float,
+                   gamma: float) -> tuple[Array, Array]:
+    """Recover subgroup shares with cross-coarse-group list rates gamma > 0.
+
+    Appendix A6.2, general case: Pi = Omega + U C U' with
+    C = (lam - gamma) I + gamma 11', A = (B'WB)^{-1} B'W M,
+    pi_r = lam + (1 - C U' A 1)_{c(r)} / (A 1)_r and Theta = B Pi^{-1}, with
+    negative entries set to zero and the shares of each coarse group
+    normalized to its coarse share. With gamma = lam, every cross-group
+    rate is lam, as in the first result of A6.2.
+
+    Args:
+        rho: (G, L) list rates, already net of the coarse groups without a
+            list.
+        Mc: (G, C) shares of the coarse groups with at least one list.
+        coarse_of: (L,) 0-based column of Mc for each list's group.
+        weights: (G,) weight of each geography.
+        lam: cross-group list rate within a coarse group.
+        gamma: cross-group list rate across coarse groups.
+
+    Returns:
+        (Theta, coverage): the (G, L) recovered shares and the estimated
+        coverage of each list.
+    """
+    n_c = Mc.shape[1]
+    sw = np.sqrt(np.maximum(weights, 0))
+    A = np.linalg.lstsq(rho * sw[:, None], Mc * sw[:, None], rcond=None)[0]
+    a = A.sum(1)
+    U = np.eye(n_c)[coarse_of]
+    Cm = (lam - gamma) * np.eye(n_c) + gamma * np.ones((n_c, n_c))
+    num = 1 - Cm @ (U.T @ a)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        pi = lam + num[coarse_of] / a
+    _check_coverage(pi, a, lam)
+    Pi = np.diag(pi - lam) + U @ Cm @ U.T
+    theta = np.maximum(rho @ np.linalg.inv(Pi), 0)
+    for c in range(n_c):
+        cols = np.flatnonzero(coarse_of == c)
+        theta[:, cols] = _normalize_to(theta[:, cols], Mc[:, c])
+    return theta, pi
 
 
 def recover_prevalence(
         onmat: npt.ArrayLike, geo: npt.ArrayLike,
         coarse_prior: npt.ArrayLike | None = None,
         coarse_of: npt.ArrayLike | None = None, lam: float = 0.0,
+        gamma: float = 0.0,
 ) -> tuple[Array, Array]:
     """Recover the geographic prevalence of each group from the list rates.
 
-    Without a coarse prior (Section 3.2), the lists must be exhaustive and
-    exclusive; each geography's shares sum to one and geographies are
-    weighted by their number of people. With a coarse prior (Section 3.3),
-    the subgroup shares are recovered within each coarse group with more
-    than one subgroup, weighting each geography by its expected number of
-    coarse group members; a coarse group with one subgroup keeps its coarse
-    share.
+    Without a coarse prior (Section 3.1), the lists must be exhaustive; each
+    geography's shares sum to one and geographies are weighted by their
+    number of people. `lam` is the rate at which a member of one group has a
+    name on another group's list (Appendix A6.1).
+
+    With a coarse prior (Section 3.2), `lam` is that rate between groups of
+    the same coarse group and `gamma` (0 <= gamma <= lam) the rate between
+    groups of different coarse groups (Appendix A6.2). With gamma = 0, the
+    subgroup shares are recovered within each coarse group with more than one
+    subgroup, weighting each geography by its expected number of coarse group
+    members, and a coarse group with one subgroup keeps its coarse share.
+    With gamma > 0, all groups with a list are recovered jointly, weighting
+    geographies by their number of people; the members of a coarse group
+    without a list have a name on each list at rate gamma, and that part of
+    each list rate is removed first.
 
     Args:
         onmat: (N, L) 0/1 list membership per person.
@@ -638,22 +767,37 @@ def recover_prevalence(
             geography.
         coarse_of: (L,) 0-based coarse group of each list's group.
         lam: assumed cross-group list rate (0 for exclusive lists).
+        gamma: assumed list rate across coarse groups (coarse prior only).
 
     Returns:
         (Theta, coverage): the (G, L) recovered shares per geography and the
         estimated coverage of each list.
     """
+    if not 0 <= lam < 1:
+        raise ValueError("lambda must be in [0, 1)")
+    if not 0 <= gamma <= lam:
+        raise ValueError("gamma must be between 0 and lambda")
     onmat = np.asarray(onmat, float)
     geo = np.asarray(geo, np.int64)
     n_geo = int(geo.max()) + 1
     rho, n = _list_rates(onmat, geo, n_geo)
     if coarse_prior is None:
+        if gamma > 0:
+            raise ValueError("gamma requires a coarse prior")
         return _recover_block(rho, np.ones(n_geo), n, lam)
 
     Mc = np.asarray(coarse_prior, float)
     if coarse_of is None:
         raise ValueError("coarse_prior requires coarse_of")
     coarse_of = np.asarray(coarse_of, np.int64)
+    if gamma > 0:
+        listed = np.unique(coarse_of)
+        unlisted = np.setdiff1d(np.arange(Mc.shape[1]), listed)
+        rho_net = rho - gamma * Mc[:, unlisted].sum(1, keepdims=True)
+        return _recover_joint(rho_net, Mc[:, listed],
+                              np.searchsorted(listed, coarse_of), n, lam,
+                              gamma)
+
     theta = np.zeros((n_geo, onmat.shape[1]))
     coverage = np.full(onmat.shape[1], np.nan)
     for c in np.unique(coarse_of):
