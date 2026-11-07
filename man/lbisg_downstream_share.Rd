@@ -15,10 +15,10 @@ outcome.}
 \item{den}{The outcome levels summed in the denominator.}
 }
 \value{
-A data frame with one row per aggregate and group.
+A data frame with one row per geographic unit and group.
 }
 \description{
-The share of one outcome among several for each group and aggregate, for
-example the Democratic share of two-party registration, with standard
+The share of one outcome among several for each group and geographic unit,
+for example the Democratic share of two-party registration, with standard
 errors by the delta method.
 }

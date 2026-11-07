@@ -29,6 +29,8 @@ Also provided:
     when it is unavailable (Section 3.2) or available only for coarse groups
     (Section 3.3), with the lambda sensitivity analysis of Appendix C.
   - list_quality(): the label-free list quality measure of Section 4.3.
+  - downstream_crossfit(): the cross-fitted estimator of the mean outcome of
+    each group in each geography.
 
 Numerical details that are not in the paper: the weighted least squares adds
 1e-9 to the diagonal of M'WM, and negative estimates are floored at 1e-9
@@ -44,7 +46,8 @@ To run standalone for debugging:
 """
 from __future__ import annotations
 
-from typing import Any, Iterator, Sequence
+import warnings
+from typing import Any, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -64,8 +67,9 @@ DEFAULT_GRID = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 450, 600, 999,
 Array = npt.NDArray[np.floating[Any]]
 IntArray = npt.NDArray[np.int64]
 BoolArray = npt.NDArray[np.bool_]
-# P(B_f = b | R = r) of each name field, keyed by the fold it is used for
-Phis = dict[int, list[Array]]
+# One fold of the downstream estimator: its people, their clusters in each
+# name field, and P(B_f = b | R = r) of each name field
+Nuisance = tuple[IntArray, IntArray, list[Array]]
 
 
 def _log(verbose: bool, *args: object) -> None:
@@ -563,861 +567,307 @@ def combine_fields(posteriors: Sequence[npt.ArrayLike],
 # ---------------------------------------------------------------------------
 # Downstream inference: the cross-fitted estimator of E[Y | R = r, G = g]
 # ---------------------------------------------------------------------------
-def _fold_stats(bins: IntArray, geo: IntArray, M: Array, w: Array,
-                fold_g: IntArray, V: int, K: int) -> tuple[Array, Array]:
-    """Terms of the weighted least squares for P(B = b | R = r), by fold.
-
-    The least squares of Algorithm 1, Step 9, on any set of folds is
-    solve(sum of XtWX, sum of XtWY) over those folds. The cross-fitted and
-    jackknife fits therefore need only these sums.
-
-    Args:
-        bins: (N,) cluster of each person.
-        geo: (N,) 0-based geography of each person.
-        M: (G, R) prior P(R = r | G = g).
-        w: (G,) people per geography.
-        fold_g: (G,) fold of each geography.
-        V: number of folds.
-        K: number of clusters.
+def _fold_nuisance(
+        fields: Sequence[Array], Z_fields: Sequence[Array], geo: IntArray,
+        prior: Array, M: Array, w: Array, fold_g: IntArray, v: int,
+        K: Sequence[int | None], grid: Sequence[int] | None, J: int,
+        seed: int, verbose: bool) -> Nuisance:
+    """Clusters and P(B = b | R = r) of fold v, from the observations not in
+    fold v (the loop of the cross-fitting algorithm).
 
     Returns:
-        (XtWX, XtWY): (V, R, R) and (V, R, K) arrays.
+        (rows, bins, phis): the people of fold v, their (n_fields, n_v)
+        clusters B^(-v), and one (R, K^(-v)) matrix phi^(-v) per name field.
     """
-    return _stats_from_counts(_counts(bins, geo, M.shape[0], K), M, w,
-                              fold_g, V)
+    fold_p = fold_g[geo]
+    train = np.flatnonzero(fold_p != v)
+    rows = np.flatnonzero(fold_p == v)
+    take = (fold_g != v).astype(float)
+    bins, phis = [], []
+    for f, (F_f, Z) in enumerate(zip(fields, Z_fields)):
+        K_v = K[f]
+        if K_v is None:
+            geo_train = np.unique(geo[train], return_inverse=True)[1]
+            K_v, _ = select_K(F_f[train], np.asarray(geo_train).ravel(),
+                              prior[train], grid=grid, J=J, seed=seed,
+                              verbose=verbose)
+        labels, K_used = kmeans_occupied(Z, train, int(K_v), seed)
+        _log(verbose, f"  fold {v}, field {f + 1}: K = {K_v} ({K_used} used)")
+        C = sparse.coo_matrix((np.ones(len(train)), (geo[train], labels[train])),
+                              shape=(M.shape[0], K_used)).tocsr()
+        phis.append(wls_pi(C, M, w, take))
+        bins.append(labels[rows])
+    return rows, np.stack(bins), phis
 
 
-def _counts(bins: IntArray, geo: IntArray, n_geo: int,
-            K: int) -> sparse.csr_matrix:
-    """(G, K) sparse counts of people by geography and cluster."""
-    return sparse.coo_matrix((np.ones(len(geo)), (geo, bins)),
-                             shape=(n_geo, K)).tocsr()
-
-
-def _stats_from_counts(C: sparse.csr_matrix, M: Array, w: Array,
-                       fold_g: IntArray, V: int) -> tuple[Array, Array]:
-    """_fold_stats() from the counts C and the people per geography w."""
-    R, K = M.shape[1], C.shape[1]
-    XtWX = np.zeros((V, R, R))
-    XtWY = np.zeros((V, R, K))
-    for v in range(V):
-        take = (fold_g == v).astype(float)
-        XtWX[v] = M.T @ ((w * take)[:, None] * M)
-        XtWY[v] = np.asarray(C.T @ (M * take[:, None])).T
-    return XtWX, XtWY
-
-
-def _phi_from_sums(XtWX: Array, XtWY: Array) -> Array:
-    """P(B = b | R = r) from summed least squares terms, as in wls_pi().
+def _products(phis: Sequence[Array]) -> tuple[list[Array], Array, list[Array]]:
+    """Sums over the clusters of the products of phi.
 
     Returns:
-        (R, K) array; each row is normalized to sum to one.
+        (S, S_all, others): S[f] = sum_b phi^f_b phi^f_b'; S_all is their
+        elementwise product, sum_b phi_b phi_b' over the cells b of all name
+        fields; others[f] is the elementwise product without field f (all ones
+        with one field).
     """
-    R = XtWX.shape[0]
-    Pi = np.linalg.solve(XtWX + RIDGE * np.eye(R), XtWY)
-    Pi = np.maximum(Pi, FLOOR)
-    return Pi / Pi.sum(1, keepdims=True)
+    S: list[Array] = [Phi @ Phi.T for Phi in phis]
+    S_all: Array = np.prod(S, axis=0)
+    others: list[Array] = [np.prod([S[h] for h in range(len(S)) if h != f]
+                                   + [np.ones_like(S_all)], axis=0)
+                           for f in range(len(S))]
+    return S, S_all, others
 
 
-def _posteriors(i: IntArray, geo: IntArray, bins: IntArray, M: Array,
-                fold: IntArray, phis: Phis) -> Array:
-    """Cross-fitted posteriors of the people `i`.
+def _zeta_matrix(nuisance: Sequence[Nuisance], geo: IntArray, M: Array,
+                 Qinv: Array) -> Array:
+    """The term of the estimating equation that holds zeta.
 
-    The posterior of a person in fold v uses the P(B = b | R = r) fit
-    without fold v, pi proportional to M_g * prod_f phi^f_{B_f}.
+    Summing over the clusters and the people of each fold v,
+    (1/n) sum_v sum_{i in V_v} sum_b A^(-v)_bg zeta_b(O_i^(-v), phi^(-v))'
+    (M_g * mu_g) = (M_g * T * M_g') mu_g, the same T for every g, with
+    T = (1/n) sum_v sum_{i in V_v} (phi^(-v)_{B_i} - S^(-v) M_{G_i})
+    M_{G_i}' E[M_G M_G']^{-1}. Several name fields add one such term per field
+    by the product rule, each multiplied elementwise by the S of the others.
 
     Returns:
-        (len(i), R) array; rows sum to one.
+        (R, R) array T.
     """
-    post = M[geo[i]].astype(float)
-    # compare against paper once proof is extended to include this setting
-    for v in np.unique(fold[i]):
-        s = fold[i] == v
-        for Phi, b in zip(phis[v], bins[:, i[s]]):
-            post[s] *= Phi[:, b].T
-    return post / np.maximum(post.sum(1, keepdims=True), 1e-300)
+    T = np.zeros((M.shape[1], M.shape[1]))
+    n = sum(len(rows) for rows, _, _ in nuisance)
+    for rows, bins, phis in nuisance:
+        Mi = M[geo[rows]]
+        U = Mi @ Qinv
+        S, _, others = _products(phis)
+        for f, Phi in enumerate(phis):
+            T += ((Phi[:, bins[f]].T - Mi @ S[f]).T @ U) * others[f]
+    return T / n
 
 
-def _pool_batches(
-        people: IntArray, geo: IntArray, pool: IntArray, chunk: int,
-) -> Iterator[tuple[IntArray, IntArray, IntArray]]:
-    """Batches of people that each hold whole pooling units.
+def _solve_mu(nuisance: Sequence[Nuisance], geo: IntArray, M: Array, Y: Array,
+              T: Array) -> tuple[Array, BoolArray]:
+    """Solve the estimating equation for each geography.
 
-    Yields:
-        (i, starts, ends): the people of the batch, sorted by pooling unit,
-        and the start and end of each unit within the batch.
-    """
-    people = people[np.argsort(pool[geo[people]], kind="stable")]
-    p = pool[geo[people]]
-    starts = np.flatnonzero(np.r_[True, p[1:] != p[:-1]])
-    ends = np.r_[starts[1:], len(p)]
-    first = 0
-    while first < len(starts):
-        last = first
-        while (last + 1 < len(starts)
-               and ends[last + 1] - starts[first] <= chunk):
-            last += 1
-        i = people[starts[first]:ends[last]]
-        yield (i, starts[first:last + 1] - starts[first],
-               ends[first:last + 1] - starts[first])
-        first = last + 1
-
-
-def _pool_grams(
-        people: IntArray, geo: IntArray, bins: IntArray, M: Array, Y: Array,
-        pool: IntArray, n_pool: int, fold: IntArray, phis: Phis,
-        chunk: int = 50000, fulls: Phis | None = None,
-) -> tuple[Array, Array, Array, Array, Array]:
-    """Sums of pi pi', pi Y' and pi over the people of each pooling unit,
-    and the terms of the orthogonal correction.
-
-    Args:
-        people: indices of the people to include.
-        geo: (N,) 0-based geography of each person.
-        bins: (n_fields, N) cluster of each person in each field.
-        M: (G, R) prior P(R = r | G = g).
-        Y: (N, P) outcome.
-        pool: (G,) pooling unit of each geography.
-        n_pool: number of pooling units.
-        fold: (N,) fold of each person.
-        phis: dict from fold to the list of (R, K_f) matrices of
-            P(B_f = b | R = r) used for the people of that fold.
-        chunk: people per block.
-        fulls: optional dict like `phis` holding, for each fold, the fit of
-            P(B_f = b | R = r) on all folds. With dpi the posterior under
-            `fulls` minus the posterior under `phis`, the correction terms are
-            C = sum (dpi pi' + pi dpi') and c0 = sum dpi Y' (zero without
-            `fulls`). The difference equals the derivative of the posterior
-            in the direction fulls - phis to first order, and unlike the
-            derivative it stays bounded when a cross-fitted P(B_f = b | R = r)
-            is at its floor.
+    With D_g = diag(M_g) and v the fold of g, the equation is
+    D_g (S_all^(-v) + T) D_g mu_g
+    = D_g (1 / n_g) sum_{i: G_i = g} phi^(-v)_{B_i} Y_i,
+    using the sample share n_g / n for Pr(G = g). D_g cancels from the left.
+    There is no solution when a group has M_{g, r} = 0, or when S_all^(-v) or
+    S_all^(-v) + T is rank deficient; mu_g is then nan.
 
     Returns:
-        (A, B, mass, C, c0): (n_pool, R, R), (n_pool, R, P), (n_pool, R),
-        (n_pool, R, R) and (n_pool, R, P) arrays.
+        (mu, singular): the (G, R, P) estimates and the (G,) geographies with
+        no solution, including those with no people.
     """
-    R, P = M.shape[1], Y.shape[1]
-    A = np.zeros((n_pool, R, R))
-    B = np.zeros((n_pool, R, P))
-    mass = np.zeros((n_pool, R))
-    C = np.zeros((n_pool, R, R))
-    c0 = np.zeros((n_pool, R, P))
-    for i, starts, ends in _pool_batches(people, geo, pool, chunk):
-        post = _posteriors(i, geo, bins, M, fold, phis)
-        dpi = (None if fulls is None else
-               _posteriors(i, geo, bins, M, fold, fulls) - post)
-        y = Y[i]
-        for s, e in zip(starts, ends):
-            c = pool[geo[i[s]]]
-            A[c] += post[s:e].T @ post[s:e]
-            B[c] += post[s:e].T @ y[s:e]
-            mass[c] += post[s:e].sum(0)
-            if dpi is not None:
-                cross = dpi[s:e].T @ post[s:e]
-                C[c] += cross + cross.T
-                c0[c] += dpi[s:e].T @ y[s:e]
-    return A, B, mass, C, c0
-
-
-def _simplex_rows(X: Array) -> Array:
-    """Euclidean projection of each row of X onto the probability simplex."""
-    U = -np.sort(-X, axis=1)
-    css = np.cumsum(U, 1) - 1
-    k = np.arange(1, X.shape[1] + 1)
-    rho = (U - css / k > 0).sum(1)
-    tau = css[np.arange(len(X)), rho - 1] / rho
-    return np.maximum(X - tau[:, None], 0)
-
-
-def _project(X: Array, constraint: str | None) -> Array:
-    """Projection onto the constraint on the group means."""
-    if constraint == "simplex":
-        return _simplex_rows(X)
-    if constraint == "box":
-        return np.clip(X, 0.0, 1.0)
-    return X
-
-
-def _solve_pools(A: Array, B: Array, solve: BoolArray) -> Array:
-    """Least squares group means in each pooling unit, without pooling.
-
-    Args:
-        A, B: (n_pool, R, R) and (n_pool, R, P) terms of each unit's
-            equation A mu = B.
-        solve: (n_pool, R) True for the groups to estimate in each unit.
-
-    Returns:
-        (n_pool, R, P) array, nan for the groups not estimated.
-    """
-    n_pool, R, P = B.shape
-    mu = np.full((n_pool, R, P), np.nan)
-    for c in range(n_pool):
-        k = np.flatnonzero(solve[c])
-        if len(k):
-            mu[c, k] = np.linalg.lstsq(A[c][np.ix_(k, k)], B[c, k],
-                                       rcond=None)[0]
-    return mu
-
-
-def _eb_pools(A: Array, B: Array, yy: Array, solve: BoolArray,
-              by_pool: IntArray, n_agg: int, constraint: str | None,
-              init: dict[str, Any] | None = None, max_iter: int = 500,
-              tol: float = 1e-5) -> tuple[Array, dict[str, Any]]:
-    """Empirical-Bayes group means in each pooling unit, pooled toward the
-    group means of the unit's aggregate.
-
-    Model: within pooling unit c of aggregate s, y_j = mu_c' pi_j + e_j with
-    Var(e_j) = sigma^2 for each outcome column, and mu_{c, r} = m_{s, r} +
-    u_{c, r} with u_{c, r} ~ N(0, tau_r^2); tau and sigma are shared over the
-    outcome columns. m, tau and sigma are fit by EM on the sums of each unit.
-    The estimate of mu_c is the posterior mean, the ridge
-    (A_c + Lambda) mu_c = B_c + Lambda m_s with Lambda = diag(sigma^2 /
-    tau_r^2), which pulls each group's means toward the aggregate in
-    proportion to how little the unit's own data identify them.
-
-    With a constraint, tau_r^2 is at most the mean over the outcome columns
-    and the aggregates with the group of m (1 - m), m projected onto the
-    constraint: a quantity in [0, 1] with mean m has variance at most
-    m (1 - m). Without the bound, groups that the units barely identify can
-    get an implausibly large tau and almost no pooling.
-
-    Args:
-        A, B: (n_pool, R, R) and (n_pool, R, P) sums of pi pi' and pi Y'.
-        yy: (n_pool, P) sums of Y^2.
-        solve: (n_pool, R) True for the groups to estimate in each unit.
-        by_pool: (n_pool,) aggregate of each unit.
-        n_agg: number of aggregates.
-        constraint: "simplex", "box" or None (no bound on tau).
-        init: optional fit (m, tau2, sigma2) to start from.
-        max_iter, tol: EM iteration limit and tolerance (on log tau,
-            log sigma^2 and m).
-
-    Returns:
-        (mu, fit): the (n_pool, R, P) posterior means, nan where `solve` is
-        False, and a dict with m (n_agg, R, P), tau2 (R,), sigma2 and iters.
-    """
-    n_pool, R, P = B.shape
-    KS = [np.flatnonzero(solve[c]) for c in range(n_pool)]
-    present = np.stack([solve[by_pool == s].any(0) for s in range(n_agg)])
-    cnt = solve.sum(0)
-    n_obs = max(float(yy.sum()), 1e-300)
-    if init is None:
-        m = np.zeros((n_agg, R, P))
-        for s in range(n_agg):
-            cs = by_pool == s
-            k = np.flatnonzero(present[s])
-            if len(k):
-                m[s, k] = _project(np.linalg.lstsq(
-                    A[cs].sum(0)[np.ix_(k, k)], B[cs].sum(0)[k],
-                    rcond=None)[0], constraint)
-        tau2, sig2 = np.full(R, 0.01), 0.2
-    else:
-        m = init["m"].copy()
-        tau2, sig2 = init["tau2"].copy(), float(init["sigma2"])
-    it = 0
-    for it in range(max_iter):
-        U = np.zeros((n_pool, R, P))
-        Vd = np.zeros((n_pool, R))
-        rss = 0.0
-        for c, k in enumerate(KS):
-            if not len(k):
-                continue
-            Ak = A[c][np.ix_(k, k)]
-            mk = m[by_pool[c], k]
-            Qi = np.linalg.inv(Ak / sig2 + np.diag(1 / tau2[k]))
-            u = Qi @ (B[c, k] - Ak @ mk) / sig2
-            U[c, k] = u
-            Vd[c, k] = np.diag(Qi)
-            beta = mk + u
-            rss += (yy[c].sum() - 2 * np.sum(beta * B[c, k])
-                    + np.sum(beta * (Ak @ beta)) + P * np.sum(Ak * Qi))
-        m_new = np.zeros_like(m)
-        for s in range(n_agg):
-            cs = np.flatnonzero(by_pool == s)
-            k = np.flatnonzero(present[s])
-            if not len(k):
-                continue
-            rhs = sum(B[c][k] - A[c][np.ix_(k, k)] @ U[c][k] for c in cs)
-            m_new[s, k] = np.linalg.lstsq(A[cs].sum(0)[np.ix_(k, k)], rhs,
-                                          rcond=None)[0]
-        tau_new = np.maximum(((U ** 2).mean(2) + Vd).sum(0)
-                             / np.maximum(cnt, 1), 1e-8)
-        if constraint is not None:
-            mp = np.stack([_project(m_new[s], constraint)
-                           for s in range(n_agg)])
-            cap = ((present[:, :, None] * mp * (1 - mp)).sum((0, 2))
-                   / (P * np.maximum(present.sum(0), 1)))
-            tau_new = np.clip(tau_new, 1e-8, np.maximum(cap, 1e-8))
-        sig_new = max(rss / (n_obs * P) if yy.sum() > 0 else sig2, 1e-12)
-        delta = max(np.max(np.abs(np.log(tau_new) - np.log(tau2))),
-                    abs(np.log(sig_new / sig2)), np.max(np.abs(m_new - m)))
-        m, tau2, sig2 = m_new, tau_new, sig_new
-        if delta < tol:
-            break
-    mu = np.full((n_pool, R, P), np.nan)
-    for c, k in enumerate(KS):
-        if len(k):
-            lam = sig2 / tau2[k]
-            mu[c, k] = np.linalg.solve(A[c][np.ix_(k, k)] + np.diag(lam),
-                                       B[c, k] + lam[:, None] * m[by_pool[c], k])
-    return mu, dict(m=m, tau2=tau2, sigma2=sig2, iters=it + 1)
-
-
-def _aggregate(mu: Array, weight: Array, by_pool: IntArray,
-               n_agg: int) -> tuple[Array, Array]:
-    """Mean outcome among the members of each group, by aggregate.
-
-    Returns:
-        (theta, N): the (H, R, P) estimates and the (H, R) group members used
-        as weights.
-    """
-    N = np.zeros((n_agg, weight.shape[1]))
-    np.add.at(N, by_pool, weight)
-    total = np.zeros((n_agg,) + mu.shape[1:])
-    np.add.at(total, by_pool, weight[:, :, None] * np.nan_to_num(mu))
-    with np.errstate(divide="ignore", invalid="ignore"):
-        theta = total / N[:, :, None]
-    return theta, N
-
-
-def _project_aggregates(theta: Array, constraint: str | None) -> Array:
-    """Each aggregate's means of each group projected onto the constraint
-    (rows with no estimate stay nan)."""
-    if constraint is None:
-        return theta
-    H, R, P = theta.shape
-    flat = theta.reshape(H * R, P)
-    out = flat.copy()
-    ok = np.isfinite(flat).all(1)
-    out[ok] = _project(flat[ok], constraint)
-    return out.reshape(H, R, P)
-
-
-def _if_vcov(
-        geo: IntArray, bins: IntArray, M: Array, Y: Array, pool: IntArray,
-        by_pool: IntArray, n_agg: int, fold_p: IntArray,
-        clus: dict[int, tuple[IntArray, IntArray]], phis: Phis, H: Array,
-        mu: Array, solve: BoolArray, weight: Array, N: Array, G: Array,
-        chunk: int, verbose: bool) -> Array:
-    """Covariance of the aggregates from the influence function of the
-    orthogonal least squares (see downstream_crossfit).
-
-    The influence function of aggregate h at person j is
-    sum_c w_c H_c^{-1} [pi_j (Y_j - mu_c' pi_j)' 1{j in c}
-                        + sum_{f, b, s} T^f_c[b, s] zeta^f_{b, s}(O_j)],
-    with w_c the unit's share of each group's members in the aggregate,
-    H_c = A_c + C_c, T^f_c[b, s] the derivative of unit c's score in
-    P(B_f = b | R = s), and zeta^f(O_j) the influence function of the
-    least squares for P(B_f = b | R = r), whose (s, b) entry is
-    (G^{-1} M_g)_s (1{B_jf = b} - (Phi' M_g)_b). Its last term is the same
-    for every person of a geography. The covariance is the sum of the
-    squared influence functions centred within each geography (the
-    geographies held fixed), and that term therefore drops out.
-
-    For each aggregate, one pass over its people builds the T terms
-    (K_f R P R values per name field and clustering), and one pass over all
-    people evaluates them.
-
-    Args:
-        H: (n_pool, R, R) matrix of each unit's corrected equation.
-        mu: (n_pool, R, P) group means of each unit.
-        solve: (n_pool, R) groups estimated in each unit.
-        weight: (n_pool, R) group members of each unit used for the
-            aggregates.
-        N: (H, R) group members of each aggregate.
-        G: (R, R) the matrix M'WM of the least squares for
-            P(B = b | R = r) on all folds.
-        Other arguments as in _pool_grams().
-
-    Returns:
-        (H, R * P, R * P) array.
-    """
-    n, P = Y.shape
-    R = M.shape[1]
-    n_pool = H.shape[0]
-    n_fields = bins.shape[0]
-    U = np.linalg.solve(G + RIDGE * np.eye(R), M.T).T
-    mu0 = np.nan_to_num(mu)
-    agg_p = by_pool[pool[geo]]
-    n_g = np.bincount(geo, minlength=M.shape[0]).astype(float)
-    Gc = np.zeros((n_pool, R, R))
-    for c in range(n_pool):
-        k = np.flatnonzero(solve[c])
-        if len(k) == 0:
+    n_geo, R = M.shape
+    P = Y.shape[1]
+    n_g = np.bincount(geo, minlength=n_geo).astype(float)
+    mu = np.full((n_geo, R, P), np.nan)
+    singular = np.ones(n_geo, bool)
+    for rows, bins, phis in nuisance:
+        _, S_all, _ = _products(phis)
+        X = S_all + T
+        if np.linalg.matrix_rank(S_all) < R or np.linalg.matrix_rank(X) < R:
             continue
-        Nk = N[by_pool[c], k]
-        om = np.where(Nk > 0, weight[c, k] / np.where(Nk > 0, Nk, 1), 0.0)
-        Gc[c][np.ix_(k, k)] = om[:, None] * np.linalg.pinv(H[c][np.ix_(k, k)])
-    # one set of T terms per distinct clustering
-    keys: dict[int, int] = {}
-    for v in sorted(clus):
-        keys.setdefault(id(clus[v][0]), v)
-    first_of = {v: keys[id(clus[v][0])] for v in clus}
-    vcov = np.full((n_agg, R * P, R * P), np.nan)
-    everyone = np.arange(n)
-    for h in range(n_agg):
-        T = {v: [np.zeros((int(k), R, P, R)) for k in clus[v][1]]
-             for v in keys.values()}
-        for i, starts, ends in _pool_batches(np.flatnonzero(agg_p == h), geo,
-                                             pool, chunk):
-            post = _posteriors(i, geo, bins, M, fold_p, phis)
-            y = Y[i]
-            for s0, e0 in zip(starts, ends):
-                c = pool[geo[i[s0]]]
-                fp = fold_p[i[s0:e0]]
-                # a pooling unit may span folds: one block per fold
-                for v in np.unique(fp):
-                    rows = s0 + np.flatnonzero(fp == v)
-                    _if_terms(T[first_of[int(v)]], phis[int(v)],
-                              bins[:, i[rows]], post[rows], y[rows], mu0[c],
-                              Gc[c])
-        V = np.zeros((R * P, R * P))
-        for i, starts, ends in _pool_batches(everyone, geo, pool, chunk):
-            IF = np.zeros((len(i), R * P))
-            for v, Tv in T.items():
-                for f in range(n_fields):
-                    b = clus[v][0][f, i]
-                    ub, inv = np.unique(b, return_inverse=True)
-                    order = np.argsort(inv, kind="stable")
-                    cuts = np.r_[0, np.cumsum(np.bincount(inv))]
-                    Ui = U[geo[i[order]]]
-                    for j, bj in enumerate(ub):
-                        rows = order[cuts[j]:cuts[j + 1]]
-                        IF[rows] += (Ui[cuts[j]:cuts[j + 1]]
-                                     @ Tv[f][bj].reshape(R * P, R).T)
-            own = np.flatnonzero(agg_p[i] == h)
-            if len(own):
-                post = _posteriors(i[own], geo, bins, M, fold_p, phis)
-                c_o = pool[geo[i[own]]]
-                for c in np.unique(c_o):
-                    t = np.flatnonzero(c_o == c)
-                    err = Y[i[own[t]]] - post[t] @ mu0[c]
-                    gpi = post[t] @ Gc[c].T
-                    IF[own[t]] += (gpi[:, :, None]
-                                   * err[:, None, :]).reshape(len(t), R * P)
-            ug, ginv = np.unique(geo[i], return_inverse=True)
-            ind = sparse.csr_matrix(
-                (np.ones(len(i)), (ginv, np.arange(len(i)))),
-                shape=(len(ug), len(i)))
-            S = np.asarray(ind @ IF)
-            V += IF.T @ IF - S.T @ (S / n_g[ug][:, None])
-        vcov[h] = V
-        _log(verbose, f"  influence function: aggregate {h + 1} of {n_agg}")
-    return vcov
+        cell: Array = np.ones((len(rows), R))
+        for f, Phi in enumerate(phis):
+            cell = cell * Phi[:, bins[f]].T
+        g_v, inv = np.unique(geo[rows], return_inverse=True)
+        inv = np.asarray(inv).ravel()
+        rhs = np.zeros((len(g_v), R, P))
+        for r in range(R):
+            for p in range(P):
+                rhs[:, r, p] = np.bincount(inv, weights=cell[:, r] * Y[rows, p],
+                                           minlength=len(g_v))
+        rhs = rhs / n_g[g_v][:, None, None]
+        sol = np.linalg.solve(X, rhs)
+        use = (M[g_v] > 0).all(1)
+        mu[g_v[use]] = sol[use] / M[g_v[use]][:, :, None]
+        singular[g_v[use]] = False
+    return mu, singular
 
 
-def _if_terms(T: list[Array], phis: list[Array], bins: IntArray, post: Array,
-              y: Array, mu: Array, Gc: Array) -> None:
-    """Add to T the derivatives of one pooling unit's weighted score in
-    P(B_f = b | R = s), from people of one fold (see _if_vcov).
-
-    For person i with posterior pi, a = pi / phi_{., B_i}, fitted value
-    yhat = mu' pi, residual e = y - yhat and g = Gc pi, the derivative of
-    Gc pi e' in phi_{s, B_i} is a_s [Gc[r, s] e_p - g_r (y_p - 2 yhat_p +
-    mu[s, p])], indexed [r, p, s].
+def _zeta_coef(others: Sequence[Array], d: Array) -> Array:
+    """Coefficients of the zeta term of the influence function for one
+    geography, as a linear map of the person-level x_i of _if_vcov().
 
     Args:
-        T: one (K_f, R, P, R) array per name field, added to in place.
-        phis: the (R, K_f) P(B_f = b | R = r) of the people's fold.
-        bins: (n_fields, m) clusters of the people.
-        post, y: (m, R) posteriors and (m, P) outcomes of the people.
-        mu: (R, P) the unit's group means.
-        Gc: (R, R) the unit's weighted inverse of its corrected equation.
-    """
-    m, R = post.shape
-    P = y.shape[1]
-    yhat = post @ mu
-    err = y - yhat
-    gpi = post @ Gc.T
-    z = y - 2 * yhat
-    for f in range(len(T)):
-        b = bins[f]
-        a = post / phis[f][:, b].T
-        Bm = a[:, None, :] * (z[:, :, None] + mu.T[None])
-        ub, inv = np.unique(b, return_inverse=True)
-        ind = sparse.csr_matrix((np.ones(m), (inv, np.arange(m))),
-                                shape=(len(ub), m))
-        alpha = np.asarray(ind @ (a[:, :, None]
-                                  * err[:, None, :]).reshape(m, R * P))
-        T[f][ub] += np.einsum("rs,bsp->brps", Gc, alpha.reshape(len(ub), R, P))
-        order = np.argsort(inv, kind="stable")
-        cuts = np.r_[0, np.cumsum(np.bincount(inv))]
-        gs, Bs = gpi[order], Bm[order].reshape(m, P * R)
-        for j, bj in enumerate(ub):
-            lo, hi = cuts[j], cuts[j + 1]
-            T[f][bj] -= (gs[lo:hi].T @ Bs[lo:hi]).reshape(R, P, R)
-
-
-def _fold_phis(fold_tot: dict[int, list[tuple[Array, Array]]],
-               fold_ids: Sequence[int], weight: Array,
-               leave_out: bool = True) -> Phis:
-    """P(B_f = b | R = r) for the people of each fold, fit on the fold terms
-    weighted by `weight` (one per fold of the terms), without the person's
-    own fold when `leave_out`."""
-    out: Phis = {}
-    for v in fold_ids:
-        wv = np.asarray(weight, float).copy()
-        if leave_out:
-            wv[v] = 0.0
-        out[int(v)] = [_phi_from_sums(np.tensordot(wv, tX, 1),
-                                      np.tensordot(wv, tY, 1))
-                       for tX, tY in fold_tot[int(v)]]
-    return out
-
-
-def _bootstrap_vcov(
-        estimate: Any, fold_tot: dict[int, list[tuple[Array, Array]]],
-        fold_ids: Sequence[int], n_fold: int, phis0: Phis, n: int,
-        n_boot: int, n_split: int, rng: np.random.Generator,
-        verbose: bool) -> Array:
-    """Covariance of the unprojected aggregates (see downstream_crossfit).
-
-    The covariance is the sum of two parts. The error of the fitted
-    P(B = b | R = r): the covariance over `n_boot` replicates that resample
-    the folds of the least squares terms with replacement, the people held
-    fixed. The error from the people given P(B = b | R = r): over `n_split`
-    random splits of the people into halves, the mean of
-    (theta_1 - theta_2)(theta_1 - theta_2)' / 4.
-
-    Args:
-        estimate: function of (phis, people) returning the (H, R, P)
-            unprojected aggregates.
+        others: as in _products().
+        d: (R, P) M_g * mu_g.
 
     Returns:
-        (H, R * P, R * P) array.
+        (R * P, n_fields * R * R) array.
     """
-    reps = []
-    for b in range(n_boot):
-        cnt = rng.multinomial(n_fold, np.full(n_fold, 1 / n_fold))
-        reps.append(estimate(_fold_phis(fold_tot, fold_ids, cnt),
-                             np.arange(n)))
-        _log(verbose, f"  bootstrap of P(B | R): replicate {b + 1} of "
-                      f"{n_boot}")
-    reps_a = np.stack(reps).reshape(n_boot, reps[0].shape[0], -1)
-    H, RP = reps_a.shape[1], reps_a.shape[2]
-    vcov = np.zeros((H, RP, RP))
-    for h in range(H):
-        vcov[h] = np.cov(reps_a[:, h].T, ddof=1).reshape(RP, RP)
-    for j in range(n_split):
-        half = rng.random(n) < 0.5
-        d = (estimate(phis0, np.flatnonzero(half))
-             - estimate(phis0, np.flatnonzero(~half))).reshape(H, RP)
-        vcov += np.einsum("hi,hj->hij", d, d) / (4 * n_split)
-        _log(verbose, f"  half split {j + 1} of {n_split}")
-    return vcov
+    R, P = d.shape
+    F = len(others)
+    B = np.zeros((R * P, F * R * R))
+    for f in range(F):
+        off = f * R * R
+        for r in range(R):
+            B[r * P:(r + 1) * P, off + r * R:off + (r + 1) * R] = (
+                others[f][r][:, None] * d).T
+    return B
 
 
-def combine_clusterings(results: Sequence[dict[str, Any]],
-                        constraint: str | None = "simplex") -> dict[str, Any]:
-    """Average of the estimates from several clusterings (for example K-means
-    with different seeds).
+def _if_vcov(nuisance: Sequence[Nuisance], geo: IntArray, M: Array, Y: Array,
+             Qinv: Array, mu: Array, singular: BoolArray,
+             chunk: int = 10000) -> Array:
+    """Covariance of mu_g from the influence function of the paper's theorem.
 
-    The estimate depends on the random start of K-means. The average over m
-    clusterings removes most of that dependence; its covariance is the mean
-    of the clusterings' covariances plus the covariance of the unprojected
-    aggregates across clusterings divided by m.
+    For person i of fold v, with the plug-ins of fold v,
+    varphi_i = (A_g' A_g)^{-1} sum_b A_bg [eta_bg(O_i) - zeta_b(O_i)'
+    (M_g * mu_g)]; the estimated covariance of mu_g is
+    (1/n^2) sum_v sum_{i in V_v} varphi_i varphi_i', without centring.
 
-    Args:
-        results: outputs of downstream_crossfit() with n_seeds = 1, one per
-            clustering, for the same people, outcome and aggregates.
-        constraint: the constraint the averaged aggregates are projected
-            onto.
+    Only the people of g have an eta term. Every person has a zeta term,
+    z_i = B_g x_i, with x_i the vector of the products of
+    phi^f_{B_i} - S^f M_{G_i} and E[M_G M_G']^{-1} M_{G_i} over the name
+    fields and B_g from _zeta_coef(). The sum of z_i z_i' over a fold is
+    therefore B_g C B_g', with C = sum_i x_i x_i' computed once per fold. C has
+    (n_fields R^2)^2 entries per fold, which limits the number of groups.
 
     Returns:
-        dict like downstream_crossfit()'s, with K stacked over clusterings.
+        (G, R * P, R * P) array indexed (r, p) row-major, nan where `singular`.
     """
-    m = len(results)
-    raw = np.stack([r["theta_raw"] for r in results])
-    theta_raw = raw.mean(0)
-    vcov = None
-    if all(r["vcov"] is not None for r in results):
-        vcov = np.mean([r["vcov"] for r in results], 0)
-        if m > 1:
-            H = raw.shape[1]
-            flat = raw.reshape(m, H, -1)
-            for h in range(H):
-                vcov[h] = vcov[h] + np.cov(flat[:, h].T, ddof=1) / m
-    return dict(mu=np.mean([r["mu"] for r in results], 0),
-                theta=_project_aggregates(theta_raw, constraint),
-                theta_raw=theta_raw, vcov=vcov, N=results[0]["N"],
-                K=np.concatenate([np.asarray(r["K"]) for r in results]),
-                pooling=[p for r in results for p in r["pooling"]])
+    n_geo, R = M.shape
+    P = Y.shape[1]
+    F = len(nuisance[0][2])
+    n = sum(len(rows) for rows, _, _ in nuisance)
+    n_g = np.bincount(geo, minlength=n_geo).astype(float)
+    vcov = np.full((n_geo, R * P, R * P), np.nan)
+    keep = np.flatnonzero(~singular)
+    vcov[keep] = 0.0
+    for rows, bins, phis in nuisance:
+        S, S_all, others = _products(phis)
+        full = np.linalg.matrix_rank(S_all) == R
+        L = np.linalg.inv(S_all) if full else np.full((R, R), np.nan)
+
+        def x_of(idx: IntArray) -> Array:
+            Mi = M[geo[rows[idx]]]
+            U = Mi @ Qinv
+            return np.concatenate(
+                [((phis[f][:, bins[f, idx]].T - Mi @ S[f])[:, :, None]
+                  * U[:, None, :]).reshape(len(idx), R * R)
+                 for f in range(F)], axis=1)
+
+        C = np.zeros((F * R * R, F * R * R))
+        for lo in range(0, len(rows), chunk):
+            x = x_of(np.arange(lo, min(lo + chunk, len(rows))))
+            C += x.T @ x
+        order = np.argsort(geo[rows], kind="stable")
+        g_v, start = np.unique(geo[rows[order]], return_index=True)
+        stop = np.r_[start[1:], len(rows)]
+        own = {int(g): order[a:b] for g, a, b in zip(g_v, start, stop)}
+        for g in keep:
+            m = M[g]
+            d = m[:, None] * mu[g]
+            B = _zeta_coef(others, d)
+            Z = B @ C @ B.T
+            idx = own.get(int(g))
+            if idx is not None:
+                cell: Array = np.ones((len(idx), R))
+                for f, Phi in enumerate(phis):
+                    cell = cell * Phi[:, bins[f, idx]].T
+                a = (n / n_g[g]) * (cell[:, :, None] * Y[rows[idx]][:, None, :]
+                                    - S_all @ d)
+                a = a.reshape(len(idx), R * P)
+                z = x_of(idx) @ B.T
+                az = a.T @ z
+                Z = Z + a.T @ a - az - az.T
+            W = np.kron(L / m[:, None], np.eye(P))
+            vcov[g] += W @ Z @ W.T
+    return vcov / n ** 2
 
 
 def downstream_crossfit(
         F: npt.ArrayLike | Sequence[npt.ArrayLike], geo: npt.ArrayLike,
         prior: npt.ArrayLike, Y: npt.ArrayLike,
-        fold: npt.ArrayLike | None = None, pool: npt.ArrayLike | None = None,
-        by: npt.ArrayLike | None = None,
-        K: int | Sequence[int] | None = None, V: int = 5,
-        bins: npt.ArrayLike | None = None,
-        fold_stats: Sequence[tuple[Array, Array]] | None = None,
-        constraint: str | None = "simplex", correct: bool = False,
-        se: str | None = "auto", n_boot: int = 100, n_split: int = 10,
-        n_seeds: int = 3, fold_clusters: bool = False,
-        seed: int = 0, chunk: int = 50000, verbose: bool = True,
+        fold: npt.ArrayLike | None = None, V: int = 5,
+        K: int | Sequence[int] | None = None,
+        grid: Sequence[int] | None = None, J: int = 5, se: bool = True,
+        seed: int = 0, verbose: bool = True,
 ) -> dict[str, Any]:
-    """Cross-fitted estimator of the mean outcome of each group.
+    """Cross-fitted estimator of mu_g, the mean outcome of each group in each
+    geography, E[Y | R = r, G = g], under the BIRDiE assumption that the outcome
+    is independent of the name given the group and geography.
 
-    Under the lBISG assumptions and the BIRDiE assumption that the outcome is
-    independent of the name given the group and geography,
-    E[Y | B, G] = sum_r mu_r P(R = r | B, G). The estimand is
-    mu_{c, r} = E[Y | R = r, c], the mean outcome of group r in pooling unit
-    c (for example the county), and its aggregates over the pooling units of
-    each aggregate (for example the state), weighted by the group's prior
-    members in each unit, the sum of P(R = r | G) over the unit's people.
+    The geographic units are randomly partitioned into V folds. For each fold
+    v, the observations outside the fold give K^(-v) (Algorithm 2, or `K`),
+    the clusters B^(-v) and phi^(-v) = P(B = b | R = r) (Algorithm 1, Steps
+    7-10). With O = (Y, B, G) and A_bg = M_g * phi_b, the moments are
 
-    Within each pooling unit, the group means solve the least squares of Y on
-    the posterior probabilities. The posterior of each person uses the
-    P(B = b | R = r) fit on the other folds of geographies; folds should be
-    spatial blocks, such as states. The clusters are fit once on all
-    people, or on the other folds as well with `fold_clusters`, in which
-    case a person's posterior uses nothing from their own fold.
+      zeta_b(O, phi_b) = E[M_G M_G']^{-1} M_G (1{B = b} - M_G' phi_b),
+      eta_bg(O, phi_b, mu_g) = 1{G = g} / Pr(G = g) [Y 1{B = b} - A_bg' mu_g],
+      psi^(-v)_g = sum_b A^(-v)_bg [eta_bg(O_i^(-v), phi^(-v)_b, mu_g)
+                     - zeta_b(O_i^(-v), phi^(-v)_b)' (M_g * mu_g)],
 
-    With many groups whose names and geography are similar, each unit's
-    least squares is close to singular, and its estimates of rare groups can
-    lie far outside [0, 1]. By default (correct = False) the means of the
-    pooling units are therefore pooled toward the means of their aggregate
-    by empirical Bayes (see _eb_pools()): each group's means are pulled
-    toward the aggregate in proportion to how little the unit's own data
-    identify them, with the pooling estimated from the data.
+    and mu_g solves (1/n) sum_i sum_v 1{i in V_v} psi^(-v)_g = 0. The equation
+    is linear in mu_g; see _zeta_matrix() and _solve_mu() for its closed form.
+    Pr(G = g) is the sample share of g and E[M_G M_G'] the mean over all people.
 
-    With correct = True, the means of each pooling unit are instead the
-    least squares with the orthogonal correction of the paper's estimating
-    equation, without pooling: the change in each unit's score when the
-    cross-fitted P(B = b | R = r) is replaced by the fit on all folds (to
-    first order, the derivative of the score in that direction). The
-    correction removes the first-order sensitivity to the error of the
-    fitted P(B = b | R = r), but it needs that error to be small in every
-    direction, which holds for a few groups with distinct names and
-    geography. With many similar groups, M'WM is badly conditioned, the
-    corrected equations can be indefinite, and the estimates and standard
-    errors break down; the condition number of M'WM is the check.
-
-    The constraint (the simplex for an outcome with mutually exclusive
-    categories, or [0, 1]) is imposed on the reported aggregates only: each
-    aggregate is projected onto it. A group whose unprojected aggregate
-    (theta_raw) lies far outside the constraint, with a large standard error,
-    is not identified by the data.
-
-    The estimate depends on the random start of K-means. Without `bins`,
-    the clusters are fit with `n_seeds` seeds and the estimates averaged
-    (see combine_clusterings()). With `bins`, run each clustering separately
-    and combine them with combine_clusterings().
-
-    Standard errors, with the geographies held fixed. se = "bootstrap" (the
-    default with correct = False) adds two parts: the error of the fitted
-    P(B = b | R = r), from `n_boot` replicates that resample the folds of
-    the least squares terms with replacement (it needs many folds, for
-    example the states), and the error from the people given
-    P(B = b | R = r), from `n_split` random splits of the people into
-    halves. se = "if" (the default with correct = True) is the influence
-    function of the corrected estimator; it includes the error of the fitted
-    P(B = b | R = r) through the people in Y (with `fold_stats`, people
-    outside Y are left out). Both are for the unprojected aggregates;
-    intervals for a projected aggregate are cut at the constraint.
-
-    With several name fields, the clusters of the fields are taken as
-    independent given the group and geography (the lBIFSG assumption), and
-    the posterior is proportional to P(R = r | G) prod_f P(B_f = b | R = r).
+    With several name fields, A_bg = M_g * prod_f phi^f_{b_f} and the derivative
+    of A_bg' mu_g gives one zeta term per field by the product rule.
 
     Args:
         F: (N, L) list scores per person (from lbisg_field()), or a list of
             such matrices, one per name field.
-        geo: (N,) 0-based geography of each person, at the prior's level.
+        geo: (N,) 0-based geography of each person; g in mu_g.
         prior: (N, R) P(R = r | G) per person; rows sum to one.
-        Y: (N,) or (N, P) outcome; the columns are estimated jointly.
-        fold: (n_geo,) 0-based fold of each geography, or None for V folds
-            of geographies with approximately equal numbers of people.
-        pool: (n_geo,) 0-based pooling unit of each geography, nested within
-            `by`, or None for one pooling unit per aggregate (no pooling).
-        by: (n_geo,) 0-based aggregate of each geography, or None for a
-            single aggregate over all geographies.
-        K: number of clusters, or a list with one per name field; required
-            unless `bins` is given.
+        Y: (N,) or (N, P) outcome. Each column is its own estimating equation.
+        fold: (n_geo,) 0-based fold of each geography, or None for a random
+            partition into V folds.
         V: number of folds when `fold` is None.
-        bins: optional (n_fields, N) clusters of each person in each field,
-            to use an existing clustering.
-        fold_stats: optional list, one per field, of the (XtWX, XtWY) terms of
-            _fold_stats() over a larger set of folds (for example every
-            state), so that P(B = b | R = r) is fit on data outside Y.
-            `fold` then indexes these folds, and `bins` is required.
-        constraint: "simplex", "box" or None. With a constraint, the outcome
-            should lie in [0, 1]; it also bounds the pooling variance.
-        correct: the corrected least squares without pooling, instead of
-            the empirical-Bayes pooling.
-        se: "bootstrap", "if", "auto" ("bootstrap" with correct = False,
-            "if" with correct = True) or None.
-        n_boot: bootstrap replicates of P(B = b | R = r).
-        n_split: half splits of the people.
-        n_seeds: K-means seeds averaged over when `bins` is None.
-        fold_clusters: fit the clusters of each fold on the other folds
-            (Algorithm 3), or False for one clustering of all people.
-            Ignored when `bins` is given. The least squares terms are then
-            kept for each fold's clustering, V times the memory of one.
-        seed: first K-means seed (seeds seed, ..., seed + n_seeds - 1) and
-            seed of the bootstrap.
-        chunk: people per block.
+        K: number of clusters, or a list with one per name field; None chooses
+            K^(-v) by Algorithm 2 in each fold's training sample.
+        grid: candidate values of K for Algorithm 2.
+        J: number of geographic folds of Algorithm 2.
+        se: compute the covariance of mu_g from the influence function.
+        seed: seed of the random partition, K-means and Algorithm 2.
         verbose: print progress.
 
     Returns:
         dict with
-          mu (n_pool, R, P): group means in each pooling unit, nan for groups
-            with no prior mass there;
-          theta (H, R, P): the estimate of each aggregate, with the
-            constraint;
-          theta_raw (H, R, P): the same before the aggregate's projection;
-          vcov (H, R * P, R * P): covariance of theta_raw_h, indexed (r, p)
-            row-major, or None with se = None;
-          N (H, R): group prior members in each aggregate;
-          K: clusters used in each name field, (n_seeds, n_fields), or
-            (n_seeds, V, n_fields) with fold_clusters;
-          pooling: for each clustering, the empirical-Bayes fit (m, tau2,
-            sigma2, iters), or None with correct = True.
+          mu (G, R, P): the estimates, nan for geographies with no solution;
+          vcov (G, R * P, R * P): covariance of each mu_g, indexed (r, p)
+            row-major, or None with se = False;
+          singular (G,): True for geographies with no solution, which also
+            raise a warning;
+          fold (G,): the fold of each geography;
+          K (V, n_fields): clusters used in each fold and name field.
     """
-    fields: list[Any] = list(F) if isinstance(F, (list, tuple)) else [F]
-    n_fields = len(fields)
+    F_list = list(F) if isinstance(F, (list, tuple)) else [F]
+    fields: list[Array] = [np.asarray(F_f, float) for F_f in F_list]
     geo, prior_a, n_geo, w, M = _geo_setup(geo, prior)
     Y = np.asarray(Y, float)
     if Y.ndim == 1:
         Y = Y[:, None]
-    n, R = prior_a.shape
-    P = Y.shape[1]
-    correct = bool(correct)
-    if constraint not in ("simplex", "box", None):
-        raise ValueError("constraint must be 'simplex', 'box' or None")
-    if constraint == "simplex" and P < 2:
-        raise ValueError("constraint 'simplex' needs one column per category")
-    if fold_stats is not None and (fold is None or bins is None):
-        raise ValueError("fold_stats requires fold and bins")
-    if se == "auto":
-        se = "if" if correct else "bootstrap"
-    if se not in ("bootstrap", "if", None):
-        raise ValueError("se must be 'bootstrap', 'if', 'auto' or None")
-    if se == "if" and not correct:
-        raise ValueError("se 'if' requires correct = True")
-    if se == "bootstrap" and correct:
-        raise ValueError("se 'bootstrap' requires correct = False")
-    if int(n_seeds) < 1:
-        raise ValueError("n_seeds must be at least 1")
-    fold_g = geo_folds(geo, V) if fold is None else np.asarray(fold, np.int64)
-    fold_p = fold_g[geo]
-    if len(np.unique(fold_p)) < 2 and fold_stats is None:
-        raise ValueError("cross-fitting needs at least two folds")
-    by = (np.zeros(n_geo, np.int64) if by is None
-          else np.asarray(by, np.int64))
-    n_agg = int(by.max()) + 1
-    pool = by.copy() if pool is None else np.asarray(pool, np.int64)
-    n_pool = int(pool.max()) + 1
-    by_pool = np.zeros(n_pool, np.int64)
-    by_pool[pool] = by
-    if np.any(by_pool[pool] != by):
-        raise ValueError("each pooling unit must lie within one aggregate")
-    fold_ids = [int(v) for v in np.unique(fold_p)]
-    n_fold = (int(np.max(fold_g)) + 1 if fold_stats is None
-              else fold_stats[0][0].shape[0])
-    prior_mass = np.zeros((n_pool, R))
-    np.add.at(prior_mass, pool, w[:, None] * M)
-    solve = prior_mass > 0
-    weight = prior_mass * solve
-    everyone = np.arange(n)
-    if bins is None:
-        K_fields: list[Any] = (list(K) if isinstance(K, (list, tuple))
-                               else [K] * n_fields)
-        if len(K_fields) != n_fields or any(k is None for k in K_fields):
-            raise ValueError("K must have one value per name field")
-        Z_fields = [logodds(F_f) for F_f in fields]
-        seeds = [int(seed) + s for s in range(int(n_seeds))]
+    n = prior_a.shape[0]
+    if K is None:
+        K_fields: list[int | None] = [None] * len(fields)
+    elif isinstance(K, (int, np.integer)):
+        K_fields = [int(K)] * len(fields)
     else:
-        seeds = [int(seed)]
-
-    def clusterings(seed_s: int) -> dict[int, tuple[IntArray, IntArray]]:
-        """Algorithm 1, Step 7: clus[v] is the clustering of the people of
-        fold v and of the P(B = b | R = r) their posteriors use."""
-        if bins is not None:
-            b_all = np.asarray(bins, np.int64).reshape(n_fields, n)
-            return {v: (b_all, b_all.max(1) + 1) for v in fold_ids}
-        clus: dict[int, tuple[IntArray, IntArray]] = {}
-        for v in (fold_ids if fold_clusters else [-1]):
-            rows = np.flatnonzero(fold_p != v)
-            b_v = np.empty((n_fields, n), np.int64)
-            k_v = np.zeros(n_fields, np.int64)
-            for f in range(n_fields):
-                b_v[f], k_v[f] = kmeans_occupied(Z_fields[f], rows,
-                                                 int(K_fields[f]), seed_s)
-                _log(verbose, f"  seed {seed_s}, field {f + 1}"
-                              + (f", fold {v}" if fold_clusters else "")
-                              + f": K = {K_fields[f]} ({k_v[f]} used)")
-            clus[int(v)] = (b_v, k_v)
-        if not fold_clusters:
-            clus = {v: clus[-1] for v in fold_ids}
-        return clus
-
-    def run(seed_s: int) -> dict[str, Any]:
-        """The estimate and its covariance for one clustering."""
-        clus = clusterings(seed_s)
-        per_fold = bins is None and fold_clusters
-        bins_a = np.empty((n_fields, n), np.int64)
-        for v in fold_ids:
-            s = fold_p == v
-            bins_a[:, s] = clus[v][0][:, s]
-        K_used = (np.stack([clus[v][1] for v in fold_ids]) if per_fold
-                  else clus[fold_ids[0]][1])
-        # Step 9 terms by fold, for each fold's clustering
-        fold_tot: dict[int, list[tuple[Array, Array]]] = {}
-        for v in fold_ids:
-            if not per_fold and fold_tot:
-                fold_tot[v] = fold_tot[next(iter(fold_tot))]
-                continue
-            b_v, k_v = clus[v]
-            fold_tot[v] = (list(fold_stats) if fold_stats is not None else
-                           [_fold_stats(b_v[f], geo, M, w, fold_g, n_fold,
-                                        int(k_v[f]))
-                            for f in range(n_fields)])
-        ones = np.ones(n_fold)
-        phis0 = _fold_phis(fold_tot, fold_ids, ones)
-        if correct:
-            fulls0 = _fold_phis(fold_tot, fold_ids, ones, leave_out=False)
-            A, B, _, C, c0 = _pool_grams(everyone, geo, bins_a, M, Y, pool,
-                                         n_pool, fold_p, phis0, chunk, fulls0)
-            mu = _solve_pools(A + C, B + c0, solve)
-            theta_raw, N = _aggregate(mu, weight, by_pool, n_agg)
-            vcov = None
-            if se == "if":
-                G = fold_tot[fold_ids[0]][0][0].sum(0)
-                vcov = _if_vcov(geo, bins_a, M, Y, pool, by_pool, n_agg,
-                                fold_p, clus, phis0, A + C, mu, solve, weight,
-                                N, G, chunk, verbose)
-            return dict(mu=mu, theta_raw=theta_raw, vcov=vcov, N=N,
-                        K=K_used[None], pooling=[None])
-
-        def estimate(phis: Phis, people: IntArray,
-                     init: dict[str, Any] | None = None
-                     ) -> tuple[Array, dict[str, Any]]:
-            A, B, _, _, _ = _pool_grams(people, geo, bins_a, M, Y, pool,
-                                        n_pool, fold_p, phis, chunk)
-            yy = np.zeros((n_pool, P))
-            np.add.at(yy, pool[geo[people]], Y[people] ** 2)
-            mu, fit = _eb_pools(A, B, yy, solve, by_pool, n_agg, constraint,
-                                init=init,
-                                max_iter=2000 if init is None else 200)
-            return mu, fit
-
-        mu, fit0 = estimate(phis0, everyone)
-        theta_raw, N = _aggregate(mu, weight, by_pool, n_agg)
-        _log(verbose, f"  empirical Bayes: {fit0['iters']} EM iterations")
-        vcov = None
-        if se == "bootstrap":
-            vcov = _bootstrap_vcov(
-                lambda ph, people: _aggregate(
-                    estimate(ph, people, fit0)[0], weight, by_pool,
-                    n_agg)[0],
-                fold_tot, fold_ids, n_fold, phis0, n, int(n_boot),
-                int(n_split), np.random.default_rng(seed_s), verbose)
-        return dict(mu=mu, theta_raw=theta_raw, vcov=vcov, N=N,
-                    K=K_used[None], pooling=[fit0])
-
-    return combine_clusterings([run(s) for s in seeds], constraint)
+        K_fields = [int(k) for k in K]
+    if len(K_fields) != len(fields):
+        raise ValueError("K must have one value per name field")
+    fold_g = (np.random.default_rng(seed).permutation(n_geo) % int(V)
+              if fold is None else np.asarray(fold, np.int64))
+    fold_ids = [int(v) for v in np.unique(fold_g[geo])]
+    if len(fold_ids) < 2:
+        raise ValueError("cross-fitting needs at least two folds")
+    Qinv = np.linalg.inv(M.T @ (w[:, None] * M) / n)
+    Z_fields = [logodds(F_f) for F_f in fields]
+    nuisance = [_fold_nuisance(fields, Z_fields, geo, prior_a, M, w, fold_g, v,
+                               K_fields, grid, int(J), int(seed), verbose)
+                for v in fold_ids]
+    T = _zeta_matrix(nuisance, geo, M, Qinv)
+    mu, singular = _solve_mu(nuisance, geo, M, Y, T)
+    if singular.any():
+        warnings.warn(f"{int(singular.sum())} of {n_geo} geographies have no "
+                      "solution of the estimating equation; their estimates "
+                      "are nan", stacklevel=2)
+    vcov = _if_vcov(nuisance, geo, M, Y, Qinv, mu, singular) if se else None
+    return dict(mu=mu, vcov=vcov, singular=singular, fold=fold_g,
+                K=np.array([[Phi.shape[1] for Phi in phis]
+                            for _, _, phis in nuisance]))
 
 
 # ---------------------------------------------------------------------------

@@ -9,18 +9,10 @@ lbisg_downstream(
   outcome,
   geo,
   folds = NULL,
-  pool = NULL,
-  by = NULL,
   fields = names(fit$fields),
   V = 5,
   K = NULL,
-  constraint = NULL,
-  correct = FALSE,
-  se = NULL,
-  n.boot = 100,
-  n.split = 10,
-  n.seeds = 3,
-  fold.clusters = FALSE,
+  se = TRUE,
   control = lbisg_control(),
   verbose = TRUE
 )
@@ -29,28 +21,14 @@ lbisg_downstream(
 \item{fit}{An object from \code{\link{lbisg}}.}
 
 \item{outcome}{The outcome, one value per person: a numeric vector, a
-numeric matrix (columns estimated jointly), or a factor or character
-vector, which is expanded into one indicator per level.}
+numeric matrix (each column is its own estimating equation), or a factor or
+character vector, which is expanded into one indicator per level.}
 
 \item{geo}{The vector of geographic units passed to \code{\link{lbisg}}.}
 
 \item{folds}{Optional vector, one value per person and constant within each
-geographic unit, defining the folds for cross-fitting (for example the
-state). The default is \code{V} folds of geographic units with
-approximately equal numbers of people.}
-
-\item{pool}{Optional vector, one value per person and constant within each
-geographic unit, defining the units within which the group means are the
-same (for example the county). Each pooling unit must lie within one
-aggregate of \code{by}. The default is one pooling unit per aggregate.}
-
-\item{by}{Optional vector, one value per person and constant within each
-geographic unit, defining the aggregates to estimate. Each aggregate
-estimate is the mean outcome among the members of the group,
-\eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the
-prior group members of pooling unit \eqn{c}, the sum of
-\eqn{P(R = r \mid G)} over the unit's people. The
-default is one aggregate over all geographic units.}
+geographic unit, defining the folds for cross-fitting. The default is a
+random partition of the geographic units into \code{V} folds.}
 
 \item{fields}{The name fields whose clusters are used: any of
 \code{"surname"} and \code{"first"}. Defaults to every field in
@@ -58,104 +36,65 @@ default is one aggregate over all geographic units.}
 
 \item{V}{Number of folds when \code{folds} is \code{NULL}.}
 
-\item{K}{Number of clusters, one value per field. Defaults to the \eqn{K}
-selected for each field in \code{fit}.}
+\item{K}{Number of clusters, one value per field. By default, \eqn{K^{(-v)}}
+is chosen by Algorithm 2 in the training sample of each fold, using
+\code{control$K.grid} and \code{control$geo.folds}.}
 
-\item{constraint}{\code{"simplex"}, \code{"box"} or \code{"none"}. The
-default is \code{"simplex"} for a factor outcome, \code{"box"} for a
-numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.}
+\item{se}{If \code{TRUE}, compute the standard errors and covariance
+matrices. They need memory for \eqn{(F R^2)^2} numbers per fold, with
+\eqn{F} name fields and \eqn{R} groups.}
 
-\item{correct}{If \code{TRUE}, the least squares with the orthogonal
-correction, without pooling, in place of the empirical-Bayes pooling.}
-
-\item{se}{How to compute the standard errors, with the geographies held
-fixed. \code{"bootstrap"} (the default with \code{correct = FALSE}) adds
-the error of the fitted cluster probabilities, from \code{n.boot}
-replicates that resample the folds with replacement, which needs many
-folds (for example the states), and the error from the people given those
-probabilities, from \code{n.split} random splits of the people into halves.
-\code{"if"} (the default with \code{correct = TRUE}) is the influence
-function of the corrected estimator. The confidence intervals use the
-standard error of the unprojected aggregate and are cut at the constraint.
-\code{"none"} skips them.}
-
-\item{n.boot}{Bootstrap replicates of the cluster probabilities.}
-
-\item{n.split}{Half splits of the people.}
-
-\item{n.seeds}{K-means seeds to average over, starting at
-\code{control$seed}.}
-
-\item{fold.clusters}{If \code{TRUE}, the clusters of each fold are fit on
-the other folds, so that a person's posterior uses nothing from their own
-fold. If \code{FALSE} (the default), one clustering of all people is used
-for each seed.}
-
-\item{control}{A list from \code{\link{lbisg_control}} (uses \code{seed}).}
+\item{control}{A list from \code{\link{lbisg_control}} (uses \code{seed},
+\code{K.grid} and \code{geo.folds}).}
 
 \item{verbose}{Print progress.}
 }
 \value{
 A list with \code{estimates} (a data frame with one row per
-  aggregate, group and outcome: the estimate, the estimate before the
-  projection onto the constraint \code{estimate.raw}, its standard error,
-  the 95\% interval \code{lower} and \code{upper} cut at the constraint,
-  and the expected number of group members \code{N}),
-  \code{vcov} (the covariance matrix of each aggregate over all
-  groups and outcomes), \code{mu} (an array of pooling unit by group by
-  outcome means, \code{NA} where the group has no prior mass) and the
-  number of clusters used in each field \code{K} (a matrix with one row per
-  seed, or an array of seed by fold by field when \code{fold.clusters} is
-  \code{TRUE}), and \code{pooling}, the empirical-Bayes fit of each seed
-  (\code{NULL} entries with \code{correct = TRUE}).
+geographic unit, group and outcome: the \code{estimate}, its standard error
+\code{se} and the 95\\% interval \code{lower} and \code{upper}), \code{vcov}
+(the covariance matrix of each unit over all groups and outcomes, or
+\code{NULL} with \code{se = FALSE}), \code{mu} (an array of unit by group by
+outcome), \code{singular} (\code{TRUE} for the units with no solution),
+\code{folds} (the fold of each unit), and \code{K} (the clusters used, a
+matrix of fold by field).
 }
 \description{
-Cross-fitted estimator of the mean outcome of each group under the BIRDiE
-assumption that the outcome is independent of the name given the group and
-geography. The estimand is the mean outcome of each group in each pooling
-unit (for example the county), \eqn{E[Y \mid R = r, c]}, and its
-aggregates over pooling units weighted by the group's prior members in each
-unit. Within each pooling unit, the group means solve the least squares of
-the outcome on the lBISG posterior probabilities. The posterior of each
-person uses \eqn{P(B = b \mid R = r)} fit without the person's fold of
-geographies. Folds should be spatial blocks, such as states.
+Cross-fitted estimator of \eqn{\mu_g}, the mean outcome of each group in each
+geographic unit, \eqn{E[Y \mid R = r, G = g]}, under the BIRDiE assumption
+that the outcome is independent of the name given the group and geography.
+Whatever \code{geo} is passed defines \eqn{g}.
 }
 \details{
-With many groups whose names and geography are similar, each pooling unit's
-least squares is close to singular. By default, the means of the pooling
-units are therefore pooled toward the means of their aggregate by empirical
-Bayes: each group's means are pulled toward the aggregate in proportion to
-how little the unit's own data identify them, with the pooling estimated
-from the data.
+The geographic units are randomly partitioned into \code{V} folds. For each
+fold \eqn{v}, the observations outside the fold give the number of clusters
+\eqn{K^{(-v)}} (Algorithm 2, or \code{K}), the clusters \eqn{B^{(-v)}}, and
+\eqn{\phi^{(-v)}_b = P(B = b \mid R)} (Algorithm 1, Steps 7-10). With
+\eqn{A_{bg} = M_g \odot \phi_b}, the estimating equation is
+\deqn{\frac{1}{n} \sum_i \sum_v 1\{i \in V_v\} \sum_b A^{(-v)}_{bg}
+  [\eta_{bg}(O_i^{(-v)}, \phi^{(-v)}_b, \mu_g)
+  - \zeta_b(O_i^{(-v)}, \phi^{(-v)}_b)^\top (M_g \odot \mu_g)] = 0,}
+with \eqn{\zeta_b(O, \phi_b) = E[M_G M_G^\top]^{-1} M_G (1\{B = b\} -
+M_G^\top \phi_b)} and \eqn{\eta_{bg}(O, \phi_b, \mu_g) = 1\{G = g\} /
+\Pr(G = g) [Y 1\{B = b\} - A_{bg}^\top \mu_g]}. The equation is linear in
+\eqn{\mu_g} and is solved in closed form for each geographic unit. The
+standard errors are from the influence function, with the plug-ins of each
+person's fold.
 
-With \code{correct = TRUE}, the means of each pooling unit are instead the
-least squares with the orthogonal correction of the paper's estimating
-equation, without pooling. The correction removes the first-order
-sensitivity to the error of the fitted \eqn{P(B = b \mid R = r)}. It needs
-that error to be small in every direction, which holds for a few groups with
-distinct names and geography. With many similar groups, the estimates and
-standard errors break down.
+With both surname and first name, the clusters of the two fields are taken as
+independent given the group and geography (the lBIFSG assumption):
+\eqn{A_{bg} = M_g \odot \prod_f \phi^f_{b_f}}, and the derivative gives one
+\eqn{\zeta} term per field by the product rule.
 
-A constraint on the means (the simplex for a factor outcome, \eqn{[0, 1]}
-for a binary one) is imposed on the reported aggregates only: each aggregate
-is projected onto the constraint. A group whose unprojected aggregate
-(\code{estimate.raw}) lies far outside the constraint, with a large standard
-error, is not identified by the data.
-
-The estimate depends on the random start of K-means. The clusters are fit
-with \code{n.seeds} seeds and the estimates averaged, and the spread across
-seeds enters the covariance.
-
-With both surname and first name, the clusters of the two fields are taken
-as independent given the group and geography (the lBIFSG assumption), and
-the posterior combines both fields.
+A geographic unit in which a group has a prior share of exactly zero has no
+solution, and neither does any unit when a fold has fewer usable clusters
+than groups. Those estimates are \code{NaN}, with a warning.
 }
 \examples{
 \dontrun{
 fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
              prior = tract_shares)
-ds <- lbisg_downstream(fit, voters$party, voters$tract,
-                       folds = voters$state, pool = voters$county)
+ds <- lbisg_downstream(fit, voters$party, voters$tract)
 lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
 }
 }

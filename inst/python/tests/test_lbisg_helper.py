@@ -2,6 +2,7 @@
 the downstream estimator and the recovery of geographic prevalence."""
 from __future__ import annotations
 
+import itertools
 from typing import Any
 
 import numpy as np
@@ -246,437 +247,423 @@ def test_combine_fields_divides_out_the_repeated_prior() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Downstream estimator: building blocks
+# Downstream estimator: the estimating equation as written in the paper
 # ---------------------------------------------------------------------------
-def test_fold_stats_sum_to_the_full_least_squares(
-        sim_small: dict[str, Any]) -> None:
-    geo, _, n_geo, w, M = lb._geo_setup(sim_small["geo"], sim_small["prior"])
-    bins, K_used = lb.kmeans_occupied(lb.logodds(sim_small["fields"][0]),
-                                      np.arange(len(geo)), 12)
-    fold = lb.geo_folds(geo, 4)
-    XtWX, XtWY = lb._fold_stats(bins, geo, M, w, fold, 4, K_used)
-    C = sparse.coo_matrix((np.ones(len(geo)), (geo, bins)),
-                          shape=(n_geo, K_used)).tocsr()
-    np.testing.assert_allclose(lb._phi_from_sums(XtWX.sum(0), XtWY.sum(0)),
-                               lb.wls_pi(C, M, w, np.ones(n_geo)))
-    np.testing.assert_allclose(
-        lb._phi_from_sums(XtWX[1:].sum(0), XtWY[1:].sum(0)),
-        lb.wls_pi(C, M, w, (fold != 0).astype(float)))
+def literal_psi(nuisance: list[Any], geo: np.ndarray, M: np.ndarray,
+                Y: np.ndarray, g: int, mu_g: np.ndarray) -> np.ndarray:
+    """psi^(-v)_g for every person, by the sums over b as written.
+
+    Several name fields use the extension A_bg = M_g * prod_f phi^f_{b_f}, with
+    one zeta term per field. Y is (N,) and mu_g is (R,).
+    """
+    n = len(geo)
+    Qinv = np.linalg.inv(M[geo].T @ M[geo] / n)
+    p_g = (geo == g).mean()
+    out = np.zeros((n, M.shape[1]))
+    for rows, bins, phis in nuisance:
+        for j, i in enumerate(rows):
+            Mi = M[geo[i]]
+            for b in itertools.product(*[range(P.shape[1]) for P in phis]):
+                phi_b = np.prod([P[:, k] for P, k in zip(phis, b)], axis=0)
+                A = M[g] * phi_b
+                hit = all(bins[f, j] == k for f, k in enumerate(b))
+                eta = (geo[i] == g) / p_g * (Y[i] * hit - A @ mu_g)
+                corr = 0.0
+                for f, k in enumerate(b):
+                    zeta = Qinv @ Mi * ((bins[f, j] == k) - Mi @ phis[f][:, k])
+                    rest = np.prod([np.ones(len(A))]
+                                   + [P[:, c] for h, (P, c)
+                                      in enumerate(zip(phis, b)) if h != f],
+                                   axis=0)
+                    corr += zeta @ (M[g] * mu_g * rest)
+                out[i] += A * (eta - corr)
+    return out
 
 
-def test_posteriors_use_the_fit_of_each_persons_fold() -> None:
-    rng = np.random.default_rng(0)
-    M = rng.dirichlet(np.ones(3), 6)
-    geo = np.repeat(np.arange(6), 5)
-    fold = np.where(geo < 3, 0, 1)
-    bins = rng.integers(0, 4, (2, len(geo)))
-    phis = {v: [rng.dirichlet(np.ones(4), 3) for _ in range(2)]
-            for v in (0, 1)}
-    i = np.arange(len(geo))
-    post = lb._posteriors(i, geo, bins, M, fold, phis)
-    for p in i:
-        v = fold[p]
-        e = M[geo[p]] * phis[v][0][:, bins[0, p]] * phis[v][1][:, bins[1, p]]
-        np.testing.assert_allclose(post[p], e / e.sum())
+def literal_varphi(nuisance: list[Any], geo: np.ndarray, M: np.ndarray,
+                   Y: np.ndarray, g: int, mu_g: np.ndarray) -> np.ndarray:
+    """varphi_g of the theorem for every person, with each fold's plug-ins."""
+    psi = literal_psi(nuisance, geo, M, Y, g, mu_g)
+    out = np.zeros_like(psi)
+    for rows, _, phis in nuisance:
+        cells = itertools.product(*[range(P.shape[1]) for P in phis])
+        A = np.array([M[g] * np.prod([P[:, k] for P, k in zip(phis, b)], axis=0)
+                      for b in cells])
+        out[rows] = np.linalg.solve(A.T @ A, psi[rows].T).T
+    return out
 
 
-def test_pool_batches_hold_whole_pools_once() -> None:
-    rng = np.random.default_rng(0)
-    geo = rng.integers(0, 40, 2000)
-    pool = np.arange(40) // 3
-    people = rng.permutation(2000)[:1500]
-    seen = []
-    for i, starts, ends in lb._pool_batches(people, geo, pool, chunk=300):
-        units = [pool[geo[i[s:e]]] for s, e in zip(starts, ends)]
-        assert all(len(set(u)) == 1 for u in units)
-        assert len({u[0] for u in units}) == len(units)
-        assert len(i) <= 300 or len(units) == 1
-        assert ends[-1] == len(i)
-        seen.append(i)
-    allp = np.concatenate(seen)
-    assert sorted(allp) == sorted(people)
-    batch_pools = [set(pool[geo[i]]) for i in seen]
-    assert sum(len(b) for b in batch_pools) == len(set.union(*batch_pools))
-
-
-def test_pool_grams_match_a_direct_sum() -> None:
-    rng = np.random.default_rng(0)
-    M = rng.dirichlet(np.ones(3), 10)
-    geo = rng.integers(0, 10, 400)
-    fold = (geo % 2).astype(np.int64)
-    bins = rng.integers(0, 5, (1, 400))
-    Y = np.eye(2)[rng.integers(0, 2, 400)]
-    pool = np.arange(10) // 4
-    phis = {v: [rng.dirichlet(np.ones(5), 3)] for v in (0, 1)}
-    people = np.arange(400)
-    fulls = {v: [rng.dirichlet(np.ones(5), 3)] for v in (0, 1)}
-    A, B, mass, C, c0 = lb._pool_grams(people, geo, bins, M, Y, pool, 3,
-                                       fold, phis, chunk=50, fulls=fulls)
-    post = lb._posteriors(people, geo, bins, M, fold, phis)
-    dpi = lb._posteriors(people, geo, bins, M, fold, fulls) - post
-    for c in range(3):
-        s = pool[geo] == c
-        np.testing.assert_allclose(A[c], post[s].T @ post[s])
-        np.testing.assert_allclose(B[c], post[s].T @ Y[s])
-        np.testing.assert_allclose(mass[c], post[s].sum(0))
-        np.testing.assert_allclose(C[c], dpi[s].T @ post[s]
-                                   + post[s].T @ dpi[s])
-        np.testing.assert_allclose(c0[c], dpi[s].T @ Y[s])
-    # without deltas the correction terms are zero
-    out = lb._pool_grams(people, geo, bins, M, Y, pool, 3, fold, phis)
-    assert not out[3].any() and not out[4].any()
-
-
-def test_simplex_rows_projects_onto_the_simplex() -> None:
-    rng = np.random.default_rng(0)
-    X = rng.normal(0, 2, (50, 4))
-    P = lb._simplex_rows(X)
-    assert np.all(P >= 0)
-    np.testing.assert_allclose(P.sum(1), 1)
-    # a point on the simplex is its own projection
-    S = rng.dirichlet(np.ones(4), 10)
-    np.testing.assert_allclose(lb._simplex_rows(S), S)
-    # the projection is the nearest point: (x - p)'(q - p) <= 0 for all q
-    Q = rng.dirichlet(np.ones(4), 200)
-    for x, p in zip(X, P):
-        assert np.all((Q - p) @ (x - p) <= 1e-10)
-
-
-def test_project_applies_each_constraint() -> None:
-    X = np.array([[-0.5, 0.2, 1.4]])
-    np.testing.assert_allclose(lb._project(X, "box"), [[0, 0.2, 1]])
-    np.testing.assert_allclose(lb._project(X, None), X)
-    np.testing.assert_allclose(lb._project(X, "simplex").sum(), 1)
-
-
-def test_solve_pools_skips_groups_absent_from_a_pool() -> None:
-    rng = np.random.default_rng(0)
-    Pm = rng.dirichlet(np.ones(3), (2, 30))
-    A = np.einsum("cnr,cns->crs", Pm, Pm)
-    B = np.einsum("cnr,np->crp", Pm, np.eye(2)[rng.integers(0, 2, 30)])
-    solve = np.array([[True, True, True], [True, False, True]])
-    mu = lb._solve_pools(A, B, solve)
-    assert np.all(np.isnan(mu[1, 1])) and not np.any(np.isnan(mu[0]))
-    np.testing.assert_allclose(mu[0], np.linalg.solve(A[0], B[0]))
-    k = [0, 2]
-    np.testing.assert_allclose(
-        mu[1, k], np.linalg.solve(A[1][np.ix_(k, k)], B[1, k]))
-
-
-def _eb_data(seed: int = 0, n_pool: int = 30, n_per: int = 400,
-             spread: float = 0.05) -> dict[str, Any]:
-    """Pooling units in two aggregates with unit means spread around the
-    aggregate means, and the sums _eb_pools() takes."""
+def random_system(n_fields: int, seed: int = 0) -> dict[str, Any]:
+    """Arbitrary clusters and phi that differ by fold, in number and in value."""
     rng = np.random.default_rng(seed)
-    by_pool = np.arange(n_pool) % 2
-    m = np.stack([GROUP_MEANS, GROUP_MEANS[::-1]])
-    mu = np.stack([lb._simplex_rows(m[s] + rng.normal(0, spread, (3, 3)))
-                   for s in by_pool])
-    A = np.zeros((n_pool, 3, 3))
-    B = np.zeros((n_pool, 3, 3))
-    yy = np.zeros((n_pool, 3))
-    for c in range(n_pool):
-        pi = rng.dirichlet(np.full(3, 0.6), n_per)
-        p = pi @ mu[c]
-        y = np.eye(3)[(rng.random(n_per)[:, None] > np.cumsum(p, 1)).sum(1)
-                      .clip(0, 2)]
-        A[c], B[c], yy[c] = pi.T @ pi, pi.T @ y, y.sum(0)
-    return dict(A=A, B=B, yy=yy, by_pool=by_pool, mu=mu, m=m,
-                solve=np.ones((n_pool, 3), bool))
+    G, R, V = 9, 3, 3
+    M = rng.dirichlet(np.full(R, 2.0), G)
+    geo = rng.integers(0, G, 150)
+    fold_g = np.arange(G) % V
+    Y = rng.random((len(geo), 2))
+    nuisance = []
+    for v in range(V):
+        rows = np.flatnonzero(fold_g[geo] == v)
+        Ks = [[4, 5, 6][v], [3, 4, 3][v]][:n_fields]
+        phis = [rng.dirichlet(np.ones(k), R) for k in Ks]
+        bins = np.stack([rng.integers(0, k, len(rows)) for k in Ks])
+        nuisance.append((rows, bins, phis))
+    return dict(M=M, geo=geo, Y=Y, nuisance=nuisance,
+                Qinv=np.linalg.inv(M[geo].T @ M[geo] / len(geo)))
 
 
-def test_eb_pools_is_a_ridge_toward_the_aggregate() -> None:
-    d = _eb_data(n_per=4000)
-    mu, fit = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"], d["by_pool"],
-                           2, "simplex")
-    # the posterior mean solves (A_c + Lambda) mu_c = B_c + Lambda m_s
-    lam = fit["sigma2"] / fit["tau2"]
-    for c in range(len(mu)):
-        lhs = (d["A"][c] + np.diag(lam)) @ mu[c]
-        rhs = d["B"][c] + lam[:, None] * fit["m"][d["by_pool"][c]]
-        np.testing.assert_allclose(lhs, rhs, atol=1e-8)
-    # the aggregate means are recovered
-    target = np.stack([d["mu"][d["by_pool"] == s].mean(0) for s in (0, 1)])
-    np.testing.assert_allclose(fit["m"], target, atol=0.03)
-    # pooling beats the least squares of each unit
-    ls = lb._solve_pools(d["A"], d["B"], d["solve"])
-    assert (np.mean((mu - d["mu"]) ** 2)
-            < np.mean((ls - d["mu"]) ** 2))
-
-
-def test_eb_pools_bound_caps_the_pooling_variance() -> None:
-    # units with almost no data: without the bound, tau can be implausible
-    d = _eb_data(n_per=15, spread=0.0)
-    _, fit = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"], d["by_pool"],
-                          2, "simplex")
-    mp = np.stack([lb._simplex_rows(x) for x in fit["m"]])
-    cap = (mp * (1 - mp)).mean((0, 2))
-    assert np.all(fit["tau2"] <= cap + 1e-12)
-    _, free = lb._eb_pools(d["A"], d["B"], d["yy"], d["solve"],
-                           d["by_pool"], 2, None)
-    assert np.all(np.isfinite(free["tau2"]))
-
-
-def test_eb_pools_skips_groups_absent_from_a_pool() -> None:
-    d = _eb_data()
-    solve = d["solve"].copy()
-    solve[3, 1] = False
-    mu, _ = lb._eb_pools(d["A"], d["B"], d["yy"], solve, d["by_pool"], 2,
-                         "simplex")
-    assert np.all(np.isnan(mu[3, 1]))
-    assert np.isfinite(np.delete(mu.reshape(-1, 3), 3 * 3 + 1, 0)).all()
-
-
-def test_aggregate_is_the_weighted_mean_over_pools() -> None:
-    mu = np.array([[[0.2], [np.nan]], [[0.6], [0.5]], [[0.9], [0.1]]])
-    weight = np.array([[1.0, 0.0], [3.0, 2.0], [4.0, 1.0]])
-    theta, N = lb._aggregate(mu, weight, np.array([0, 0, 1]), 2)
-    np.testing.assert_allclose(N, [[4, 2], [4, 1]])
-    np.testing.assert_allclose(theta[:, :, 0], [[0.5, 0.5], [0.9, 0.1]])
-
-
-def test_fold_phis_leave_out_each_fold() -> None:
-    rng = np.random.default_rng(0)
-    XtWX = rng.random((4, 3, 3)) + np.eye(3) * 5
-    XtWY = rng.random((4, 3, 6))
-    tot = {v: [(XtWX, XtWY)] for v in (0, 2)}
-    wt = np.array([1.0, 2.0, 0.0, 1.0])
-    phis = lb._fold_phis(tot, [0, 2], wt)
-    np.testing.assert_allclose(
-        phis[0][0], lb._phi_from_sums(2 * XtWX[1] + XtWX[3],
-                                      2 * XtWY[1] + XtWY[3]))
-    full = lb._fold_phis(tot, [0, 2], np.ones(4), leave_out=False)
-    np.testing.assert_allclose(full[2][0], lb._phi_from_sums(XtWX.sum(0),
-                                                             XtWY.sum(0)))
-
-
-def test_combine_clusterings_averages_and_adds_the_spread() -> None:
-    theta = [np.array([[[0.2, 0.8]]]), np.array([[[0.4, 0.6]]])]
-    res = [dict(mu=t, theta_raw=t, vcov=np.eye(2)[None] * 0.01,
-                N=np.ones((1, 1)), K=np.array([[5]]), pooling=[None])
-           for t in theta]
-    out = lb.combine_clusterings(res, "simplex")
-    np.testing.assert_allclose(out["theta"][0, 0], [0.3, 0.7])
-    # mean covariance plus the covariance across clusterings over m
-    between = np.cov(np.array([[0.2, 0.8], [0.4, 0.6]]).T, ddof=1) / 2
-    np.testing.assert_allclose(out["vcov"][0], 0.01 * np.eye(2) + between)
-    assert out["K"].shape == (2, 1)
-
-
-# ---------------------------------------------------------------------------
-# Downstream estimator
-# ---------------------------------------------------------------------------
-@pytest.mark.parametrize("correct", [False, True])
 @pytest.mark.parametrize("n_fields", [1, 2])
-def test_downstream_crossfit_recovers_group_means(
-        sim: dict[str, Any], correct: bool, n_fields: int) -> None:
+def test_solution_solves_the_equation_as_written(n_fields: int) -> None:
+    s = random_system(n_fields)
+    T = lb._zeta_matrix(s["nuisance"], s["geo"], s["M"], s["Qinv"])
+    mu, singular = lb._solve_mu(s["nuisance"], s["geo"], s["M"], s["Y"], T)
+    assert not singular.any()
+    for g in range(len(s["M"])):
+        for p in range(2):
+            psi = literal_psi(s["nuisance"], s["geo"], s["M"], s["Y"][:, p], g,
+                              mu[g, :, p])
+            np.testing.assert_allclose(psi.mean(0), 0, atol=1e-10)
+
+
+def test_equation_is_not_solved_by_another_value() -> None:
+    """The check above can fail: a wrong mu leaves the equation unsolved."""
+    s = random_system(1)
+    T = lb._zeta_matrix(s["nuisance"], s["geo"], s["M"], s["Qinv"])
+    mu, _ = lb._solve_mu(s["nuisance"], s["geo"], s["M"], s["Y"], T)
+    psi = literal_psi(s["nuisance"], s["geo"], s["M"], s["Y"][:, 0], 0,
+                      mu[0, :, 0] + 0.1)
+    assert np.abs(psi.mean(0)).max() > 1e-3
+
+
+def test_constant_second_field_reduces_to_the_single_field_equation() -> None:
+    """A second field with one cluster has phi = 1: A_bg, zeta and the estimate
+    are exactly those of the single name partition B of the paper."""
+    s = random_system(1)
+    two = [(rows, np.vstack([bins, np.zeros_like(bins)]),
+            [phis[0], np.ones((3, 1))]) for rows, bins, phis in s["nuisance"]]
+    T1 = lb._zeta_matrix(s["nuisance"], s["geo"], s["M"], s["Qinv"])
+    T2 = lb._zeta_matrix(two, s["geo"], s["M"], s["Qinv"])
+    np.testing.assert_allclose(T1, T2, atol=1e-14)
+    mu1, _ = lb._solve_mu(s["nuisance"], s["geo"], s["M"], s["Y"], T1)
+    mu2, _ = lb._solve_mu(two, s["geo"], s["M"], s["Y"], T2)
+    np.testing.assert_allclose(mu1, mu2)
+
+
+def test_zeta_matrix_with_one_field_is_the_sum_over_clusters() -> None:
+    s = random_system(1)
+    M, geo, Qinv = s["M"], s["geo"], s["Qinv"]
+    T = np.zeros((3, 3))
+    for rows, bins, phis in s["nuisance"]:
+        Phi = phis[0]
+        for j, i in enumerate(rows):
+            for b in range(Phi.shape[1]):
+                zeta = Qinv @ M[geo[i]] * ((bins[0, j] == b)
+                                           - M[geo[i]] @ Phi[:, b])
+                T += np.outer(Phi[:, b], zeta)
+    np.testing.assert_allclose(lb._zeta_matrix(s["nuisance"], geo, M, Qinv),
+                               T / len(geo))
+
+
+@pytest.mark.parametrize("n_fields", [1, 2])
+def test_if_vcov_matches_the_person_level_influence_function(
+        n_fields: int) -> None:
+    s = random_system(n_fields)
+    M, geo, Y, Qinv = s["M"], s["geo"], s["Y"], s["Qinv"]
+    T = lb._zeta_matrix(s["nuisance"], geo, M, Qinv)
+    mu, singular = lb._solve_mu(s["nuisance"], geo, M, Y, T)
+    vcov = lb._if_vcov(s["nuisance"], geo, M, Y, Qinv, mu, singular, chunk=17)
+    n = len(geo)
+    for g in range(len(M)):
+        vp = np.stack([literal_varphi(s["nuisance"], geo, M, Y[:, p], g,
+                                      mu[g, :, p]) for p in range(2)], axis=2)
+        vp = vp.reshape(n, -1)
+        np.testing.assert_allclose(vcov[g], vp.T @ vp / n ** 2, rtol=1e-8,
+                                   atol=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# Downstream estimator: properties on simulated data
+# ---------------------------------------------------------------------------
+TRUE_PHI = np.array([[0.55, 0.25, 0.10, 0.05, 0.05],
+                     [0.05, 0.15, 0.55, 0.20, 0.05],
+                     [0.10, 0.05, 0.05, 0.25, 0.55]])
+TRUE_MU = np.array([0.8, 0.5, 0.2])
+
+
+def known_setup(seed: int = 0, G: int = 15) -> tuple[np.ndarray, np.ndarray]:
+    """Prevalence by geography and the fold of each geography."""
+    rng = np.random.default_rng(seed)
+    return rng.dirichlet(np.full(3, 3.0), G), np.arange(G) % 3
+
+
+def draw_people(M: np.ndarray, n: int, rng: np.random.Generator
+                ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Geography at random, then group, cluster and outcome (BIRDiE holds)."""
+    geo = rng.integers(0, len(M), n)
+    grp = (rng.random(n)[:, None] > np.cumsum(M[geo], 1)).sum(1)
+    b = (rng.random(n)[:, None] > np.cumsum(TRUE_PHI[grp], 1)).sum(1)
+    y = (rng.random(n) < TRUE_MU[grp]).astype(float)
+    return geo, b, y[:, None]
+
+
+def known_nuisance(geo: np.ndarray, b: np.ndarray, fold_g: np.ndarray,
+                   phi_of: Any) -> list[Any]:
+    """The nuisance of each fold, with given clusters and phi_of(v)."""
+    out = []
+    for v in np.unique(fold_g):
+        rows = np.flatnonzero(fold_g[geo] == v)
+        out.append((rows, b[rows][None], [phi_of(int(v))]))
+    return out
+
+
+def fit_known(geo: np.ndarray, b: np.ndarray, y: np.ndarray, M: np.ndarray,
+              fold_g: np.ndarray, phi_of: Any, zeta: bool = True,
+              se: bool = False) -> tuple[np.ndarray, Any]:
+    nuis = known_nuisance(geo, b, fold_g, phi_of)
+    Qinv = np.linalg.inv(M[geo].T @ M[geo] / len(geo))
+    T = lb._zeta_matrix(nuis, geo, M, Qinv) if zeta else np.zeros((3, 3))
+    mu, singular = lb._solve_mu(nuis, geo, M, y, T)
+    vcov = lb._if_vcov(nuis, geo, M, y, Qinv, mu, singular) if se else None
+    return mu[:, :, 0], vcov
+
+
+def test_estimating_equation_is_unbiased_at_known_phi() -> None:
+    M, fold_g = known_setup()
+    rng = np.random.default_rng(1)
+    reps = np.stack([
+        fit_known(*draw_people(M, 6000, rng), M, fold_g,
+                  lambda v: TRUE_PHI)[0]
+        for _ in range(400)])
+    mc_se = reps.std(0, ddof=1) / np.sqrt(len(reps))
+    assert np.abs(reps.mean(0) - TRUE_MU).max() < 0.02
+    assert np.all(np.abs(reps.mean(0) - TRUE_MU) < 4 * mc_se)
+
+
+def population(M: np.ndarray, per_geo: int = 20000
+               ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """People in the exact proportions of the model in every geography, so that
+    sampling noise does not hide the order of the sensitivity to phi."""
+    geo, b, y = [], [], []
+    for g, m in enumerate(M):
+        for r in range(3):
+            for k in range(TRUE_PHI.shape[1]):
+                count = int(round(per_geo * m[r] * TRUE_PHI[r, k]))
+                ones = int(round(count * TRUE_MU[r]))
+                geo += [g] * count
+                b += [k] * count
+                y += [1.0] * ones + [0.0] * (count - ones)
+    return np.array(geo), np.array(b), np.array(y)[:, None]
+
+
+def phi_direction(seed: int = 3) -> np.ndarray:
+    """A perturbation of phi whose rows sum to zero, as phi's rows must."""
+    h = np.random.default_rng(seed).normal(size=TRUE_PHI.shape)
+    return h - h.mean(1, keepdims=True)
+
+
+def order_of_sensitivity(fit: Any, base: np.ndarray) -> tuple[float, float]:
+    """(change at eps = 0.01, ratio of the change at 0.01 to that at 0.005);
+    the ratio is about 2 at first order."""
+    d1 = np.abs(fit(0.01) - base).max()
+    d2 = np.abs(fit(0.005) - base).max()
+    return float(d1), float(d1 / d2)
+
+
+def test_zeta_makes_the_estimate_orthogonal_to_a_perturbation_of_phi() -> None:
+    M, fold_g = known_setup()
+    geo, b, y = population(M)
+    h = phi_direction()
+
+    def fit(eps: float, zeta: bool) -> np.ndarray:
+        return fit_known(geo, b, y, M, fold_g, lambda v: TRUE_PHI + eps * h,
+                         zeta=zeta)[0]
+
+    base = fit(0.0, True)
+    np.testing.assert_allclose(base, np.broadcast_to(TRUE_MU, base.shape),
+                               atol=2e-3)
+    with_zeta, _ = order_of_sensitivity(lambda e: fit(e, True), base)
+    without, ratio_none = order_of_sensitivity(lambda e: fit(e, False),
+                                               fit(0.0, False))
+    # without zeta, first order. With zeta, below second order (eps^2 = 1e-4):
+    # in the population the moment at the true mu is zero for any phi common to
+    # the folds, so all that is left is the rounding of the population's counts
+    assert 1.8 < ratio_none < 2.2
+    assert without > 0.01
+    assert with_zeta < 1e-4
+    assert with_zeta < without / 1000
+
+
+def test_zeta_does_not_cancel_a_perturbation_that_differs_by_fold() -> None:
+    """The equation as written: eta uses phi of g's fold only, while the zeta
+    sum averages phi over the folds, so an error that differs by fold moves the
+    estimate at first order (the point of the red note in the draft)."""
+    M, fold_g = known_setup()
+    geo, b, y = population(M)
+    hs = [phi_direction(s) for s in (3, 4, 5)]
+
+    def fit(eps: float) -> np.ndarray:
+        return fit_known(geo, b, y, M, fold_g,
+                         lambda v: TRUE_PHI + eps * hs[v])[0]
+
+    change, ratio = order_of_sensitivity(fit, fit(0.0))
+    assert 1.8 < ratio < 2.2
+    assert change > 0.01
+
+
+def test_if_se_matches_the_monte_carlo_sd_at_known_phi() -> None:
+    M, fold_g = known_setup()
+    rng = np.random.default_rng(2)
+    est, var = [], []
+    for _ in range(400):
+        mu, vc = fit_known(*draw_people(M, 6000, rng), M, fold_g,
+                           lambda v: TRUE_PHI, se=True)
+        est.append(mu)
+        var.append(vc[:, [0, 1, 2], [0, 1, 2]])
+    ratio = np.sqrt(np.mean(var, 0)) / np.std(est, 0, ddof=1)
+    assert 0.92 < np.median(ratio) < 1.08
+    assert 0.8 < ratio.min() and ratio.max() < 1.2
+
+
+def scores_and_outcome(M: np.ndarray, n: int, rng: np.random.Generator
+                       ) -> tuple[np.ndarray, ...]:
+    """People whose list scores depend only on their group."""
+    geo = rng.integers(0, len(M), n)
+    grp = (rng.random(n)[:, None] > np.cumsum(M[geo], 1)).sum(1)
+    centers = np.array([[2.0, -2.0, -2.0], [-2.0, 2.0, -2.0], [-2.0, -2.0, 2.0]])
+    F = 1 / (1 + np.exp(-(centers[grp] + rng.normal(0, 1.0, (n, 3)))))
+    y = (rng.random(n) < TRUE_MU[grp]).astype(float)
+    return F, geo, M[geo], y
+
+
+def test_if_se_matches_the_monte_carlo_sd_with_estimated_phi() -> None:
+    M, fold_g = known_setup(G=30)
+    fold_g = np.arange(30) % 5
+    rng = np.random.default_rng(4)
+    est, var = [], []
+    for _ in range(60):
+        F, geo, prior, y = scores_and_outcome(M, 6000, rng)
+        out = lb.downstream_crossfit(F, geo, prior, y, fold=fold_g, K=8,
+                                     verbose=False)
+        est.append(out["mu"][:, :, 0])
+        var.append(out["vcov"][:, [0, 1, 2], [0, 1, 2]])
+    ratio = np.sqrt(np.mean(var, 0)) / np.std(est, 0, ddof=1)
+    assert 0.8 < np.median(ratio) < 1.25
+    assert np.abs(np.mean(est, 0) - TRUE_MU).mean() < 0.02
+
+
+# ---------------------------------------------------------------------------
+# Downstream estimator: downstream_crossfit()
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("n_fields", [1, 2])
+def test_downstream_crossfit_recovers_group_means_by_geography(
+        sim: dict[str, Any], n_fields: int) -> None:
     out = lb.downstream_crossfit(sim["fields"][:n_fields], sim["geo"],
                                  sim["prior"], sim["Y"], fold=sim["state"],
-                                 pool=sim["county"], K=[30, 20][:n_fields],
-                                 correct=correct, se=None, n_seeds=1,
-                                 verbose=False)
-    assert out["theta"].shape == (1, 3, 3) and out["vcov"] is None
-    assert out["mu"].shape == (20, 3, 3)
-    assert out["K"].shape == (1, n_fields)
-    np.testing.assert_allclose(out["theta"][0].sum(1), 1)
-    np.testing.assert_allclose(out["theta"][0], GROUP_MEANS, atol=0.05)
-    # the aggregate is the projection of the unprojected aggregate
-    np.testing.assert_allclose(out["theta"][0],
-                               lb._simplex_rows(out["theta_raw"][0]))
-    assert (out["pooling"][0] is None) == correct
-
-
-def test_downstream_crossfit_pools_toward_the_aggregate(
-        sim: dict[str, Any]) -> None:
-    kw: dict[str, Any] = dict(fold=sim["state"], pool=sim["county"], K=30,
-                              se=None, n_seeds=1, verbose=False)
-    eb = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
-                                sim["Y"], **kw)
-    ls = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
-                                sim["Y"], correct=True, **kw)
-    # the true means are the same in every county: pooling is closer
-    assert (np.nanmean((eb["mu"] - GROUP_MEANS) ** 2)
-            < np.nanmean((ls["mu"] - GROUP_MEANS) ** 2))
-    fit = eb["pooling"][0]
-    assert fit["m"].shape == (1, 3, 3) and fit["tau2"].shape == (3,)
-
-
-def test_downstream_crossfit_bootstrap_se(sim: dict[str, Any]) -> None:
-    out = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
-                                 sim["Y"], fold=sim["state"],
-                                 pool=sim["county"], K=30, n_boot=20,
-                                 n_split=4, n_seeds=1, verbose=False)
+                                 K=[30, 20][:n_fields], verbose=False)
+    assert out["mu"].shape == (100, 3, 3)
+    assert out["vcov"].shape == (100, 9, 9)
+    assert out["K"].shape == (5, n_fields)
+    assert not out["singular"].any()
+    np.testing.assert_allclose(np.median(out["mu"], 0), GROUP_MEANS, atol=0.1)
     v = out["vcov"][0]
-    assert v.shape == (9, 9)
     np.testing.assert_allclose(v, v.T, atol=1e-12)
     assert np.all(np.diag(v) > 0)
-    se = np.sqrt(np.diag(v)).reshape(3, 3)
-    assert np.all(np.abs(out["theta_raw"][0] - GROUP_MEANS) < 4 * se + 0.01)
 
 
-def test_downstream_crossfit_averages_over_seeds(
+def test_downstream_crossfit_single_field_list_is_the_bare_matrix(
         sim_small: dict[str, Any]) -> None:
     s = sim_small
-    kw: dict[str, Any] = dict(fold=s["state"], K=10, n_boot=5, n_split=2,
-                              verbose=False)
-    two = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                 s["Y"], n_seeds=2, **kw)
-    one = [lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                  s["Y"], n_seeds=1, seed=k, **kw)
-           for k in (0, 1)]
-    assert two["K"].shape == (2, 1) and len(two["pooling"]) == 2
-    np.testing.assert_allclose(two["theta_raw"],
-                               (one[0]["theta_raw"] + one[1]["theta_raw"]) / 2)
-    comb = lb.combine_clusterings(one, "simplex")
-    np.testing.assert_allclose(two["vcov"], comb["vcov"])
+    a = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
+                               fold=s["state"], K=10, verbose=False)
+    b = lb.downstream_crossfit([s["fields"][0]], s["geo"], s["prior"], s["Y"],
+                               fold=s["state"], K=[10], verbose=False)
+    np.testing.assert_allclose(a["mu"], b["mu"])
+    np.testing.assert_allclose(a["vcov"], b["vcov"])
 
 
-def test_downstream_crossfit_fold_clusters_leave_out_the_fold(
+def test_downstream_crossfit_fits_each_fold_on_the_other_folds(
         sim_small: dict[str, Any]) -> None:
+    """Changing the scores and outcomes of fold 0 leaves phi and the clusters of
+    fold 0 alone, so the people of fold 0 enter only as data of fold 0."""
     s = sim_small
-    kw: dict[str, Any] = dict(fold=s["state"], K=10, se=None, n_seeds=1,
-                              verbose=False)
-    per = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                 s["Y"], fold_clusters=True, **kw)
-    one = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                 s["Y"], **kw)
-    assert per["K"].ndim == 3 and one["K"].ndim == 2
-    # with one clustering, the result matches the clustering passed as bins
-    bins, _ = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
-                                 np.arange(len(s["geo"])), 10)
-    given = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                   s["Y"], bins=bins[None], **kw)
-    np.testing.assert_allclose(given["theta"], one["theta"])
-    # the people of a fold get the clusters fit without that fold
     fold_p = s["state"][s["geo"]]
-    v = int(fold_p[0])
-    b_v, _ = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
-                                np.flatnonzero(fold_p != v), 10)
-    alone = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                   s["Y"], bins=b_v[None], **kw)
-    assert np.all(np.isfinite(per["theta"]))
-    assert not np.allclose(alone["theta"], one["theta"])
+    geo, prior, _, w, M = lb._geo_setup(s["geo"], s["prior"])
+    F = s["fields"][0]
+    Z = lb.logodds(F)
+    args = (geo, prior, M, w, s["state"], 0, [10], None, 5, 0, False)
+    rows, bins, phis = lb._fold_nuisance([F], [Z], *args)
+    F2 = F.copy()
+    F2[fold_p == 0] = 0.5 * F2[fold_p == 0]
+    rows2, _, phis2 = lb._fold_nuisance([F2], [lb.logodds(F2)], *args)
+    np.testing.assert_array_equal(rows, np.flatnonzero(fold_p == 0))
+    np.testing.assert_array_equal(rows, rows2)
+    assert bins.shape == (1, len(rows))
+    np.testing.assert_allclose(phis[0], phis2[0])
+    # the other folds do depend on fold 0
+    args1 = (geo, prior, M, w, s["state"], 1, [10], None, 5, 0, False)
+    _, _, phis1 = lb._fold_nuisance([F], [Z], *args1)
+    _, _, phis1b = lb._fold_nuisance([F2], [lb.logodds(F2)], *args1)
+    assert (phis1[0].shape != phis1b[0].shape
+            or not np.allclose(phis1[0], phis1b[0]))
 
 
-def _if_direct(sim: dict[str, Any], bins: Any, out: dict[str, Any]) -> Any:
-    """The influence-function covariance of the pooled aggregate computed
-    directly, person by person, for one name field and one clustering."""
-    geo, _, n_geo, w, M = lb._geo_setup(sim["geo"], sim["prior"])
-    Y, fold, pool = sim["Y"], sim["state"], sim["county"]
-    n, P = Y.shape
-    R, K = M.shape[1], int(bins.max()) + 1
-    V = int(fold.max()) + 1
-    XtWX, XtWY = lb._fold_stats(bins, geo, M, w, fold, V, K)
-    phis = {v: [lb._phi_from_sums(XtWX[np.arange(V) != v].sum(0),
-                                  XtWY[np.arange(V) != v].sum(0))]
-            for v in range(V)}
-    ph = lb._phi_from_sums(XtWX.sum(0), XtWY.sum(0))
-    G = XtWX.sum(0)
-    fold_p, pc = fold[geo], pool[geo]
-    post = lb._posteriors(np.arange(n), geo, bins[None], M, fold_p, phis)
-    pm = np.zeros((pool.max() + 1, R))
-    np.add.at(pm, pool, w[:, None] * M)
-    U = np.linalg.solve(G, M.T).T
-    IF = np.zeros((n, R, P))
-    for c in range(pool.max() + 1):
-        s = np.flatnonzero(pc == c)
-        Phi = phis[int(fold_p[s[0]])][0]
-        pi, y = post[s], Y[s]
-        S = (np.einsum("ir,rs->irs", pi, np.eye(R))
-             - pi[:, :, None] * pi[:, None, :])
-        dS = S / Phi[:, bins[s]].T[:, None, :]
-        full = M[geo[s]] * ph[:, bins[s]].T
-        dpi = full / full.sum(1, keepdims=True) - pi
-        H = (pi.T @ pi + dpi.T @ pi + pi.T @ dpi)
-        mu = out["mu"][c]
-        e = y - pi @ mu
-        t = (np.einsum("irs,ip->irps", dS, e)
-             - np.einsum("ir,iqs,qp->irps", pi, dS, mu))
-        Tc = np.zeros((K, R, P, R))
-        np.add.at(Tc, bins[s], t)
-        contrib = np.einsum("irps,is->irp", Tc[bins], U[geo])
-        contrib[s] += pi[:, :, None] * e[:, None, :]
-        om = pm[c] / pm.sum(0)
-        IF += om[None, :, None] * np.einsum("rs,isp->irp",
-                                            np.linalg.inv(H), contrib)
-    IF = IF.reshape(n, R * P)
-    Sg = np.zeros((n_geo, R * P))
-    np.add.at(Sg, geo, IF)
-    n_g = np.bincount(geo, minlength=n_geo)
-    return IF.T @ IF - Sg.T @ (Sg / np.maximum(n_g, 1)[:, None])
-
-
-def test_downstream_crossfit_if_se_matches_a_direct_computation(
-        sim: dict[str, Any]) -> None:
-    bins, _ = lb.kmeans_occupied(lb.logodds(sim["fields"][0]),
-                                 np.arange(len(sim["geo"])), 15)
-    out = lb.downstream_crossfit(sim["fields"][0], sim["geo"], sim["prior"],
-                                 sim["Y"], fold=sim["state"],
-                                 pool=sim["county"], bins=bins[None],
-                                 correct=True, chunk=700, verbose=False)
-    v = out["vcov"][0]
-    assert v.shape == (9, 9)
-    np.testing.assert_allclose(v, v.T, atol=1e-12)
-    assert np.all(np.diag(v) > 0)
-    np.testing.assert_allclose(v, _if_direct(sim, bins, out), rtol=1e-6,
-                               atol=1e-12)
-
-
-def test_downstream_crossfit_by_aggregate(sim_small: dict[str, Any]) -> None:
-    s = sim_small
-    out = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                 s["Y"][:, 0], fold=s["state"],
-                                 pool=s["county"], by=s["state"], K=10,
-                                 constraint="box", se=None, n_seeds=1,
-                                 verbose=False)
-    assert out["theta"].shape == (5, 3, 1)
-    assert np.nanmin(out["theta"]) >= 0 and np.nanmax(out["theta"]) <= 1
-    assert out["pooling"][0]["m"].shape == (5, 3, 1)
-
-
-def test_downstream_crossfit_accepts_external_fold_stats(
+def test_downstream_crossfit_selects_k_in_each_fold(
         sim_small: dict[str, Any]) -> None:
     s = sim_small
-    geo, _, _, w, M = lb._geo_setup(s["geo"], s["prior"])
-    bins, K_used = lb.kmeans_occupied(lb.logodds(s["fields"][0]),
-                                      np.arange(len(geo)), 10)
-    kw: dict[str, Any] = dict(fold=s["state"], bins=bins[None],
-                              n_boot=5, n_split=2, verbose=False)
-    base = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                  s["Y"], **kw)
-    stats = [lb._fold_stats(bins, geo, M, w, s["state"], 5, K_used)]
-    ext = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
-                                 s["Y"], fold_stats=stats, **kw)
-    np.testing.assert_allclose(ext["theta"], base["theta"])
-    np.testing.assert_allclose(ext["vcov"], base["vcov"])
+    out = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
+                                 V=3, grid=[3, 5, 10], J=3, se=False,
+                                 verbose=False)
+    assert out["vcov"] is None
+    assert out["K"].shape == (3, 1)
+    assert sorted(set(out["fold"])) == [0, 1, 2]
+    # the partition is random, and repeats with the seed
+    again = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
+                                   V=3, K=5, se=False, verbose=False)
+    np.testing.assert_array_equal(out["fold"], again["fold"])
+    other = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
+                                   V=3, K=5, se=False, seed=1, verbose=False)
+    assert not np.array_equal(out["fold"], other["fold"])
+
+
+def test_downstream_crossfit_group_absent_from_a_geography_is_nan(
+        sim_small: dict[str, Any]) -> None:
+    s = sim_small
+    prior = s["prior"].copy()
+    at = s["geo"] == 3
+    prior[at] = [0.6, 0.0, 0.4]
+    with pytest.warns(UserWarning, match="1 of 40 geographies"):
+        out = lb.downstream_crossfit(s["fields"][0], s["geo"], prior, s["Y"],
+                                     fold=s["state"], K=10, verbose=False)
+    assert out["singular"].tolist() == [g == 3 for g in range(40)]
+    assert np.isnan(out["mu"][3]).all() and np.isnan(out["vcov"][3]).all()
+    keep = np.arange(40) != 3
+    assert np.isfinite(out["mu"][keep]).all()
+    assert np.isfinite(out["vcov"][keep]).all()
+
+
+def test_downstream_crossfit_fewer_clusters_than_groups_is_nan(
+        sim_small: dict[str, Any]) -> None:
+    s = sim_small
+    with pytest.warns(UserWarning, match="40 of 40 geographies"):
+        out = lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"],
+                                     s["Y"], fold=s["state"], K=2,
+                                     verbose=False)
+    assert out["singular"].all() and np.isnan(out["mu"]).all()
 
 
 @pytest.mark.parametrize("kw, message", [
-    (dict(constraint="unit"), "constraint must be"),
-    (dict(Y_col=True), "one column per category"),
-    (dict(fold_stats=[(None, None)]), "fold_stats requires"),
-    (dict(fold="single"), "at least two folds"),
-    (dict(pool="state", by="county"), "within one aggregate"),
     (dict(K=[10, 10]), "one value per name field"),
-    (dict(se="parametric"), "se must be"),
-    (dict(se="if"), "se 'if' requires"),
-    (dict(se="bootstrap", correct=True), "se 'bootstrap' requires"),
-    (dict(n_seeds=0), "n_seeds must be"),
+    (dict(fold="single"), "at least two folds"),
 ])
 def test_downstream_crossfit_checks_its_inputs(
         sim_small: dict[str, Any], kw: dict[str, Any], message: str) -> None:
     s = sim_small
     args: dict[str, Any] = dict(fold=s["state"], K=10, verbose=False)
-    Y = s["Y"]
-    if kw.pop("Y_col", False):
-        Y = Y[:, 0]
     if kw.get("fold") == "single":
         kw["fold"] = np.zeros_like(s["state"])
-    if kw.get("pool") == "state":
-        kw["pool"], kw["by"] = s["state"], s["county"]
     args.update(kw)
     with pytest.raises(ValueError, match=message):
-        lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], Y,
+        lb.downstream_crossfit(s["fields"][0], s["geo"], s["prior"], s["Y"],
                                **args)
 
 

@@ -307,134 +307,78 @@ lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
 
 #' Downstream inference with lBISG probabilities
 #'
-#' Cross-fitted estimator of the mean outcome of each group under the BIRDiE
-#' assumption that the outcome is independent of the name given the group and
-#' geography. The estimand is the mean outcome of each group in each pooling
-#' unit (for example the county), \eqn{E[Y \mid R = r, c]}, and its
-#' aggregates over pooling units weighted by the group's prior members in each
-#' unit. Within each pooling unit, the group means solve the least squares of
-#' the outcome on the lBISG posterior probabilities. The posterior of each
-#' person uses \eqn{P(B = b \mid R = r)} fit without the person's fold of
-#' geographies. Folds should be spatial blocks, such as states.
+#' Cross-fitted estimator of \eqn{\mu_g}, the mean outcome of each group in each
+#' geographic unit, \eqn{E[Y \mid R = r, G = g]}, under the BIRDiE assumption
+#' that the outcome is independent of the name given the group and geography.
+#' Whatever \code{geo} is passed defines \eqn{g}.
 #'
-#' With many groups whose names and geography are similar, each pooling unit's
-#' least squares is close to singular. By default, the means of the pooling
-#' units are therefore pooled toward the means of their aggregate by empirical
-#' Bayes: each group's means are pulled toward the aggregate in proportion to
-#' how little the unit's own data identify them, with the pooling estimated
-#' from the data.
+#' The geographic units are randomly partitioned into \code{V} folds. For each
+#' fold \eqn{v}, the observations outside the fold give the number of clusters
+#' \eqn{K^{(-v)}} (Algorithm 2, or \code{K}), the clusters \eqn{B^{(-v)}}, and
+#' \eqn{\phi^{(-v)}_b = P(B = b \mid R)} (Algorithm 1, Steps 7-10). With
+#' \eqn{A_{bg} = M_g \odot \phi_b}, the estimating equation is
+#' \deqn{\frac{1}{n} \sum_i \sum_v 1\{i \in V_v\} \sum_b A^{(-v)}_{bg}
+#'   [\eta_{bg}(O_i^{(-v)}, \phi^{(-v)}_b, \mu_g)
+#'   - \zeta_b(O_i^{(-v)}, \phi^{(-v)}_b)^\top (M_g \odot \mu_g)] = 0,}
+#' with \eqn{\zeta_b(O, \phi_b) = E[M_G M_G^\top]^{-1} M_G (1\{B = b\} -
+#' M_G^\top \phi_b)} and \eqn{\eta_{bg}(O, \phi_b, \mu_g) = 1\{G = g\} /
+#' \Pr(G = g) [Y 1\{B = b\} - A_{bg}^\top \mu_g]}. The equation is linear in
+#' \eqn{\mu_g} and is solved in closed form for each geographic unit. The
+#' standard errors are from the influence function, with the plug-ins of each
+#' person's fold.
 #'
-#' With \code{correct = TRUE}, the means of each pooling unit are instead the
-#' least squares with the orthogonal correction of the paper's estimating
-#' equation, without pooling. The correction removes the first-order
-#' sensitivity to the error of the fitted \eqn{P(B = b \mid R = r)}. It needs
-#' that error to be small in every direction, which holds for a few groups with
-#' distinct names and geography. With many similar groups, the estimates and
-#' standard errors break down.
+#' With both surname and first name, the clusters of the two fields are taken as
+#' independent given the group and geography (the lBIFSG assumption):
+#' \eqn{A_{bg} = M_g \odot \prod_f \phi^f_{b_f}}, and the derivative gives one
+#' \eqn{\zeta} term per field by the product rule.
 #'
-#' A constraint on the means (the simplex for a factor outcome, \eqn{[0, 1]}
-#' for a binary one) is imposed on the reported aggregates only: each aggregate
-#' is projected onto the constraint. A group whose unprojected aggregate
-#' (\code{estimate.raw}) lies far outside the constraint, with a large standard
-#' error, is not identified by the data.
-#'
-#' The estimate depends on the random start of K-means. The clusters are fit
-#' with \code{n.seeds} seeds and the estimates averaged, and the spread across
-#' seeds enters the covariance.
-#'
-#' With both surname and first name, the clusters of the two fields are taken
-#' as independent given the group and geography (the lBIFSG assumption), and
-#' the posterior combines both fields.
+#' A geographic unit in which a group has a prior share of exactly zero has no
+#' solution, and neither does any unit when a fold has fewer usable clusters
+#' than groups. Those estimates are \code{NaN}, with a warning.
 #'
 #' @param fit An object from \code{\link{lbisg}}.
 #' @param outcome The outcome, one value per person: a numeric vector, a
-#'   numeric matrix (columns estimated jointly), or a factor or character
-#'   vector, which is expanded into one indicator per level.
+#'   numeric matrix (each column is its own estimating equation), or a factor or
+#'   character vector, which is expanded into one indicator per level.
 #' @param geo The vector of geographic units passed to \code{\link{lbisg}}.
 #' @param folds Optional vector, one value per person and constant within each
-#'   geographic unit, defining the folds for cross-fitting (for example the
-#'   state). The default is \code{V} folds of geographic units with
-#'   approximately equal numbers of people.
-#' @param pool Optional vector, one value per person and constant within each
-#'   geographic unit, defining the units within which the group means are the
-#'   same (for example the county). Each pooling unit must lie within one
-#'   aggregate of \code{by}. The default is one pooling unit per aggregate.
-#' @param by Optional vector, one value per person and constant within each
-#'   geographic unit, defining the aggregates to estimate. Each aggregate
-#'   estimate is the mean outcome among the members of the group,
-#'   \eqn{\sum_c N_{c,r} \mu_{c,r} / \sum_c N_{c,r}}, with \eqn{N_{c,r}} the
-#'   prior group members of pooling unit \eqn{c}, the sum of
-#'   \eqn{P(R = r \mid G)} over the unit's people. The
-#'   default is one aggregate over all geographic units.
+#'   geographic unit, defining the folds for cross-fitting. The default is a
+#'   random partition of the geographic units into \code{V} folds.
 #' @param fields The name fields whose clusters are used: any of
 #'   \code{"surname"} and \code{"first"}. Defaults to every field in
 #'   \code{fit}.
 #' @param V Number of folds when \code{folds} is \code{NULL}.
-#' @param K Number of clusters, one value per field. Defaults to the \eqn{K}
-#'   selected for each field in \code{fit}.
-#' @param constraint \code{"simplex"}, \code{"box"} or \code{"none"}. The
-#'   default is \code{"simplex"} for a factor outcome, \code{"box"} for a
-#'   numeric outcome with values in \eqn{[0, 1]}, and \code{"none"} otherwise.
-#' @param correct If \code{TRUE}, the least squares with the orthogonal
-#'   correction, without pooling, in place of the empirical-Bayes pooling.
-#' @param se How to compute the standard errors, with the geographies held
-#'   fixed. \code{"bootstrap"} (the default with \code{correct = FALSE}) adds
-#'   the error of the fitted cluster probabilities, from \code{n.boot}
-#'   replicates that resample the folds with replacement, which needs many
-#'   folds (for example the states), and the error from the people given those
-#'   probabilities, from \code{n.split} random splits of the people into halves.
-#'   \code{"if"} (the default with \code{correct = TRUE}) is the influence
-#'   function of the corrected estimator. The confidence intervals use the
-#'   standard error of the unprojected aggregate and are cut at the constraint.
-#'   \code{"none"} skips them.
-#' @param n.boot Bootstrap replicates of the cluster probabilities.
-#' @param n.split Half splits of the people.
-#' @param n.seeds K-means seeds to average over, starting at
-#'   \code{control$seed}.
-#' @param fold.clusters If \code{TRUE}, the clusters of each fold are fit on
-#'   the other folds, so that a person's posterior uses nothing from their own
-#'   fold. If \code{FALSE} (the default), one clustering of all people is used
-#'   for each seed.
-#' @param control A list from \code{\link{lbisg_control}} (uses \code{seed}).
+#' @param K Number of clusters, one value per field. By default, \eqn{K^{(-v)}}
+#'   is chosen by Algorithm 2 in the training sample of each fold, using
+#'   \code{control$K.grid} and \code{control$geo.folds}.
+#' @param se If \code{TRUE}, compute the standard errors and covariance
+#'   matrices. They need memory for \eqn{(F R^2)^2} numbers per fold, with
+#'   \eqn{F} name fields and \eqn{R} groups.
+#' @param control A list from \code{\link{lbisg_control}} (uses \code{seed},
+#'   \code{K.grid} and \code{geo.folds}).
 #' @param verbose Print progress.
 #'
 #' @return A list with \code{estimates} (a data frame with one row per
-#'   aggregate, group and outcome: the estimate, the estimate before the
-#'   projection onto the constraint \code{estimate.raw}, its standard error,
-#'   the 95\% interval \code{lower} and \code{upper} cut at the constraint,
-#'   and the expected number of group members \code{N}),
-#'   \code{vcov} (the covariance matrix of each aggregate over all
-#'   groups and outcomes), \code{mu} (an array of pooling unit by group by
-#'   outcome means, \code{NA} where the group has no prior mass) and the
-#'   number of clusters used in each field \code{K} (a matrix with one row per
-#'   seed, or an array of seed by fold by field when \code{fold.clusters} is
-#'   \code{TRUE}), and \code{pooling}, the empirical-Bayes fit of each seed
-#'   (\code{NULL} entries with \code{correct = TRUE}).
+#'   geographic unit, group and outcome: the \code{estimate}, its standard error
+#'   \code{se} and the 95\% interval \code{lower} and \code{upper}), \code{vcov}
+#'   (the covariance matrix of each unit over all groups and outcomes, or
+#'   \code{NULL} with \code{se = FALSE}), \code{mu} (an array of unit by group by
+#'   outcome), \code{singular} (\code{TRUE} for the units with no solution),
+#'   \code{folds} (the fold of each unit), and \code{K} (the clusters used, a
+#'   matrix of fold by field).
 #' @examples
 #' \dontrun{
 #' fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
 #'              prior = tract_shares)
-#' ds <- lbisg_downstream(fit, voters$party, voters$tract,
-#'                        folds = voters$state, pool = voters$county)
+#' ds <- lbisg_downstream(fit, voters$party, voters$tract)
 #' lbisg_downstream_share(ds, "DEM", c("DEM", "REP"))
 #' }
 #' @export
-lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
-                             by = NULL, fields = names(fit$fields), V = 5,
-                             K = NULL, constraint = NULL,
-                             correct = FALSE, se = NULL, n.boot = 100,
-                             n.split = 10, n.seeds = 3,
-                             fold.clusters = FALSE,
-                             control = lbisg_control(), verbose = TRUE) {
-  correct <- isTRUE(correct)
-  if (is.null(se)) se <- if (correct) "if" else "bootstrap"
-  se <- match.arg(se, c("bootstrap", "if", "none"))
-  if (se == "if" && !correct) {
-    stop("se = \"if\" requires correct = TRUE.")
-  }
-  if (se == "bootstrap" && correct) {
-    stop("se = \"bootstrap\" requires correct = FALSE.")
-  }
+lbisg_downstream <- function(fit, outcome, geo, folds = NULL,
+                             fields = names(fit$fields), V = 5, K = NULL,
+                             se = TRUE, control = lbisg_control(),
+                             verbose = TRUE) {
+  se <- isTRUE(se)
   control <- utils::modifyList(lbisg_control(), control)
   if (!inherits(fit, "lbisg")) stop("'fit' must be an object from lbisg().")
   missing_fields <- setdiff(fields, names(fit$fields))
@@ -458,7 +402,6 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
     Y <- vapply(levels(outcome), function(l) as.numeric(outcome == l),
                 numeric(n))
     Y <- matrix(Y, nrow = n, dimnames = list(NULL, levels(outcome)))
-    if (is.null(constraint)) constraint <- "simplex"
   } else {
     Y <- as.matrix(outcome)
     if (!is.numeric(Y) || anyNA(Y)) {
@@ -467,24 +410,12 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
     if (is.null(colnames(Y))) {
       colnames(Y) <- if (ncol(Y) == 1) "y" else paste0("y", seq_len(ncol(Y)))
     }
-    if (is.null(constraint)) {
-      constraint <- if (all(Y >= 0 & Y <= 1)) "box" else "none"
-    }
-  }
-  constraint <- match.arg(constraint, c("simplex", "box", "none"))
-  if (constraint == "simplex" && any(abs(rowSums(Y) - 1) > 1e-8)) {
-    stop("constraint = \"simplex\" requires outcome indicators that sum to one.")
   }
 
   geo_f <- factor(as.character(geo))
   geo_idx <- as.integer(geo_f) - 1L
   folds_f <- lbisg_geo_factor(folds, geo_idx, "folds")
-  by_f <- lbisg_geo_factor(by, geo_idx, "by")
-  pool_f <- if (is.null(pool)) by_f else lbisg_geo_factor(pool, geo_idx, "pool")
-  if (is.null(K)) {
-    K <- vapply(flds, function(f) as.integer(f$K), integer(1))
-  }
-  if (length(K) != length(flds)) {
+  if (!is.null(K) && length(K) != length(flds)) {
     stop("'K' must have one value per name field.")
   }
 
@@ -494,88 +425,64 @@ lbisg_downstream <- function(fit, outcome, geo, folds = NULL, pool = NULL,
     F = unname(lapply(flds, `[[`, "scores")), geo = geo_idx,
     prior = fit$prior, Y = Y,
     fold = if (is.null(folds_f)) NULL else as.integer(folds_f) - 1L,
-    pool = as.integer(pool_f) - 1L, by = as.integer(by_f) - 1L,
-    K = as.list(as.integer(K)), V = as.integer(V),
-    constraint = if (constraint == "none") NULL else constraint,
-    correct = correct,
-    se = if (se == "none") NULL else se, n_boot = as.integer(n.boot),
-    n_split = as.integer(n.split), n_seeds = as.integer(n.seeds),
-    fold_clusters = isTRUE(fold.clusters),
+    V = as.integer(V),
+    K = if (is.null(K)) NULL else as.list(as.integer(K)),
+    grid = if (is.null(control$K.grid)) NULL else as.list(as.integer(control$K.grid)),
+    J = as.integer(control$geo.folds),
+    se = se,
     seed = as.integer(control$seed),
     verbose = verbose
   )
 
-  aggs <- levels(by_f)
+  units <- levels(geo_f)
   groups <- colnames(fit$prior)
   outs <- colnames(Y)
+  G <- length(units)
   R <- length(groups)
   P <- length(outs)
-  theta <- array(res$theta, c(length(aggs), R, P),
-                 dimnames = list(aggs, groups, outs))
-  theta_raw <- array(res$theta_raw, c(length(aggs), R, P),
-                     dimnames = list(aggs, groups, outs))
-  N <- matrix(res$N, length(aggs), R, dimnames = list(aggs, groups))
-  # The covariance of each aggregate is indexed by group, then outcome
+  singular <- stats::setNames(as.logical(res$singular), units)
+  if (any(singular)) {
+    warning(sum(singular), " of ", G, " geographic units have no solution of ",
+            "the estimating equation; their estimates are NaN.")
+  }
+  mu <- array(res$mu, c(G, R, P), dimnames = list(units, groups, outs))
+  # The covariance of each unit is indexed by group, then outcome
   lab <- paste(rep(groups, each = P), rep(outs, R), sep = ":")
   vcov <- NULL
-  if (se != "none") {
-    vc <- array(res$vcov, c(length(aggs), R * P, R * P))
-    vcov <- lapply(stats::setNames(seq_along(aggs), aggs), function(h) {
-      matrix(vc[h, , ], R * P, R * P, dimnames = list(lab, lab))
+  if (se) {
+    vc <- array(res$vcov, c(G, R * P, R * P))
+    vcov <- lapply(stats::setNames(seq_len(G), units), function(g) {
+      matrix(vc[g, , ], R * P, R * P, dimnames = list(lab, lab))
     })
   }
 
-  # One row per aggregate, group and outcome
-  est <- expand.grid(outcome = outs, group = groups, by = aggs,
-                     stringsAsFactors = FALSE)[, c("by", "group", "outcome")]
-  cell <- as.matrix(est)
-  est$estimate <- theta[cell]
-  est$estimate.raw <- theta_raw[cell]
-  est$se <- if (se != "none") {
-    mapply(function(b, l) sqrt(max(vcov[[b]][l, l], 0)),
-           est$by, paste(est$group, est$outcome, sep = ":"),
-           USE.NAMES = FALSE)
+  # One row per unit, group and outcome, in the order of the covariance
+  est <- expand.grid(outcome = outs, group = groups, geo = units,
+                     stringsAsFactors = FALSE)[, c("geo", "group", "outcome")]
+  est$estimate <- mu[as.matrix(est)]
+  est$se <- if (se) {
+    idx <- rep(seq_len(R * P), G)
+    sqrt(vc[cbind(rep(seq_len(G), each = R * P), idx, idx)])
   } else {
     NA_real_
   }
-  # The interval of the unprojected aggregate, cut at the constraint
-  lo <- est$estimate.raw - stats::qnorm(0.975) * est$se
-  hi <- est$estimate.raw + stats::qnorm(0.975) * est$se
-  if (constraint != "none") {
-    lo <- pmax(lo, 0)
-    hi <- pmin(hi, 1)
-  }
-  est$lower <- lo
-  est$upper <- hi
-  est$N <- N[cell[, c("by", "group")]]
+  est$lower <- est$estimate - stats::qnorm(0.975) * est$se
+  est$upper <- est$estimate + stats::qnorm(0.975) * est$se
 
-  mu <- array(res$mu, c(nlevels(pool_f), R, P),
-              dimnames = list(levels(pool_f), groups, outs))
-  # Clusters used: seed by field, or seed by fold by field with fold.clusters
-  k_dim <- dim(res$K)
-  seed_lab <- as.character(as.integer(control$seed) + seq_len(k_dim[1]) - 1L)
-  K_used <- if (isTRUE(fold.clusters)) {
-    fold_lab <- if (is.null(folds_f)) seq_len(k_dim[2]) else levels(folds_f)
-    array(as.integer(res$K), k_dim,
-          dimnames = list(seed_lab, fold_lab[seq_len(k_dim[2])], fields))
-  } else {
-    matrix(as.integer(res$K), k_dim[1], k_dim[2],
-           dimnames = list(seed_lab, fields))
-  }
-  list(estimates = est, vcov = vcov, mu = mu, K = K_used,
-       pooling = res$pooling)
+  fold_lab <- if (is.null(folds_f)) as.character(seq_len(nrow(res$K)) - 1L) else levels(folds_f)
+  list(
+    estimates = est, vcov = vcov, mu = mu, singular = singular,
+    folds = stats::setNames(fold_lab[as.integer(res$fold) + 1L], units),
+    K = matrix(as.integer(res$K), nrow(res$K), length(fields),
+               dimnames = list(fold_lab, fields))
+  )
 }
 
 
 # One level per geographic unit for a vector given per person, which must be
-# constant within each unit. NULL stays NULL for 'folds' and becomes a single
-# level otherwise.
+# constant within each unit. NULL stays NULL.
 lbisg_geo_factor <- function(x, geo_idx, arg) {
-  n_geo <- max(geo_idx) + 1L
-  if (is.null(x)) {
-    if (arg == "folds") return(NULL)
-    return(factor(rep("all", n_geo)))
-  }
+  if (is.null(x)) return(NULL)
   if (length(x) != length(geo_idx)) {
     stop("'", arg, "' must have one value per person.")
   }
@@ -591,15 +498,15 @@ lbisg_geo_factor <- function(x, geo_idx, arg) {
 
 #' Ratio of downstream estimates
 #'
-#' The share of one outcome among several for each group and aggregate, for
-#' example the Democratic share of two-party registration, with standard
+#' The share of one outcome among several for each group and geographic unit,
+#' for example the Democratic share of two-party registration, with standard
 #' errors by the delta method.
 #'
 #' @param x An object from \code{\link{lbisg_downstream}} with a factor
 #'   outcome.
 #' @param num The outcome level in the numerator.
 #' @param den The outcome levels summed in the denominator.
-#' @return A data frame with one row per aggregate and group.
+#' @return A data frame with one row per geographic unit and group.
 #' @export
 lbisg_downstream_share <- function(x, num, den) {
   est <- x$estimates
@@ -607,13 +514,13 @@ lbisg_downstream_share <- function(x, num, den) {
   if (!all(c(num, den) %in% outs)) {
     stop("'num' and 'den' must be outcome levels of 'x'.")
   }
-  rows <- unique(est[, c("by", "group")])
+  rows <- unique(est[, c("geo", "group")])
   out <- lapply(seq_len(nrow(rows)), function(i) {
     lab_num <- paste(rows$group[i], num, sep = ":")
     lab_den <- paste(rows$group[i], den, sep = ":")
-    V <- x$vcov[[rows$by[i]]]
+    V <- x$vcov[[rows$geo[i]]]
     th <- stats::setNames(
-      est$estimate[est$by == rows$by[i] & est$group == rows$group[i]],
+      est$estimate[est$geo == rows$geo[i] & est$group == rows$group[i]],
       paste(rows$group[i], outs, sep = ":")
     )
     a <- th[lab_num]
@@ -621,7 +528,7 @@ lbisg_downstream_share <- function(x, num, den) {
     grad <- stats::setNames(numeric(nrow(V)), rownames(V))
     grad[lab_den] <- -a / d^2
     grad[lab_num] <- grad[lab_num] + 1 / d
-    data.frame(by = rows$by[i], group = rows$group[i], share = unname(a / d),
+    data.frame(geo = rows$geo[i], group = rows$group[i], share = unname(a / d),
                se = sqrt(max(drop(t(grad) %*% V %*% grad), 0)))
   })
   do.call(rbind, out)
