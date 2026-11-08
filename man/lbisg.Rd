@@ -24,8 +24,9 @@ lbisg(
 \item{geo}{Vector of geographic unit identifiers, one per person.}
 
 \item{lists}{Named list of character vectors: the name list of each group.
-Every group in \code{prior} needs a list, except at most one residual group
-(for example "other"), which is predicted without a list.}
+Each group in \code{prior} requires a list, with the exception of at most
+one residual group (for example "other"), which is predicted without a
+list.}
 
 \item{prior}{Optional matrix or data frame of \eqn{P(R = r \mid G)} with one
 row per person and one named column per group (rows sum to one).}
@@ -33,21 +34,24 @@ row per person and one named column per group (rows sum to one).}
 \item{coarse.prior}{Optional matrix or data frame of coarse group shares
 \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-known (Section 3.2). Requires \code{coarse.map}.}
+known. Requires \code{coarse.map}.}
 
-\item{coarse.map}{Named character vector mapping each list group to its
-coarse group (names are list groups, values are columns of
+\item{coarse.map}{Named character vector mapping each list group to the
+coarse group that contains it (names are list groups, values are columns of
 \code{coarse.prior}). The list groups within a coarse group must together
-make up that coarse group. One coarse group may have no list group: it is
-not subdivided, keeps its coarse share, and is predicted without a list.}
+constitute that coarse group. A single coarse group may have no list group.
+That coarse group is not divided, retains the share of that coarse group,
+and is
+predicted without a list.}
 
 \item{first.names, first.lists}{Optional first names (one per person) and
-first-name lists keyed by the same groups. When supplied, lBISG is applied
-separately to each name field and the posteriors are combined under the
-lBIFSG assumption (Section 2.6).}
+first-name lists for the same groups. Each name field is fit separately,
+and the two posteriors are combined assuming that the first-name and
+surname clusters are independent given group and geography.}
 
 \item{K}{Optional number of clusters. If \code{NULL} (default), \eqn{K} is
-chosen by Algorithm 2 for each name field.}
+selected for each name field by maximizing the held-out criterion
+\eqn{Q(K)}.}
 
 \item{control}{A list from \code{\link{lbisg_control}}.}
 
@@ -56,23 +60,25 @@ chosen by Algorithm 2 for each name field.}
 \value{
 An object of class \code{"lbisg"}: a list with \code{posterior} (a
 data frame with one column \code{pred.<group>} per group), \code{prior}
-(the geographic prior used), and per name field the selected \code{K}, the
-\code{Q} curve, and the number of training epochs chosen in each fold.
-When the prior was recovered, \code{recovered} holds the estimated list
-coverages (\code{NA} for groups that were not subdivided, whose share is
-the coarse share).
+(the geographic prior used), and \code{fields}, which contains for each
+name field the selected \code{K}, the \code{Q} curve, and the number of
+training epochs selected in each fold. When the prior was estimated,
+\code{recovered} contains the estimated list coverages. With
+\code{gamma = 0}, the coverage is \code{NA} for groups that were not
+divided, for which the share is the share of the coarse group.
 }
 \description{
-lBISG recovers calibrated group probabilities from short, approximate
-group-specific name lists, with no name-by-group frequency table
-(Chasalow, Dasanaike and Imai). Names are represented by text embeddings;
-list membership is predicted from the embeddings out of fold, the list
-scores are clustered, and the cluster-by-group probabilities are recovered
-from the geographic system \eqn{P(B \mid G) = \sum_r P(B \mid R = r) P(R = r
-\mid G)} by weighted least squares, before Bayes' rule with the geographic
-prior. The number of clusters is chosen by the held-out log-likelihood ratio
-\eqn{Q(K)}. When the geographic prior is unavailable, or available only for
-coarse groups, it is first recovered from the list rates in each geography.
+Predicts group membership from names and geography using a short name list
+for each group instead of a name-by-group frequency table. Each name is
+embedded with a sentence-transformer, and a model for each list predicts
+whether the name is on that list. Names with similar predictions are grouped
+into clusters. The share of each cluster within each group is estimated from
+how the clusters vary with the geographic prior, and the probabilities for
+each person are then obtained by Bayes' rule. When the prior is unknown, or
+known only for coarser groups, the prior is first estimated from the rate at
+which people in each geography have a name on each list. Chasalow, Dasanaike
+and Imai (2026) describe the method at
+\url{https://arxiv.org/abs/2610.06273}.
 }
 \examples{
 \dontrun{

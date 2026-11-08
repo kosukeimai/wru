@@ -18,7 +18,7 @@ def people_from_shares(shares: np.ndarray, rates: np.ndarray,
 
     Each geography has `per_geo` people split into groups by `shares`
     (G, R), and within group r the first rates[r, l] of the people are on
-    list l. The shares and rates must give whole numbers of people.
+    list l. The shares and rates must produce whole numbers of people.
     """
     geo, grp, onmat = [], [], []
     for g, row in enumerate(shares):
@@ -34,7 +34,7 @@ def people_from_shares(shares: np.ndarray, rates: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Algorithm 1, Steps 2-6
+# List scores
 # ---------------------------------------------------------------------------
 def test_name_folds_balances_people_across_folds() -> None:
     counts = np.random.default_rng(0).integers(1, 50, 500)
@@ -54,7 +54,8 @@ def test_make_net_has_the_requested_layers() -> None:
 
 
 def separable_names(n: int = 400, seed: int = 0) -> tuple[np.ndarray, ...]:
-    """Embeddings whose first two coordinates decide membership in two lists."""
+    """Embeddings for which the first two coordinates determine membership in
+    two lists."""
     rng = np.random.default_rng(seed)
     emb = rng.normal(size=(n, 4)).astype(np.float32)
     onmat = np.column_stack([emb[:, 0] > 0, emb[:, 1] > 0.5]).astype(float)
@@ -76,7 +77,7 @@ def test_list_scores_oof_learns_the_lists() -> None:
 
 
 def test_list_scores_oof_never_sees_the_scored_names_labels() -> None:
-    """Changing the labels in fold 0 leaves the scores in fold 0 unchanged."""
+    """Changing the labels in fold 0 does not change the scores in fold 0."""
     emb, onmat, counts = separable_names(n=200)
     fold = lb.name_folds(counts, J=3, seed=2026)
     flipped = onmat.copy()
@@ -103,7 +104,7 @@ def test_per_list_model_heldout_loss_falls_with_training() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Algorithm 1, Steps 7-10, and Algorithm 2
+# Clusters, the number of clusters and the posterior
 # ---------------------------------------------------------------------------
 def test_logodds_clips_at_zero_and_one() -> None:
     z = lb.logodds([0.0, 0.5, 1.0])
@@ -145,7 +146,7 @@ def test_wls_pi_recovers_noiseless_cluster_rates() -> None:
     Pi = rng.dirichlet(np.ones(K), R)
     C = sparse.csr_matrix(w[:, None] * (M @ Pi))
     np.testing.assert_allclose(lb.wls_pi(C, M, w, np.ones(G)), Pi, atol=1e-6)
-    # geographies left out of the fit do not affect it
+    # geographies excluded from the fit do not affect the estimates
     take = (np.arange(G) % 3 != 0).astype(float)
     C_bad = C.toarray()
     C_bad[take == 0] = rng.random((int((take == 0).sum()), K)) * 100
@@ -279,7 +280,7 @@ def test_combine_fields_divides_out_the_repeated_prior() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Section 3: recovering geographic prevalence
+# Estimating the geographic prior from the lists
 # ---------------------------------------------------------------------------
 SHARES = np.array([[0.5, 0.3, 0.2], [0.1, 0.6, 0.3], [0.2, 0.2, 0.6],
                    [0.4, 0.4, 0.2], [0.7, 0.1, 0.2]])
@@ -331,8 +332,9 @@ COARSE_OF = np.array([0, 0, 1, 1])
 
 
 def rates_with(lam: float, gamma: float) -> np.ndarray:
-    """P(L_l = 1 | R = r) with own coverage, lam within a coarse group and
-    gamma across coarse groups; the unlisted fifth group is at gamma."""
+    """P(L_l = 1 | R = r) with the coverage of each list, lam within a coarse
+    group and gamma across coarse groups. The fifth group, which has no list,
+    has rate gamma on each list."""
     rates = np.full((5, 4), gamma)
     for r in range(4):
         for l in range(4):
@@ -357,7 +359,7 @@ def test_recover_prevalence_with_lambda_and_gamma(lam: float,
 
 
 def test_recover_joint_with_every_coarse_group_listed() -> None:
-    # gamma = lam: the first result of Appendix A6.2, every cross rate lam
+    # gamma = lam: each cross-group rate is lam
     lam = 0.04
     shares = SHARES5[:, :4] / SHARES5[:, :4].sum(1, keepdims=True)
     Pi = np.diag(COVERAGE4 - lam) + lam
@@ -386,7 +388,7 @@ def test_coverage_outside_its_range_warns() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Section 4.3: list quality
+# List quality
 # ---------------------------------------------------------------------------
 def test_list_quality_recovers_list_rates_without_labels() -> None:
     rates = np.array([[0.6, 0.1], [0.2, 0.7], [0.1, 0.0]])

@@ -48,7 +48,7 @@ test_that("lbisg requires a list for every group but one residual", {
   expect_error(lbisg(s$names, s$geo, s$lists, prior = pr), "only one residual group")
 })
 
-test_that("a coarse group without a list keeps its coarse share", {
+test_that("a coarse group without a list retains the coarse share", {
   skip_if_no_lbisg()
   s <- sim_lists()
   cp <- cbind(AB = rep(0.9, length(s$names)), Z = 0.1)
@@ -75,7 +75,7 @@ test_that("lbisg accepts any embedding model ID and checks a fixed K", {
                "at least the number of groups")
 })
 
-test_that("lbisg_control sets and checks the Algorithm 2 and sensitivity options", {
+test_that("lbisg_control sets and checks the options for K and the sensitivity analysis", {
   ctl <- lbisg_control()
   expect_equal(ctl$K.method, "split")
   expect_equal(ctl$val.frac, 0.2)
@@ -113,7 +113,7 @@ test_that("predict_race lBISG checks its inputs", {
   )
 })
 
-test_that("kmeans_occupied leaves every cluster with a fitting observation", {
+test_that("each cluster from kmeans_occupied has a fitting observation", {
   skip_if_no_lbisg()
   mod <- get_lbisg_module()
   set.seed(3)

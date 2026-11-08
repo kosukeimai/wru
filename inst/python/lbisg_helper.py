@@ -1,48 +1,25 @@
-"""lBISG helper: list scores, clustering and the geographic solve for wru.
+"""lBISG helper for wru: list scores, clustering and estimation.
 
-This module provides the Python-side machinery for the list-powered BISG
-(lBISG) model in the wru R package (Chasalow, Dasanaike and Imai). It is
-imported from R via reticulate
-(`reticulate::import_from_path("lbisg_helper", path = ...)`) and is not
-typically run directly. Name embeddings are produced separately by
-ebisg_helper.embed_names().
+Called from R through reticulate (see R/lbisg.R) and not usually run directly.
+Name embeddings are obtained with ebisg_helper.embed_names(). Chasalow,
+Dasanaike and Imai (2026) describe the method:
+https://arxiv.org/abs/2610.06273.
 
-Pipeline (Algorithm 1 of the paper, per name field):
-  1. name_folds(): randomly partition the distinct names into J folds with
-     approximately equal numbers of people.
-  2. list_scores_oof(): for each fold, fit a separate neural network for
-     membership in each list on the names outside the fold and score the
-     names in the fold, so a name's score never sees its own list label.
-     The number of training epochs is chosen by cross-validation within the
-     training folds before the model is fit to all of them.
-  3. select_K() (Algorithm 2): choose the number of clusters K by the
-     held-out log-likelihood ratio Q(K), either on one random split of the
-     geographic units into training and validation sets (method="split", as
-     in the paper) or cross-fitted over population-balanced folds of the
-     units (method="crossfit").
-  4. fit_posterior(): K-means on the log-odds list scores, cluster
-     proportions within each geography, weighted least squares for
-     P(B = b | R = r), and Bayes' rule with the geographic prior.
+For each name field, lbisg_field()
+  1. trains a network for each list on the name embeddings, and scores each
+     name with a network that was trained without that name
+     (list_scores_oof());
+  2. determines the number of clusters K (select_K());
+  3. clusters the log-odds list scores, estimates P(cluster | group) by
+     weighted least squares on the geographic prior, and applies Bayes' rule
+     (fit_posterior()).
 
-Also provided:
-  - combine_fields(): first-name and surname posteriors combined as
-    P_F * P_S / P(R | G) (lBIFSG, Section 2.6).
-  - recover_prevalence(): the geographic prior recovered from the list rates
-    when it is unavailable (Section 3.1) or available only for coarse groups
-    (Section 3.2), with the lambda and gamma sensitivity analysis of
-    Appendix A6.
-  - list_quality(): the label-free list quality measure of Section 4.3.
+combine_fields() combines the posteriors of several name fields.
+recover_prevalence() estimates the geographic prior from the list rates when
+the prior is unknown or known only for coarse groups. list_quality() estimates
+how well the lists separate the groups.
 
-Numerical details that are not in the paper: the weighted least squares adds
-1e-9 to the diagonal of M'WM, and negative estimates are floored at 1e-9
-rather than 0, so that P(B | G) is never exactly zero; K-means centres with no
-member among the fitting observations are dropped, so every cluster used has
-members; Algorithm 2 extends its candidate grid upward by a factor of 1.5
-while the maximum of Q(K) sits at the top of the grid.
-
-To run standalone for debugging:
-  >>> import numpy as np
-  >>> from lbisg_helper import lbisg_field
+Example:
   >>> res = lbisg_field(emb_unique, idx, onmat_unique, geo, prior)
   >>> res["posterior"].shape  # (N, R)
 """
@@ -60,8 +37,9 @@ from scipy.optimize import nnls
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances_argmin
 
-EPS_Z = 1e-6     # clip for the log-odds of the list scores (Algorithm 1)
-FLOOR = 1e-9     # floor for P(B = b | R = r)
+EPS_Z = 1e-6     # clip for the log-odds of the list scores
+# Floor for P(B = b | R = r). The floor ensures that P(B | G) remains above 0.
+FLOOR = 1e-9
 RIDGE = 1e-9     # added to the diagonal of M'WM
 DEFAULT_GRID = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 450, 600, 999,
                 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000]
@@ -80,18 +58,18 @@ def _device() -> torch.device:
 
 
 # ---------------------------------------------------------------------------
-# Algorithm 1, Steps 2-6: out-of-fold list scores
+# List scores
 # ---------------------------------------------------------------------------
 def name_folds(counts: npt.ArrayLike, J: int = 5,
                seed: int = 2026) -> IntArray:
-    """Randomly partition the distinct names into J folds.
+    """Split the distinct names at random into J folds.
 
-    Names are taken in random order and each is put into the fold with the
-    fewest people so far, so the folds hold approximately equal numbers of
-    people (Algorithm 1, Step 2).
+    Names are taken in random order, and each name is assigned to the fold
+    with the fewest people so far. The folds therefore contain approximately
+    equal numbers of people.
 
     Args:
-        counts: (n_names,) number of people carrying each name.
+        counts: (n_names,) number of people with each name.
         J: number of folds.
         seed: random seed for the order of the names.
 
@@ -122,10 +100,11 @@ def _make_net(input_dim: int, hidden_dims: Sequence[int] = (256, 128),
 
 
 class PerListModel:
-    """One separate network for each list (Algorithm 1, Step 4).
+    """A separate network for each list.
 
-    The networks share no parameters and each has its own optimizer, so
-    fitting them together is the same as fitting them one at a time.
+    The networks share no parameters, and each network has a separate
+    optimizer. Training the networks together therefore produces the same
+    result as training them one at a time.
 
     Args:
         input_dim: dimensionality of the name embedding.
@@ -153,7 +132,8 @@ class PerListModel:
                     rng: np.random.RandomState, batch_size: int) -> None:
         """One pass over the names `idx` in random order.
 
-        Each name's loss is weighted by the number of people carrying it.
+        The loss for each name is weighted by the number of people with that
+        name.
         """
         for net in self.nets:
             net.train()
@@ -206,30 +186,34 @@ def list_scores_oof(
         batch_size: int = 512, seed: int = 42, fold_seed: int = 2026,
         verbose: bool = True,
 ) -> tuple[npt.NDArray[np.float32], dict[int, dict[str, Any]]]:
-    """Out-of-fold list scores on the distinct names (Algorithm 1, Steps 2-6).
+    """Out-of-fold list scores for the distinct names.
 
-    For each outer fold k, the inner folds are the other J - 1 name folds,
-    each held out in turn. The inner models are trained in lockstep, and the
-    number of epochs is the minimum of their mean held-out loss; training
-    stops once that mean has not improved for `patience` epochs, or at
-    `max_epochs`. One model is then fit on all the training folds for that
-    many epochs and scores the names in fold k.
+    Each name is scored by a model that was trained without the fold that
+    contains the name. For each fold k, the number of epochs is selected by
+    cross-validation on the other J - 1 folds. A model is trained with each of
+    those folds held out, and the selected number of epochs is the one with the
+    lowest mean held-out loss. Training is stopped when that loss has not
+    improved for `patience` epochs, or at `max_epochs`. A model is then
+    trained on all folds except k for the selected number of epochs, and this
+    model is used to score the names in fold k.
 
     Args:
         emb: (n_names, D) name embeddings.
         onmat: (n_names, L) 0/1 list membership of each name.
-        counts: (n_names,) number of people carrying each name, used to
-            weight the loss so the fit is the same as fitting on people.
+        counts: (n_names,) number of people with each name. The loss is
+            weighted by these counts in order for the fit to be equivalent to a
+            fit on individual people.
         J: number of name folds.
-        max_epochs, patience: limits for choosing the number of epochs.
+        max_epochs, patience: limits on the selected number of epochs.
         batch_size: minibatch size in distinct names.
         seed: seed for the network weights and minibatch order.
         fold_seed: seed for the name folds.
         verbose: print progress.
 
     Returns:
-        (scores, info): scores is an (n_names, L) array of P(L_l = 1 | name);
-        info maps each fold to its selected epochs and mean held-out loss.
+        (scores, info): scores is an (n_names, L) array of P(L_l = 1 | name).
+        info maps each fold to the selected number of epochs and the mean
+        held-out loss for that fold.
     """
     device = _device()
     X = torch.as_tensor(np.ascontiguousarray(emb, np.float32), device=device)
@@ -290,27 +274,25 @@ def list_scores_oof(
 
 
 # ---------------------------------------------------------------------------
-# Algorithm 1, Steps 7-10, and Algorithm 2
+# Clusters, the number of clusters and the posterior
 # ---------------------------------------------------------------------------
 def logodds(F: npt.ArrayLike) -> Array:
-    """Log-odds of the list scores, clipped at EPS_Z."""
+    """Log-odds of the list scores, after clipping the scores to
+    [EPS_Z, 1 - EPS_Z]."""
     F = np.clip(np.asarray(F, float), EPS_Z, 1 - EPS_Z)
     return np.log(F) - np.log(1 - F)
 
 
 def kmeans_occupied(Z: Array, rows: npt.ArrayLike, K: int,
                     seed: int = 0) -> tuple[IntArray, int]:
-    """K-means on the log-odds scores (Algorithm 1, Step 7).
+    """K-means on the log-odds list scores.
 
-    The K centres are fit on the observations `rows`. Centres that no
-    observation in `rows` is nearest to are dropped, and every observation
-    is assigned to the nearest remaining centre. At a near-tie in distance,
-    the reassignment can move an observation in `rows` to another centre and
-    leave a remaining centre with none of them. The function therefore
-    repeats the dropping until every centre used has at least one
-    observation in `rows`. Without this step, such a cluster has
-    P(B = b) = 0 among the fitting observations, and any held-out
-    observation in that cluster makes Q(K) infinite.
+    The centres are fit on the observations `rows`, and each observation is
+    assigned to the nearest centre. Centres with no observation from `rows`
+    are dropped and the observations are reassigned, until each centre has at
+    least one observation from `rows`. Without this step, a cluster could
+    have P(B = b) = 0 among the fitting observations, and Q(K) would be
+    infinite for any held-out observation in that cluster.
 
     Args:
         Z: (N, L) log-odds list scores.
@@ -355,7 +337,7 @@ def _geo_setup(
 
 
 def wls_pi(C: sparse.csr_matrix, M: Array, w: Array, take: Array) -> Array:
-    """P(B = b | R = r) by weighted least squares (Algorithm 1, Step 9).
+    """P(B = b | R = r) by weighted least squares.
 
     Args:
         C: (G, K) sparse counts of people by geography and cluster.
@@ -364,7 +346,7 @@ def wls_pi(C: sparse.csr_matrix, M: Array, w: Array, take: Array) -> Array:
         take: (G,) 1 for the geographies used in the fit, 0 otherwise.
 
     Returns:
-        (R, K) array; each row is normalized to sum to one.
+        (R, K) array, with each row normalized to sum to one.
     """
     R = M.shape[1]
     XtWX = M.T @ ((w * take)[:, None] * M)
@@ -377,8 +359,8 @@ def wls_pi(C: sparse.csr_matrix, M: Array, w: Array, take: Array) -> Array:
 def geo_folds(geo: IntArray, J: int) -> IntArray:
     """J folds of geographic units with approximately equal numbers of people.
 
-    The units are taken from largest to smallest and dealt round-robin
-    (the cross-fitted version of Algorithm 2, Step 1).
+    The units are sorted from largest to smallest and assigned to folds
+    0, 1, ..., J - 1, 0, 1, ... in that order.
     """
     n_geo = int(np.max(geo)) + 1
     w = np.bincount(geo, minlength=n_geo).astype(float)
@@ -388,10 +370,11 @@ def geo_folds(geo: IntArray, J: int) -> IntArray:
 
 
 def split_units(n_geo: int, frac: float = 0.2, seed: int = 0) -> IntArray:
-    """One random split of the geographic units (Algorithm 2, Step 1).
+    """Random split of the geographic units into training (0) and validation.
 
-    Each unit goes to the validation set (1) with probability `frac` and to
-    the training set (0) otherwise.
+    Training units are coded 0 and validation units 1.
+
+    Each unit is in the validation set with probability `frac`.
     """
     return (np.random.default_rng(seed).random(n_geo) < frac).astype(int)
 
@@ -399,10 +382,9 @@ def split_units(n_geo: int, frac: float = 0.2, seed: int = 0) -> IntArray:
 def fold_term(Z: Array, geo: IntArray, M: Array, w: Array, n_geo: int,
               K: int, j: int, fold: IntArray,
               seed: int = 0) -> tuple[float, int]:
-    """Sum of the held-out log ratios in Q(K) for the units with fold == j.
+    """Sum of the log ratios in Q(K) over the units with fold == j.
 
-    Algorithm 2, Steps 3-7: clusters and P(B = b | R = r) from the units with
-    fold != j, evaluated on the observations in the units with fold == j.
+    The clusters and P(B = b | R = r) are fit on the units with fold != j.
     """
     obs_fold = fold[geo]
     train = np.flatnonzero(obs_fold != j)
@@ -423,28 +405,27 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
              extend: bool = True, verbose: bool = True,
              method: str = "split", val_frac: float = 0.2,
              split_seed: int = 0) -> tuple[int, list[tuple[int, float]]]:
-    """Choose the number of clusters by Q(K) (Algorithm 2).
+    """Determine the number of clusters K by maximizing the criterion Q(K).
 
-    With method="split" (the paper), the geographic units are split once at
-    random: each goes to the validation set with probability `val_frac`, the
-    clusters and P(B = b | R = r) are fit on the training units, and Q(K) is
-    the mean log ratio over the validation observations. With
-    method="crossfit", the units are dealt into J folds of approximately
-    equal numbers of people, each fold is held out in turn, and Q(K) is the
-    mean log ratio over all observations.
+    Q(K) is the mean of log P(B | G) - log P(B) over held-out observations,
+    with both probabilities fit on the other geographic units. With
+    method="split" (the default), each unit is held out with probability
+    `val_frac`. With method="crossfit", the units are divided into J folds of
+    approximately equal numbers of people. Each fold is then held out once.
 
-    The candidate grid is restricted to R <= K < the number of distinct score
-    vectors among the training observations. While the maximum of Q(K) sits
-    at the top of the grid, the grid is extended upward by a factor of 1.5.
+    Values of K below R, or at least the number of distinct score vectors in
+    the training data, are excluded. As long as Q(K) is largest at the top of
+    the grid, the grid is extended upward by a factor of 1.5.
 
     Args:
         F: (N, L) list scores per person.
         geo: (N,) 0-based geography of each person.
-        prior: (N, R) P(R = r | G) per person; rows sum to one.
+        prior: (N, R) P(R = r | G) per person, with rows that sum to one.
         grid: candidate values of K (default DEFAULT_GRID).
         J: number of geographic folds (method="crossfit" only).
         seed: random seed for K-means.
-        extend: extend the grid upward while the maximum is at its top.
+        extend: extend the grid upward while the maximum is at the top of
+            the grid.
         verbose: print Q(K) as it is computed.
         method: "split" or "crossfit".
         val_frac: probability that a unit is in the validation set
@@ -462,14 +443,14 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
         held = [1]
         if not ((fold[geo] == 1).any() and (fold[geo] == 0).any()):
             raise ValueError(
-                "Algorithm 2 needs geographic units in both the training and "
-                "the validation set; use more units or another val_frac")
+                "Choosing K needs geographic units in both the training and "
+                "the validation sets. Use more units or another val_frac.")
     elif method == "crossfit":
         fold = geo_folds(geo, J)
         held = list(range(J))
         if len(np.unique(fold)) < J:
             raise ValueError(
-                f"Algorithm 2 needs at least J = {J} geographic units")
+                f"Choosing K needs at least J = {J} geographic units")
     else:
         raise ValueError("method must be 'split' or 'crossfit'")
     n_held = int(sum((fold[geo] == j).sum() for j in held))
@@ -507,7 +488,10 @@ def fit_posterior(
         F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike, K: int,
         seed: int = 0,
 ) -> tuple[Array, IntArray, int, Array]:
-    """Algorithm 1, Steps 7-10, on all observations.
+    """lBISG posterior for all observations.
+
+    The observations are clustered, P(B = b | R = r) is estimated by weighted
+    least squares, and the posterior is computed by Bayes' rule.
 
     Returns:
         (posterior, bins, K_used, Pi): the (N, R) posterior, the cluster of
@@ -534,18 +518,18 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
                 verbose: bool = True, k_method: str = "split",
                 val_frac: float = 0.2,
                 split_seed: int = 0) -> dict[str, Any]:
-    """lBISG for one name field (Algorithm 1, with Algorithm 2 for K).
+    """lBISG for one name field.
 
     Args:
         emb_unique: (n_names, D) embeddings of the distinct names.
-        idx: (N,) 0-based index of each person's name into emb_unique.
+        idx: (N,) 0-based index into emb_unique of the name of each person.
         onmat_unique: (n_names, L) 0/1 list membership of each name.
         geo: (N,) 0-based geography of each person.
-        prior: (N, R) P(R = r | G) per person; rows sum to one.
-        K: number of clusters, or None to choose it by Algorithm 2.
-        grid: candidate values of K for Algorithm 2.
+        prior: (N, R) P(R = r | G) per person, with rows that sum to one.
+        K: number of clusters, or None to determine K with select_K().
+        grid: candidate values of K.
         n_folds: number of name folds for the list scores.
-        geo_folds_J: number of geographic folds for Algorithm 2 when
+        geo_folds_J: number of geographic folds when
             k_method="crossfit".
         max_epochs, patience, batch_size, seed: see list_scores_oof().
         verbose: print progress.
@@ -587,17 +571,18 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
 
 def combine_fields(posteriors: Sequence[npt.ArrayLike],
                    prior: npt.ArrayLike) -> Array:
-    """Combine name fields under the lBIFSG assumption (Section 2.6).
+    """Combine the posteriors of several name fields.
 
     P(R | B_F, B_S, G) is proportional to
-    P(R | B_F, G) * P(R | B_S, G) / P(R | G).
+    P(R | B_F, G) * P(R | B_S, G) / P(R | G), assuming that the clusters of
+    the two fields are independent given R and G.
 
     Args:
         posteriors: list of (N, R) posteriors, one per name field.
         prior: (N, R) P(R = r | G) per person.
 
     Returns:
-        (N, R) combined posterior; rows sum to one.
+        (N, R) combined posterior, with rows that sum to one.
     """
     prior = np.asarray(prior, float)
     out = np.ones_like(prior)
@@ -609,7 +594,7 @@ def combine_fields(posteriors: Sequence[npt.ArrayLike],
 
 
 # ---------------------------------------------------------------------------
-# Section 3: recovering geographic prevalence
+# Estimating the geographic prior from the lists
 # ---------------------------------------------------------------------------
 def _list_rates(onmat: Array, geo: IntArray,
                 n_geo: int) -> tuple[Array, Array]:
@@ -623,10 +608,10 @@ def _list_rates(onmat: Array, geo: IntArray,
 
 
 def _normalize_to(theta: Array, target: Array) -> Array:
-    """Scale each geography's shares so that they sum to `target`.
+    """Scale the shares in each geography to sum to `target`.
 
-    Geographies whose estimates are all zero get the overall mix of the
-    block.
+    Geographies in which each estimate is zero are assigned the overall mix of
+    the block.
     """
     total = theta.sum(1)
     positive = total > 1e-12
@@ -641,10 +626,10 @@ def _normalize_to(theta: Array, target: Array) -> Array:
 
 
 def _check_coverage(pi: Array, a: Array, lam: float) -> None:
-    """Warn when the estimated coverages violate the assumptions.
+    """Warn when an estimated coverage is not in (lam, 1].
 
-    Appendix A6 requires lam < pi_r <= 1 for every list, which in turn
-    requires every element of a = (B'WB)^{-1} B'W M 1 to be positive.
+    A coverage outside this range means that the assumptions of the recovery
+    do not hold.
     """
     bad = ~np.isfinite(pi) | (a <= 0) | (pi <= lam) | (pi > 1 + 1e-9)
     if bad.any():
@@ -657,15 +642,14 @@ def _check_coverage(pi: Array, a: Array, lam: float) -> None:
 
 def _recover_block(rho: Array, target: Array, weights: Array,
                    lam: float = 0.0) -> tuple[Array, Array]:
-    """Recover the group shares within one block of groups.
+    """Estimate the shares of the groups in one block.
 
-    With lam = 0 (exclusive lists), the inverse coverages u = 1 / pi solve a
-    non-negative least squares problem weighted by `weights` (Appendix A6.3).
-    With lam > 0 (homogeneous non-separation within the block, Appendix
-    A6.1, and the gamma = 0 case of A6.2), a = (B'WB)^{-1} B'W target,
-    pi_r = lam + (1 - lam * sum(a)) / a_r and Theta = B Pi^{-1}, with
-    negative entries set to zero. The shares are then normalized to `target`
-    in each geography.
+    A block is a coarse group, or the whole population. With lam = 0, the
+    inverse coverages 1 / pi are fit by non-negative least squares. With
+    lam > 0, members of each group are assumed to have a name on each of the
+    other lists in the block at rate lam. The shares are then B Pi^{-1}, with
+    negative shares set to zero. Finally, the shares are scaled to sum to
+    `target` in each geography.
 
     Args:
         rho: (G, Rc) list rates of the groups in the block.
@@ -696,20 +680,19 @@ def _recover_block(rho: Array, target: Array, weights: Array,
 def _recover_joint(rho: Array, Mc: Array, coarse_of: IntArray,
                    weights: Array, lam: float,
                    gamma: float) -> tuple[Array, Array]:
-    """Recover subgroup shares with cross-coarse-group list rates gamma > 0.
+    """Estimate subgroup shares when lists also overlap across coarse groups.
 
-    Appendix A6.2, general case: Pi = Omega + U C U' with
-    C = (lam - gamma) I + gamma 11', A = (B'WB)^{-1} B'W M,
-    pi_r = lam + (1 - C U' A 1)_{c(r)} / (A 1)_r and Theta = B Pi^{-1}, with
-    negative entries set to zero and the shares of each coarse group
-    normalized to its coarse share. With gamma = lam, every cross-group
-    rate is lam, as in the first result of A6.2.
+    Members of a group are assumed to have a name on the list of another
+    group at rate lam within their coarse group and gamma outside it. The
+    coverages and the shares B Pi^{-1} are solved for all groups together,
+    with negative shares set to zero. The shares in each coarse group are then
+    scaled to the share of that coarse group.
 
     Args:
-        rho: (G, L) list rates, already net of the coarse groups without a
-            list.
+        rho: (G, L) list rates, after the contribution of the coarse groups
+            without a list is subtracted.
         Mc: (G, C) shares of the coarse groups with at least one list.
-        coarse_of: (L,) 0-based column of Mc for each list's group.
+        coarse_of: (L,) 0-based column of Mc for the group of each list.
         weights: (G,) weight of each geography.
         lam: cross-group list rate within a coarse group.
         gamma: cross-group list rate across coarse groups.
@@ -742,30 +725,24 @@ def recover_prevalence(
         coarse_of: npt.ArrayLike | None = None, lam: float = 0.0,
         gamma: float = 0.0,
 ) -> tuple[Array, Array]:
-    """Recover the geographic prevalence of each group from the list rates.
+    """Estimate the share of each group in each geography from the list rates.
 
-    Without a coarse prior (Section 3.1), the lists must be exhaustive; each
-    geography's shares sum to one and geographies are weighted by their
-    number of people. `lam` is the rate at which a member of one group has a
-    name on another group's list (Appendix A6.1).
-
-    With a coarse prior (Section 3.2), `lam` is that rate between groups of
-    the same coarse group and `gamma` (0 <= gamma <= lam) the rate between
-    groups of different coarse groups (Appendix A6.2). With gamma = 0, the
-    subgroup shares are recovered within each coarse group with more than one
-    subgroup, weighting each geography by its expected number of coarse group
-    members, and a coarse group with one subgroup keeps its coarse share.
-    With gamma > 0, all groups with a list are recovered jointly, weighting
-    geographies by their number of people; the members of a coarse group
-    without a list have a name on each list at rate gamma, and that part of
-    each list rate is removed first.
+    Without a coarse prior, the lists must cover the whole population, and the
+    shares in each geography sum to one. With a coarse prior, the shares of the
+    subgroups of a coarse group sum to the share of that coarse group, and a
+    coarse group with a single subgroup retains the share of that coarse group.
+    `lam` and
+    `gamma` are the assumed rates at which members of a group have a name on
+    the list of another group, within and across coarse groups. With
+    gamma > 0, all groups are solved together, and members of a coarse group
+    without a list are assumed to have a name on each list at rate gamma.
 
     Args:
         onmat: (N, L) 0/1 list membership per person.
         geo: (N,) 0-based geography of each person.
         coarse_prior: optional (G, C) coarse shares P(C = c | G) per
             geography.
-        coarse_of: (L,) 0-based coarse group of each list's group.
+        coarse_of: (L,) 0-based coarse group of the group of each list.
         lam: assumed cross-group list rate (0 for exclusive lists).
         gamma: assumed list rate across coarse groups (coarse prior only).
 
@@ -803,8 +780,9 @@ def recover_prevalence(
     for c in np.unique(coarse_of):
         cols = np.flatnonzero(coarse_of == c)
         if len(cols) == 1:
-            # Nothing to recover: the group's share is the coarse share, and
-            # its coverage is not estimated (it stays NaN).
+            # A coarse group with a single subgroup retains the share of that
+            # coarse group,
+            # and the coverage of that list remains NaN.
             theta[:, cols[0]] = Mc[:, c]
             continue
         theta[:, cols], coverage[cols] = _recover_block(
@@ -813,25 +791,27 @@ def recover_prevalence(
 
 
 # ---------------------------------------------------------------------------
-# Section 4.3: list quality when geographic prevalence is available
+# List quality
 # ---------------------------------------------------------------------------
 def list_quality(onmat: npt.ArrayLike, geo: npt.ArrayLike,
                  prior: npt.ArrayLike,
                  list_group: npt.ArrayLike | None = None,
                  min_geo_n: int = 1) -> dict[str, Any]:
-    """Label-free list quality (Section 4.3).
+    """How well the lists separate the groups, estimated without labels.
 
-    Pi[r, l] = P(L_l = 1 | R = r) solves
-    P(L_l = 1 | G) = sum_r Pi[r, l] P(R = r | G) by least squares weighted by
-    the people in each geography, clipped to [0, 1].
+    Pi[r, l] = P(L_l = 1 | R = r) is fit by least squares on
+    P(L_l = 1 | G) = sum_r Pi[r, l] P(R = r | G), with each geography weighted
+    by the number of people in that geography. The estimates are then clipped
+    to [0, 1].
 
     Args:
         onmat: (N, L) 0/1 list membership per person.
         geo: (N,) 0-based geography of each person.
-        prior: (N, R) P(R = r | G) per person; rows sum to one.
-        list_group: (L,) 0-based group each list targets (default: list l
-            targets group l).
-        min_geo_n: geographies with fewer people are left out of the solve.
+        prior: (N, R) P(R = r | G) per person, with rows that sum to one.
+        list_group: (L,) 0-based group that corresponds to each list (by
+            default, list l corresponds to group l).
+        min_geo_n: geographies with fewer than min_geo_n people are excluded
+            from the least squares fit of Pi.
 
     Returns:
         dict with Pi (R, L), the diagonal dominance D, and the coverage and
@@ -852,8 +832,9 @@ def list_quality(onmat: npt.ArrayLike, geo: npt.ArrayLike,
     list_group = np.asarray(list_group, np.int64)
     q = (M * w[:, None]).sum(0) / w.sum()
 
-    # D(Pi): each listed group's own-list rate minus its mean rate on the
-    # other lists, averaged over groups. In the binary case it is pi_1 - pi_0.
+    # D: for each group, the rate on the list of that group minus the mean rate
+    # on the other lists, averaged over groups. With one list and two groups, D
+    # is pi_1 - pi_0.
     block = Pi[list_group, :]
     if n_lists == 1 and M.shape[1] == 2:
         D = float(Pi[list_group[0], 0] - Pi[1 - list_group[0], 0])

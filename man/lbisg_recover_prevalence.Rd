@@ -21,29 +21,39 @@ lbisg_recover_prevalence(
 \item{geo}{Vector of geographic unit identifiers, one per person.}
 
 \item{lists}{Named list of character vectors: the name list of each group.
-Every group in \code{prior} needs a list, except at most one residual group
-(for example "other"), which is predicted without a list.}
+Each group in \code{prior} requires a list, with the exception of at most
+one residual group (for example "other"), which is predicted without a
+list.}
 
 \item{coarse.prior}{Optional matrix or data frame of coarse group shares
 \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-known (Section 3.2). Requires \code{coarse.map}.}
+known. Requires \code{coarse.map}.}
 
-\item{coarse.map}{Named character vector mapping each list group to its
-coarse group (names are list groups, values are columns of
+\item{coarse.map}{Named character vector mapping each list group to the
+coarse group that contains it (names are list groups, values are columns of
 \code{coarse.prior}). The list groups within a coarse group must together
-make up that coarse group. One coarse group may have no list group: it is
-not subdivided, keeps its coarse share, and is predicted without a list.}
+constitute that coarse group. A single coarse group may have no list group.
+That coarse group is not divided, retains the share of that coarse group,
+and is
+predicted without a list.}
 
-\item{lambda}{Assumed cross-group list rate (0 for exclusive lists); with a
-coarse prior, the rate between groups of the same coarse group.}
+\item{lambda}{For a sensitivity analysis of the estimated geographic prior,
+the assumed rate at which members of one group have a name on the list
+of another group. The default of 0 corresponds to no such overlap. With a
+coarse prior, \code{lambda} is the rate within a coarse group.}
 
-\item{gamma}{Assumed list rate between groups of different coarse groups,
-between 0 and \code{lambda} (coarse prior only).}
+\item{gamma}{With a coarse prior, the assumed rate between groups in
+different coarse groups. Must be between 0 and \code{lambda}.}
 
-\item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
-make up the whole population being divided; see
-\code{\link{lbisg_control}}.}
+\item{exhaustive}{Set to \code{TRUE} to confirm that the groups with lists
+constitute the whole population or, with a coarse prior, that the
+subgroups constitute each divided coarse group. Estimation of the prior
+requires this assumption, because anyone outside the listed groups is
+assigned to them. If necessary, add a residual list, such as a list of the
+names in the coarse group that do not appear on any subgroup list. Ignored
+when
+\code{prior} is supplied.}
 }
 \value{
 A list with \code{prevalence} (a data frame with one row per
@@ -51,16 +61,13 @@ geography and one column per group) and \code{coverage} (the estimated
 \eqn{P(L_r = 1 \mid R = r)} of each list).
 }
 \description{
-Section 3 of Chasalow, Dasanaike and Imai. Without any geographic prevalence
-(\code{coarse.prior = NULL}), the lists must be exhaustive and exclusive and
-\eqn{P(R \mid G)} is recovered from the list rates in each geography (Section
-3.1). With coarse group prevalence, the subgroup shares are recovered within
-each coarse group by non-negative least squares weighted by the expected
-number of coarse group members and normalized to the coarse share (Section
-3.2). \code{lambda > 0} and \code{gamma > 0} give the sensitivity analysis
-of Appendix A6. With \code{gamma > 0}, all groups with a list are recovered
-jointly, and the members of a coarse group without a list are assumed to
-have a name on each list at rate \code{gamma}. A warning means the
-estimated coverages are outside \eqn{(\lambda, 1]}, so the assumptions do
-not hold at these values.
+Estimates the share of each group in each geographic unit from the rate at
+which people in that unit have a name on each list, without group labels.
+With no prior, the lists must cover the whole population and not overlap.
+With a coarse prior, the subgroup shares within each coarse group are
+estimated by non-negative least squares and scaled to the coarse share.
+\code{lambda} and \code{gamma} allow some overlap between lists, for a
+sensitivity analysis. A warning means that an estimated list coverage is not
+between \code{lambda} and 1. Such a coverage violates the assumptions of the
+recovery.
 }

@@ -22,58 +22,58 @@ lbisg_control(
 )
 }
 \arguments{
-\item{n.folds}{Number of name folds \eqn{J} for the out-of-fold list scores
-(Algorithm 1).}
+\item{n.folds}{Number of folds of distinct names. Each name is scored by a
+list model that is trained on the other folds.}
 
-\item{K.method}{How Algorithm 2 holds out geographic units when choosing
-\eqn{K}: \code{"split"} (default, as in the paper) splits the units once at
-random, each going to the validation set with probability
-\code{val.frac}; \code{"crossfit"} deals the units into \code{geo.folds}
-folds of approximately equal numbers of people and holds out each fold in
-turn.}
+\item{K.method}{How geographic units are held out when \eqn{K} is selected.
+With \code{"split"} (the default), each unit is held out with probability
+\code{val.frac}. With \code{"crossfit"}, the units are divided into
+\code{geo.folds} folds of approximately equal numbers of people, and each
+fold is held out once.}
 
-\item{val.frac}{Probability that a geographic unit is in the validation set
+\item{val.frac}{Probability that a geographic unit is held out
 (\code{K.method = "split"}).}
 
-\item{split.seed}{Seed of the random split (\code{K.method = "split"}).}
+\item{split.seed}{Seed for the selection of held-out units
+(\code{K.method = "split"}).}
 
-\item{geo.folds}{Number of geographic folds \eqn{J} for choosing \eqn{K}
+\item{geo.folds}{Number of folds of geographic units
 (\code{K.method = "crossfit"}).}
 
-\item{K.grid}{Candidate numbers of clusters for Algorithm 2. The default grid
-runs from 10 to 20,000 and is extended upward while the maximum of
-\eqn{Q(K)} sits at its top; values below the number of groups or at least
-the number of distinct list-score vectors are dropped.}
+\item{K.grid}{Candidate numbers of clusters. The default ranges from 10 to
+20,000. As long as \eqn{Q(K)} is largest at the top of the grid, the grid
+is extended upward by a factor of 1.5. Values below the number of groups,
+or at least the number of distinct list-score vectors, are excluded.}
 
-\item{max.epochs, patience}{The number of training epochs of each list model
-is chosen by cross-validation within the training folds; training stops
-once the mean held-out loss has not improved for \code{patience} epochs,
-or at \code{max.epochs}.}
+\item{max.epochs, patience}{The number of training epochs for each list model
+is selected by cross-validation. Training is stopped when the mean held-out
+loss has not improved for \code{patience} epochs, or at
+\code{max.epochs}.}
 
 \item{batch.size}{Minibatch size, in distinct names, for the list models.}
 
 \item{seed}{Random seed.}
 
-\item{lambda}{Cross-group list rate for the sensitivity analysis of the
-prevalence recovery (Appendix A6); 0 assumes exclusive lists. With a
-coarse prior, the rate between groups of the same coarse group.}
+\item{lambda}{For a sensitivity analysis of the estimated geographic prior,
+the assumed rate at which members of one group have a name on the list
+of another group. The default of 0 corresponds to no such overlap. With a
+coarse prior, \code{lambda} is the rate within a coarse group.}
 
-\item{gamma}{With a coarse prior, the list rate between groups of different
-coarse groups, between 0 and \code{lambda} (Appendix A6.2); 0 assumes the
-coarse groups are separated by the lists.}
+\item{gamma}{With a coarse prior, the assumed rate between groups in
+different coarse groups. Must be between 0 and \code{lambda}.}
 
-\item{exhaustive}{Set to \code{TRUE} to state that the groups with lists
-make up the whole population being divided: every group when no prior is
-given, or each subdivided coarse group when only a coarse prior is given.
-Recovering the prior requires this (Section 3): if some members of a
-coarse group belong to none of the listed subgroups, the recovery assigns
-them to the listed subgroups anyway. Add a residual list for the remaining
-members (for example, the coarse group's names minus those on the
-subgroup lists) before setting it. Not used when the full prior is given.}
+\item{exhaustive}{Set to \code{TRUE} to confirm that the groups with lists
+constitute the whole population or, with a coarse prior, that the
+subgroups constitute each divided coarse group. Estimation of the prior
+requires this assumption, because anyone outside the listed groups is
+assigned to them. If necessary, add a residual list, such as a list of the
+names in the coarse group that do not appear on any subgroup list. Ignored
+when
+\code{prior} is supplied.}
 
 \item{embedding.model}{Sentence-transformer used for the name embeddings:
 any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
-needed, because lBISG trains its own list models.}
+required, because the list models are trained on the supplied lists.}
 }
 \value{
 A named list.

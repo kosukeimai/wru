@@ -2,7 +2,7 @@
 % Please edit documentation in R/lbisg.R
 \name{lbisg_census_lists}
 \alias{lbisg_census_lists}
-\title{Name lists built from the Census name tables}
+\title{Name lists constructed from the Census name tables}
 \usage{
 lbisg_census_lists(
   groups,
@@ -14,7 +14,8 @@ lbisg_census_lists(
 )
 }
 \arguments{
-\item{groups}{Race groups to build lists for (any of whi, bla, his, asi, oth).}
+\item{groups}{Race groups for which lists are constructed (any of whi, bla,
+his, asi, oth).}
 
 \item{prior}{Matrix of \eqn{P(R \mid G)} with columns whi, bla, his, asi, oth
 and one row per person.}
@@ -29,11 +30,12 @@ and one row per person.}
 A named list of name vectors.
 }
 \description{
-Builds the "Census lists" of Chasalow, Dasanaike and Imai from wru's Census
-name tables: names with \eqn{P(R = r \mid S) \ge} \code{floor}, ranked by
-their expected contribution, count times \eqn{(P(R = r \mid S) - P(R = r))},
-and cut at \code{size}. \eqn{P(R \mid S)} combines the Census
-\eqn{P(S \mid R)} with the expected number of people of each race in the
-data (the column sums of \code{prior}).
+Constructs a list for each group from the Census name tables in wru, as in
+Chasalow, Dasanaike and Imai (2026). Each list contains the names with
+\eqn{P(R = r \mid S) \ge} \code{floor}, ranked by count times
+\eqn{P(R = r \mid S) - P(R = r)}, up to a length of \code{size}.
+\eqn{P(R \mid S)} is computed from the Census \eqn{P(S \mid R)} and the
+expected number of people of each race in the data (the column sums of
+\code{prior}).
 }
 \keyword{internal}

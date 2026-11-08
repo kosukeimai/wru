@@ -8,12 +8,13 @@ setup_lbisg(envname = "r-ebisg")
 }
 \arguments{
 \item{envname}{Name of the Python virtual environment. Defaults to
-\code{"r-ebisg"} so the environment is shared with \code{\link{setup_ebisg}}.}
+\code{"r-ebisg"}, the environment that \code{\link{setup_ebisg}} also
+uses.}
 }
 \description{
-Installs the Python packages lBISG needs (sentence-transformers and torch for
-the embeddings and the list models, plus scikit-learn and scipy). Call once
-before \code{predict_race(..., model = "lBISG")} or \code{\link{lbisg}}.
-No pre-trained weights are downloaded: the list models are trained from the
-lists you supply.
+Installs the Python packages that lBISG requires: sentence-transformers,
+torch, scikit-learn and scipy. Run once before
+\code{predict_race(..., model = "lBISG")} or \code{\link{lbisg}}. No model
+weights are downloaded, because the list models are trained on the supplied
+lists.
 }

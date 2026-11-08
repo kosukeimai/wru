@@ -12,22 +12,23 @@ lbisg_list_quality(names, geo, lists, prior, min.geo.n = 1)
 \item{geo}{Vector of geographic unit identifiers, one per person.}
 
 \item{lists}{Named list of character vectors: the name list of each group.
-Every group in \code{prior} needs a list, except at most one residual group
-(for example "other"), which is predicted without a list.}
+Each group in \code{prior} requires a list, with the exception of at most
+one residual group (for example "other"), which is predicted without a
+list.}
 
 \item{prior}{Optional matrix or data frame of \eqn{P(R = r \mid G)} with one
 row per person and one named column per group (rows sum to one).}
 
-\item{min.geo.n}{Geographies with fewer people are left out of the solve.}
+\item{min.geo.n}{Geographies with fewer than \code{min.geo.n} people are
+excluded from the least squares fit of \code{Pi}.}
 }
 \value{
-A list with \code{Pi} (groups by lists), its diagonal dominance
-\code{D}, and the estimated \code{coverage} and \code{precision} of each
-list.
+A list with \code{Pi} (groups by lists), the diagonal dominance
+\code{D} of \code{Pi}, and the estimated \code{coverage} and
+\code{precision} of each list.
 }
 \description{
-Section 4.3 of Chasalow, Dasanaike and Imai. With the geographic prevalence
-known, the matrix \eqn{\Pi_{r,r'} = P(L_{r'} = 1 \mid R = r)} is recovered
-from \eqn{P(L_{r'} = 1 \mid G) = \sum_r \Pi_{r,r'} P(R = r \mid G)} by least
-squares weighted by the people in each geography, without any group labels.
+Estimates, without group labels, the rate \eqn{\Pi_{r,r'}} at which members
+of group \eqn{r} have a name on the list of group \eqn{r'}, from how list
+membership varies with the known geographic prior.
 }

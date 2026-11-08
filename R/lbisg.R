@@ -1,48 +1,54 @@
 #' List-powered BISG (lBISG)
 #'
-#' lBISG recovers calibrated group probabilities from short, approximate
-#' group-specific name lists, with no name-by-group frequency table
-#' (Chasalow, Dasanaike and Imai). Names are represented by text embeddings;
-#' list membership is predicted from the embeddings out of fold, the list
-#' scores are clustered, and the cluster-by-group probabilities are recovered
-#' from the geographic system \eqn{P(B \mid G) = \sum_r P(B \mid R = r) P(R = r
-#' \mid G)} by weighted least squares, before Bayes' rule with the geographic
-#' prior. The number of clusters is chosen by the held-out log-likelihood ratio
-#' \eqn{Q(K)}. When the geographic prior is unavailable, or available only for
-#' coarse groups, it is first recovered from the list rates in each geography.
+#' Predicts group membership from names and geography using a short name list
+#' for each group instead of a name-by-group frequency table. Each name is
+#' embedded with a sentence-transformer, and a model for each list predicts
+#' whether the name is on that list. Names with similar predictions are grouped
+#' into clusters. The share of each cluster within each group is estimated from
+#' how the clusters vary with the geographic prior, and the probabilities for
+#' each person are then obtained by Bayes' rule. When the prior is unknown, or
+#' known only for coarser groups, the prior is first estimated from the rate at
+#' which people in each geography have a name on each list. Chasalow, Dasanaike
+#' and Imai (2026) describe the method at
+#' \url{https://arxiv.org/abs/2610.06273}.
 #'
 #' @param names Character vector of surnames, one per person.
 #' @param geo Vector of geographic unit identifiers, one per person.
 #' @param lists Named list of character vectors: the name list of each group.
-#'   Every group in \code{prior} needs a list, except at most one residual group
-#'   (for example "other"), which is predicted without a list.
+#'   Each group in \code{prior} requires a list, with the exception of at most
+#'   one residual group (for example "other"), which is predicted without a
+#'   list.
 #' @param prior Optional matrix or data frame of \eqn{P(R = r \mid G)} with one
 #'   row per person and one named column per group (rows sum to one).
 #' @param coarse.prior Optional matrix or data frame of coarse group shares
 #'   \eqn{P(C = c \mid G)}, one row per person and one named column per coarse
 #'   group, used when \code{prior} is \code{NULL} and only coarse prevalence is
-#'   known (Section 3.2). Requires \code{coarse.map}.
-#' @param coarse.map Named character vector mapping each list group to its
-#'   coarse group (names are list groups, values are columns of
+#'   known. Requires \code{coarse.map}.
+#' @param coarse.map Named character vector mapping each list group to the
+#'   coarse group that contains it (names are list groups, values are columns of
 #'   \code{coarse.prior}). The list groups within a coarse group must together
-#'   make up that coarse group. One coarse group may have no list group: it is
-#'   not subdivided, keeps its coarse share, and is predicted without a list.
+#'   constitute that coarse group. A single coarse group may have no list group.
+#'   That coarse group is not divided, retains the share of that coarse group,
+#'   and is
+#'   predicted without a list.
 #' @param first.names,first.lists Optional first names (one per person) and
-#'   first-name lists keyed by the same groups. When supplied, lBISG is applied
-#'   separately to each name field and the posteriors are combined under the
-#'   lBIFSG assumption (Section 2.6).
+#'   first-name lists for the same groups. Each name field is fit separately,
+#'   and the two posteriors are combined assuming that the first-name and
+#'   surname clusters are independent given group and geography.
 #' @param K Optional number of clusters. If \code{NULL} (default), \eqn{K} is
-#'   chosen by Algorithm 2 for each name field.
+#'   selected for each name field by maximizing the held-out criterion
+#'   \eqn{Q(K)}.
 #' @param control A list from \code{\link{lbisg_control}}.
 #' @param verbose Print progress.
 #'
 #' @return An object of class \code{"lbisg"}: a list with \code{posterior} (a
 #'   data frame with one column \code{pred.<group>} per group), \code{prior}
-#'   (the geographic prior used), and per name field the selected \code{K}, the
-#'   \code{Q} curve, and the number of training epochs chosen in each fold.
-#'   When the prior was recovered, \code{recovered} holds the estimated list
-#'   coverages (\code{NA} for groups that were not subdivided, whose share is
-#'   the coarse share).
+#'   (the geographic prior used), and \code{fields}, which contains for each
+#'   name field the selected \code{K}, the \code{Q} curve, and the number of
+#'   training epochs selected in each fold. When the prior was estimated,
+#'   \code{recovered} contains the estimated list coverages. With
+#'   \code{gamma = 0}, the coverage is \code{NA} for groups that were not
+#'   divided, for which the share is the share of the coarse group.
 #' @examples
 #' \dontrun{
 #' fit <- lbisg(voters$surname, voters$tract, lists = my_lists,
@@ -64,7 +70,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
   ensure_lbisg_python()
   mod <- get_lbisg_module()
 
-  ## Geographic prior P(R | G): supplied, or recovered from the lists
+  ## Geographic prior P(R | G): supplied, or estimated from the lists
   recovered <- NULL
   if (!is.null(prior)) {
     prior <- as.matrix(prior)
@@ -77,16 +83,16 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     }
     if (!all(groups %in% colnames(prior))) {
       stop(
-        "Every list group needs a column in 'prior': missing ",
+        "Each list group requires a column in 'prior': missing ",
         paste(setdiff(groups, colnames(prior)), collapse = ", "), "."
       )
     }
     unlisted <- setdiff(colnames(prior), groups)
     if (length(unlisted) > 1) {
       stop(
-        "Algorithm 1 requires a name list for every group; only one ",
-        "residual group may be predicted without a list. Groups in 'prior' ",
-        "without a list: ", paste(unlisted, collapse = ", "), "."
+        "Each group in 'prior' requires a list, and only one residual group may ",
+        "have none. ",
+        "Groups without a list: ", paste(unlisted, collapse = ", "), "."
       )
     }
     prior <- prior[, c(groups, unlisted), drop = FALSE]
@@ -95,8 +101,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     onm <- lbisg_list_matrix(names, lists)
     if (is.null(coarse.prior)) {
       if (verbose) {
-        message("Recovering geographic prevalence from the list rates ",
-                "(Section 3.1)...")
+        message("Estimating geographic prevalence from the lists...")
       }
       rec <- mod$recover_prevalence(
         onmat = onm, geo = geo_idx, lam = control$lambda,
@@ -106,8 +111,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
       coarse.prior <- as.matrix(coarse.prior)
       lbisg_check_coarse(coarse.prior, coarse.map, groups)
       if (verbose) {
-        message("Recovering subgroup prevalence from the coarse prevalence ",
-                "(Section 3.2)...")
+        message("Estimating subgroup prevalence from the coarse prior...")
       }
       rec <- mod$recover_prevalence(
         onmat = onm, geo = geo_idx,
@@ -120,8 +124,8 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     colnames(prior) <- groups
     recovered <- stats::setNames(as.numeric(rec[[2]]), groups)
     if (!is.null(coarse.prior)) {
-      # A coarse group that is not subdivided needs no list: its share is
-      # the coarse share, and it is the residual group of Algorithm 1.
+      # A coarse group that is not divided retains the coarse share and does
+      # not require a list.
       unlisted <- setdiff(colnames(coarse.prior), coarse.map[groups])
       prior <- cbind(prior, coarse.prior[, unlisted, drop = FALSE])
     }
@@ -131,7 +135,7 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
     stop("'K' must be at least the number of groups (", ncol(prior), ").")
   }
 
-  ## Algorithm 1 for each name field
+  ## Fit each name field
   fields <- list(
     surname = lbisg_fit_field(names, lists, "surname", geo_idx, prior, K,
                               control, mod, verbose)
@@ -165,46 +169,46 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 
 #' Control parameters for lBISG
 #'
-#' @param n.folds Number of name folds \eqn{J} for the out-of-fold list scores
-#'   (Algorithm 1).
-#' @param K.method How Algorithm 2 holds out geographic units when choosing
-#'   \eqn{K}: \code{"split"} (default, as in the paper) splits the units once at
-#'   random, each going to the validation set with probability
-#'   \code{val.frac}; \code{"crossfit"} deals the units into \code{geo.folds}
-#'   folds of approximately equal numbers of people and holds out each fold in
-#'   turn.
-#' @param val.frac Probability that a geographic unit is in the validation set
+#' @param n.folds Number of folds of distinct names. Each name is scored by a
+#'   list model that is trained on the other folds.
+#' @param K.method How geographic units are held out when \eqn{K} is selected.
+#'   With \code{"split"} (the default), each unit is held out with probability
+#'   \code{val.frac}. With \code{"crossfit"}, the units are divided into
+#'   \code{geo.folds} folds of approximately equal numbers of people, and each
+#'   fold is held out once.
+#' @param val.frac Probability that a geographic unit is held out
 #'   (\code{K.method = "split"}).
-#' @param split.seed Seed of the random split (\code{K.method = "split"}).
-#' @param geo.folds Number of geographic folds \eqn{J} for choosing \eqn{K}
+#' @param split.seed Seed for the selection of held-out units
+#'   (\code{K.method = "split"}).
+#' @param geo.folds Number of folds of geographic units
 #'   (\code{K.method = "crossfit"}).
-#' @param K.grid Candidate numbers of clusters for Algorithm 2. The default grid
-#'   runs from 10 to 20,000 and is extended upward while the maximum of
-#'   \eqn{Q(K)} sits at its top; values below the number of groups or at least
-#'   the number of distinct list-score vectors are dropped.
-#' @param max.epochs,patience The number of training epochs of each list model
-#'   is chosen by cross-validation within the training folds; training stops
-#'   once the mean held-out loss has not improved for \code{patience} epochs,
-#'   or at \code{max.epochs}.
+#' @param K.grid Candidate numbers of clusters. The default ranges from 10 to
+#'   20,000. As long as \eqn{Q(K)} is largest at the top of the grid, the grid
+#'   is extended upward by a factor of 1.5. Values below the number of groups,
+#'   or at least the number of distinct list-score vectors, are excluded.
+#' @param max.epochs,patience The number of training epochs for each list model
+#'   is selected by cross-validation. Training is stopped when the mean held-out
+#'   loss has not improved for \code{patience} epochs, or at
+#'   \code{max.epochs}.
 #' @param batch.size Minibatch size, in distinct names, for the list models.
 #' @param seed Random seed.
-#' @param lambda Cross-group list rate for the sensitivity analysis of the
-#'   prevalence recovery (Appendix A6); 0 assumes exclusive lists. With a
-#'   coarse prior, the rate between groups of the same coarse group.
-#' @param gamma With a coarse prior, the list rate between groups of different
-#'   coarse groups, between 0 and \code{lambda} (Appendix A6.2); 0 assumes the
-#'   coarse groups are separated by the lists.
-#' @param exhaustive Set to \code{TRUE} to state that the groups with lists
-#'   make up the whole population being divided: every group when no prior is
-#'   given, or each subdivided coarse group when only a coarse prior is given.
-#'   Recovering the prior requires this (Section 3): if some members of a
-#'   coarse group belong to none of the listed subgroups, the recovery assigns
-#'   them to the listed subgroups anyway. Add a residual list for the remaining
-#'   members (for example, the coarse group's names minus those on the
-#'   subgroup lists) before setting it. Not used when the full prior is given.
+#' @param lambda For a sensitivity analysis of the estimated geographic prior,
+#'   the assumed rate at which members of one group have a name on the list
+#'   of another group. The default of 0 corresponds to no such overlap. With a
+#'   coarse prior, \code{lambda} is the rate within a coarse group.
+#' @param gamma With a coarse prior, the assumed rate between groups in
+#'   different coarse groups. Must be between 0 and \code{lambda}.
+#' @param exhaustive Set to \code{TRUE} to confirm that the groups with lists
+#'   constitute the whole population or, with a coarse prior, that the
+#'   subgroups constitute each divided coarse group. Estimation of the prior
+#'   requires this assumption, because anyone outside the listed groups is
+#'   assigned to them. If necessary, add a residual list, such as a list of the
+#'   names in the coarse group that do not appear on any subgroup list. Ignored
+#'   when
+#'   \code{prior} is supplied.
 #' @param embedding.model Sentence-transformer used for the name embeddings:
 #'   any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
-#'   needed, because lBISG trains its own list models.
+#'   required, because the list models are trained on the supplied lists.
 #' @return A named list.
 #' @export
 lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
@@ -233,27 +237,18 @@ lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
 
 #' Recover geographic prevalence from name lists
 #'
-#' Section 3 of Chasalow, Dasanaike and Imai. Without any geographic prevalence
-#' (\code{coarse.prior = NULL}), the lists must be exhaustive and exclusive and
-#' \eqn{P(R \mid G)} is recovered from the list rates in each geography (Section
-#' 3.1). With coarse group prevalence, the subgroup shares are recovered within
-#' each coarse group by non-negative least squares weighted by the expected
-#' number of coarse group members and normalized to the coarse share (Section
-#' 3.2). \code{lambda > 0} and \code{gamma > 0} give the sensitivity analysis
-#' of Appendix A6. With \code{gamma > 0}, all groups with a list are recovered
-#' jointly, and the members of a coarse group without a list are assumed to
-#' have a name on each list at rate \code{gamma}. A warning means the
-#' estimated coverages are outside \eqn{(\lambda, 1]}, so the assumptions do
-#' not hold at these values.
+#' Estimates the share of each group in each geographic unit from the rate at
+#' which people in that unit have a name on each list, without group labels.
+#' With no prior, the lists must cover the whole population and not overlap.
+#' With a coarse prior, the subgroup shares within each coarse group are
+#' estimated by non-negative least squares and scaled to the coarse share.
+#' \code{lambda} and \code{gamma} allow some overlap between lists, for a
+#' sensitivity analysis. A warning means that an estimated list coverage is not
+#' between \code{lambda} and 1. Such a coverage violates the assumptions of the
+#' recovery.
 #'
 #' @inheritParams lbisg
-#' @param lambda Assumed cross-group list rate (0 for exclusive lists); with a
-#'   coarse prior, the rate between groups of the same coarse group.
-#' @param gamma Assumed list rate between groups of different coarse groups,
-#'   between 0 and \code{lambda} (coarse prior only).
-#' @param exhaustive Set to \code{TRUE} to state that the groups with lists
-#'   make up the whole population being divided; see
-#'   \code{\link{lbisg_control}}.
+#' @inheritParams lbisg_control
 #' @return A list with \code{prevalence} (a data frame with one row per
 #'   geography and one column per group) and \code{coverage} (the estimated
 #'   \eqn{P(L_r = 1 \mid R = r)} of each list).
@@ -300,22 +295,22 @@ lbisg_recover_prevalence <- function(names, geo, lists, coarse.prior = NULL,
 
 #' Label-free list quality
 #'
-#' Section 4.3 of Chasalow, Dasanaike and Imai. With the geographic prevalence
-#' known, the matrix \eqn{\Pi_{r,r'} = P(L_{r'} = 1 \mid R = r)} is recovered
-#' from \eqn{P(L_{r'} = 1 \mid G) = \sum_r \Pi_{r,r'} P(R = r \mid G)} by least
-#' squares weighted by the people in each geography, without any group labels.
+#' Estimates, without group labels, the rate \eqn{\Pi_{r,r'}} at which members
+#' of group \eqn{r} have a name on the list of group \eqn{r'}, from how list
+#' membership varies with the known geographic prior.
 #'
 #' @inheritParams lbisg
-#' @param min.geo.n Geographies with fewer people are left out of the solve.
-#' @return A list with \code{Pi} (groups by lists), its diagonal dominance
-#'   \code{D}, and the estimated \code{coverage} and \code{precision} of each
-#'   list.
+#' @param min.geo.n Geographies with fewer than \code{min.geo.n} people are
+#'   excluded from the least squares fit of \code{Pi}.
+#' @return A list with \code{Pi} (groups by lists), the diagonal dominance
+#'   \code{D} of \code{Pi}, and the estimated \code{coverage} and
+#'   \code{precision} of each list.
 #' @export
 lbisg_list_quality <- function(names, geo, lists, prior, min.geo.n = 1) {
   lists <- lbisg_check_lists(lists, "lists")
   prior <- as.matrix(prior)
   if (!all(names(lists) %in% colnames(prior))) {
-    stop("Every list group needs a column in 'prior'.")
+    stop("Each list group requires a column in 'prior'.")
   }
   ensure_lbisg_python()
   mod <- get_lbisg_module()
@@ -351,14 +346,14 @@ print.lbisg <- function(x, ...) {
 }
 
 
-# Fit Algorithm 1 (and Algorithm 2 when K is NULL) to one name field.
+# Fit lBISG to one name field, and select K when K is NULL.
 lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
                             verbose) {
   nm <- lbisg_clean(nm)
   if (any(is.na(nm) | nm == "")) {
     stop(
-      "lBISG requires a non-missing ", label, " for every person; ",
-      "filter empty names first."
+      "lBISG requires a non-missing ", label, " for each person. ",
+      "Remove rows with empty names first."
     )
   }
   uniq <- unique(nm)
@@ -416,9 +411,8 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
 }
 
 
-# The sentence-transformer for the embeddings: any HuggingFace model ID, or a
-# list with a 'transformer' element (as for eBISG). lBISG trains its own list
-# models, so no eBISG checkpoint is needed.
+# Embedding model: a HuggingFace model ID, or a list with a 'transformer'
+# element as for eBISG.
 lbisg_transformer <- function(model) {
   if (is.list(model)) model <- model$transformer
   if (!is.character(model) || length(model) != 1 || is.na(model)) {
@@ -451,7 +445,7 @@ lbisg_geo_rows <- function(x, geo_idx) {
 lbisg_check_coarse <- function(coarse.prior, coarse.map, groups) {
   lbisg_check_shares(coarse.prior, "coarse.prior")
   if (is.null(coarse.map) || !all(groups %in% names(coarse.map))) {
-    stop("'coarse.map' must give the coarse group of every list group.")
+    stop("'coarse.map' must specify the coarse group of each list group.")
   }
   if (!all(coarse.map[groups] %in% colnames(coarse.prior))) {
     stop("Every value of 'coarse.map' must be a column of 'coarse.prior'.")
@@ -459,18 +453,18 @@ lbisg_check_coarse <- function(coarse.prior, coarse.map, groups) {
   unlisted <- setdiff(colnames(coarse.prior), coarse.map[groups])
   if (length(unlisted) > 1) {
     stop(
-      "Algorithm 1 requires a name list for every group; only one coarse ",
-      "group may be left without a list (as the residual group). Coarse ",
-      "groups without a list: ", paste(unlisted, collapse = ", "), "."
+      "Each coarse group requires a list, and only one coarse group may have ",
+      "none. ",
+      "Coarse groups without a list: ", paste(unlisted, collapse = ", "), "."
     )
   }
   invisible(TRUE)
 }
 
 
-# Each row of a prior holds the shares of every group in one geography, so it
-# must sum to one. A row that sums to less usually means a group was left out,
-# and rescaling it would silently inflate the other groups.
+# Each row of a prior must sum to one. A row that sums to less usually means
+# that a group is missing, and rescaling the row would inflate the other
+# groups.
 lbisg_check_shares <- function(x, arg) {
   if (!is.numeric(x) || anyNA(x) || any(x < 0)) {
     stop("'", arg, "' must contain non-negative shares with no missing values.")
@@ -478,8 +472,8 @@ lbisg_check_shares <- function(x, arg) {
   off <- abs(rowSums(x) - 1) > 1e-3
   if (any(off)) {
     stop(
-      "Each row of '", arg, "' must sum to 1, with one column for every ",
-      "group (including a residual group for everyone else); ", sum(off),
+      "Each row of '", arg, "' must sum to 1, with one column for each ",
+      "group, including a residual group for everyone else. ", sum(off),
       " of ", nrow(x), " rows do not."
     )
   }
@@ -487,22 +481,22 @@ lbisg_check_shares <- function(x, arg) {
 }
 
 
-# Recovering the prior assumes the listed groups make up the whole population
-# being divided. The software cannot check this, so the user has to state it.
+# Estimation of the prior requires the assumption that the listed groups
+# constitute the whole population. Because this assumption cannot be checked,
+# the user has to confirm it.
 lbisg_check_exhaustive <- function(exhaustive, coarse.prior) {
   if (isTRUE(exhaustive)) return(invisible(TRUE))
   what <- if (is.null(coarse.prior)) {
-    "the listed groups make up the whole population"
+    "the listed groups constitute the whole population"
   } else {
-    "the listed subgroups of each subdivided coarse group make up that whole group"
+    "the listed subgroups of each divided coarse group constitute that coarse group"
   }
   stop(
-    "Recovering geographic prevalence from the lists assumes that ", what,
-    " (Section 3). If some members belong to none of the listed groups, ",
-    "they are assigned to the listed groups anyway. Add a residual list for ",
-    "them (for example, the coarse group's names minus those on the other ",
-    "lists), then set exhaustive = TRUE ",
-    "(control = lbisg_control(exhaustive = TRUE) in lbisg() and predict_race())."
+    "Estimating geographic prevalence from the lists assumes that ", what,
+    ". Anyone outside the listed groups would be assigned to one of them. If ",
+    "necessary, add a residual list (for example, the names in the coarse ",
+    "group that appear on none of the subgroup lists), then set ",
+    "control = lbisg_control(exhaustive = TRUE)."
   )
 }
 
@@ -521,14 +515,15 @@ lbisg_check_lists <- function(lists, arg) {
 
 #' Set up Python environment for lBISG predictions
 #'
-#' Installs the Python packages lBISG needs (sentence-transformers and torch for
-#' the embeddings and the list models, plus scikit-learn and scipy). Call once
-#' before \code{predict_race(..., model = "lBISG")} or \code{\link{lbisg}}.
-#' No pre-trained weights are downloaded: the list models are trained from the
-#' lists you supply.
+#' Installs the Python packages that lBISG requires: sentence-transformers,
+#' torch, scikit-learn and scipy. Run once before
+#' \code{predict_race(..., model = "lBISG")} or \code{\link{lbisg}}. No model
+#' weights are downloaded, because the list models are trained on the supplied
+#' lists.
 #'
 #' @param envname Name of the Python virtual environment. Defaults to
-#'   \code{"r-ebisg"} so the environment is shared with \code{\link{setup_ebisg}}.
+#'   \code{"r-ebisg"}, the environment that \code{\link{setup_ebisg}} also
+#'   uses.
 #' @export
 setup_lbisg <- function(envname = "r-ebisg") {
   if (!requireNamespace("reticulate", quietly = TRUE)) {
@@ -589,12 +584,12 @@ get_lbisg_module <- function() {
 
 
 #' @section .predict_race_lbisg:
-#' lBISG race prediction for \code{predict_race(model = "lBISG")}: the census
-#' race shares at \code{census.geo} are the geographic prior, and
-#' \code{\link{lbisg}} does the rest. A race group given as a list of
-#' subgroup lists is subdivided, with the subgroup prior recovered from the
-#' census share of that group (Section 3.2). Any of whi, bla, his and asi
-#' without a list gets a list built from the Census name table.
+#' lBISG race prediction for \code{predict_race(model = "lBISG")}, with the
+#' census race shares at \code{census.geo} as the geographic prior. A race
+#' group given as a list of subgroup lists is divided into those subgroups,
+#' and the prior for the subgroups is estimated from the census share of the
+#' group. Any of whi, bla, his and asi without a list is assigned a list
+#' constructed from the Census name table.
 #' @rdname modfuns
 #' @keywords internal
 predict_race_lbisg <- function(
@@ -627,7 +622,7 @@ predict_race_lbisg <- function(
   if (use_first) {
     if (is.null(first.lists)) {
       stop(
-        "names.to.use includes first names; supply ",
+        "names.to.use includes first names. Supply ",
         "lists = list(surname = ..., first = ...)."
       )
     }
@@ -660,7 +655,7 @@ predict_race_lbisg <- function(
   geo_id_names <- determine_geo_id_names(census.geo)
   if (!all(geo_id_names %in% names(voter.file))) {
     stop(
-      "To use ", census.geo, " as census.geo, voter.file needs the column(s): ",
+      "To use ", census.geo, " as census.geo, voter.file requires the column(s): ",
       paste(geo_id_names, collapse = ", ")
     )
   }
@@ -705,7 +700,7 @@ predict_race_lbisg <- function(
     )
   }
 
-  ## Standard five columns (a subdivided group is the sum of its subgroups),
+  ## Standard five columns (a divided group is the sum of the subgroups),
   ## then one column per subgroup
   post <- fit$posterior
   preds <- matrix(0, nrow(post), length(eth),
@@ -761,9 +756,10 @@ lbisg_check_race_lists <- function(lists, eth, what) {
 
 
 # Flatten the race lists. Returns the lists keyed by group or subgroup, the
-# race group of each (coarse), and where each list came from (user or Census).
-# Any of whi, bla, his and asi without a list gets a Census list; oth without
-# a list is the residual group.
+# race group of each list (coarse), and the source of each list (user or
+# Census). Any of whi, bla, his and asi without a list is assigned a Census
+# list.
+# If oth has no list, oth is the residual group.
 lbisg_race_lists <- function(lists, prior, year, field) {
   out <- list(); coarse <- character(); source <- character()
   for (g in c("whi", "bla", "his", "asi", "oth")) {
@@ -791,16 +787,18 @@ lbisg_race_lists <- function(lists, prior, year, field) {
 }
 
 
-#' Name lists built from the Census name tables
+#' Name lists constructed from the Census name tables
 #'
-#' Builds the "Census lists" of Chasalow, Dasanaike and Imai from wru's Census
-#' name tables: names with \eqn{P(R = r \mid S) \ge} \code{floor}, ranked by
-#' their expected contribution, count times \eqn{(P(R = r \mid S) - P(R = r))},
-#' and cut at \code{size}. \eqn{P(R \mid S)} combines the Census
-#' \eqn{P(S \mid R)} with the expected number of people of each race in the
-#' data (the column sums of \code{prior}).
+#' Constructs a list for each group from the Census name tables in wru, as in
+#' Chasalow, Dasanaike and Imai (2026). Each list contains the names with
+#' \eqn{P(R = r \mid S) \ge} \code{floor}, ranked by count times
+#' \eqn{P(R = r \mid S) - P(R = r)}, up to a length of \code{size}.
+#' \eqn{P(R \mid S)} is computed from the Census \eqn{P(S \mid R)} and the
+#' expected number of people of each race in the data (the column sums of
+#' \code{prior}).
 #'
-#' @param groups Race groups to build lists for (any of whi, bla, his, asi, oth).
+#' @param groups Race groups for which lists are constructed (any of whi, bla,
+#'   his, asi, oth).
 #' @param prior Matrix of \eqn{P(R \mid G)} with columns whi, bla, his, asi, oth
 #'   and one row per person.
 #' @param year Census vintage of the name table.
@@ -816,8 +814,8 @@ lbisg_census_lists <- function(groups, prior, year = "2020", field = "last",
   tbl <- if (field == "first") dict$census_first else dict$census_last
   if (is.null(tbl)) {
     stop(
-      "There is no Census ", field, " name table for ", year, "; supply ",
-      "first-name lists for every group."
+      "There is no Census ", field, " name table for ", year, ". Supply ",
+      "first-name lists for each group."
     )
   }
   nm <- toupper(as.character(tbl[[1]]))
