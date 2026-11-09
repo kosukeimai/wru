@@ -273,9 +273,10 @@ def list_scores_oof(
     return scores, info
 
 
-def save_list_model(model: PerListModel, groups: Sequence[str], path: str,
-                    embedding: str = "intfloat/multilingual-e5-large") -> None:
-    """Save the networks of `model` in the format read by pretrained_scores().
+def list_model_state(model: PerListModel, groups: Sequence[str],
+                     embedding: str = "intfloat/multilingual-e5-large",
+                     ) -> dict[str, Any]:
+    """The networks of `model` in the format read by pretrained_scores().
 
     The per-list networks are stored as stacked weights W1 (L, D, 256),
     b1 (L, 256), W2 (L, 256, 128), b2 (L, 128), W3 (L, 128) and b3 (L), in
@@ -287,14 +288,32 @@ def save_list_model(model: PerListModel, groups: Sequence[str], path: str,
         W1=stack(lambda l: l[0].weight.T), b1=stack(lambda l: l[0].bias),
         W2=stack(lambda l: l[1].weight.T), b2=stack(lambda l: l[1].bias),
         W3=stack(lambda l: l[2].weight[0]), b3=stack(lambda l: l[2].bias[0]))
-    torch.save(dict(state=state, groups=[str(g) for g in groups],
-                    embedding=embedding,
-                    normalisation="upper case, internal spaces collapsed"),
-               path)
+    return dict(state=state, groups=[str(g) for g in groups],
+                embedding=embedding,
+                normalisation="upper case, internal spaces collapsed")
+
+
+def save_models(path: str, fields: dict[str, Any]) -> None:
+    """Save the list models of one or more name fields to one file.
+
+    Args:
+        path: file to write.
+        fields: maps a name field ("surname", "first") to the output of
+            list_model_state().
+    """
+    torch.save(dict(fields={k: v for k, v in fields.items()
+                            if v is not None}), path)
+
+
+def model_fields(path: str) -> list[str] | None:
+    """The name fields in a saved model file, or None for a single model."""
+    ck = torch.load(path, map_location="cpu", weights_only=False)
+    return list(ck["fields"]) if "fields" in ck else None
 
 
 def fit_list_model(emb: npt.ArrayLike, onmat: npt.ArrayLike,
-                   counts: npt.ArrayLike, groups: Sequence[str], path: str,
+                   counts: npt.ArrayLike, groups: Sequence[str],
+                   path: str | None = None,
                    epochs: int | None = None, J: int = 5,
                    max_epochs: int = 100, patience: int = 100,
                    batch_size: int = 64, seed: int = 42,
@@ -344,10 +363,12 @@ def fit_list_model(emb: npt.ArrayLike, onmat: npt.ArrayLike,
     allnames = np.arange(len(X))
     for _ in range(int(epochs)):
         model.train_epoch(X, Y, W, allnames, rng, batch_size)
-    save_list_model(model, groups, path, embedding)
-    _log(verbose, f"  saved list models ({n_lists} lists, {epochs} epochs) "
-                  f"to {path}")
-    return dict(epochs=int(epochs), cv_curve=curve)
+    state = list_model_state(model, groups, embedding)
+    if path is not None:
+        torch.save(state, path)
+        _log(verbose, f"  saved list models ({n_lists} lists, {epochs} "
+                      f"epochs) to {path}")
+    return dict(epochs=int(epochs), cv_curve=curve, state=state)
 
 
 # ---------------------------------------------------------------------------
@@ -594,15 +615,15 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
                 patience: int = 5, batch_size: int = 512, seed: int = 42,
                 verbose: bool = True, k_method: str = "split",
                 val_frac: float = 0.2,
-                split_seed: int = 0, save_path: str | None = None,
+                split_seed: int = 0, keep_model: bool = False,
                 groups: Sequence[str] | None = None,
                 embedding: str = "intfloat/multilingual-e5-large",
                 ) -> dict[str, Any]:
     """lBISG for one name field.
 
-    With `save_path`, the list models are also fit to all the distinct names,
-    for the mean of the numbers of epochs selected in the folds, and saved
-    there for later use with pretrained_scores().
+    With `keep_model`, the list models are also fit to all the distinct
+    names, for the mean of the numbers of epochs selected in the folds, and
+    returned as `model_state` for save_models().
 
     Args:
         emb_unique: (n_names, D) embeddings of the distinct names.
@@ -638,18 +659,20 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
         counts[used], J=int(n_folds), max_epochs=int(max_epochs),
         patience=int(patience), batch_size=int(batch_size), seed=int(seed),
         verbose=verbose)
-    if save_path is not None:
+    state = None
+    if keep_model:
         ep = max(1, int(round(np.mean([info[k]["selected_epochs"]
                                        for k in info]))))
-        fit_list_model(emb_unique[used], np.asarray(onmat_unique)[used],
-                       counts[used], groups or [], save_path, epochs=ep,
-                       batch_size=int(batch_size), seed=int(seed),
-                       embedding=embedding, verbose=verbose)
+        state = fit_list_model(
+            emb_unique[used], np.asarray(onmat_unique)[used], counts[used],
+            groups or [], None, epochs=ep, batch_size=int(batch_size),
+            seed=int(seed), embedding=embedding, verbose=verbose)["state"]
     res = lbisg_field_scores(scores[remap[idx]], geo, prior, K=K, grid=grid,
                              geo_folds_J=geo_folds_J, verbose=verbose,
                              k_method=k_method, val_frac=val_frac,
                              split_seed=split_seed)
     res["epochs"] = [info[k]["selected_epochs"] for k in sorted(info)]
+    res["model_state"] = state
     return res
 
 
@@ -688,24 +711,33 @@ def lbisg_field_scores(F: npt.ArrayLike, geo: npt.ArrayLike,
                 scores=F)
 
 
-def pretrained_scores(emb_unique: npt.ArrayLike,
-                      path: str) -> tuple[Array, list[str]]:
-    """List scores from a pre-trained list model fit on the lists alone.
+def pretrained_scores(emb_unique: npt.ArrayLike, path: str,
+                      field: str = "surname") -> tuple[Array, list[str]]:
+    """List scores from saved list models.
 
     The checkpoint holds one network per list (D -> 256 -> 128 -> 1, ReLU),
     stored as stacked weights W1 (L, D, 256), b1 (L, 256), W2 (L, 256, 128),
     b2 (L, 128), W3 (L, 128) and b3 (L), with the list identifiers in
-    `groups`. The networks share no parameters. Dropout is off at prediction.
+    `groups`. A file written by save_models() holds such a model for each
+    name field under `fields`; a file with a single model is used for any
+    field. The networks share no parameters. Dropout is off at prediction.
 
     Args:
         emb_unique: (n_names, D) embeddings of the distinct names, from the
             embedding model named in the checkpoint.
         path: path to the .pt checkpoint.
+        field: name field ("surname" or "first") to read from a file with
+            several fields.
 
     Returns:
         (scores, groups): the (n_names, L) scores and the list identifiers.
     """
     ck = torch.load(path, map_location="cpu", weights_only=False)
+    if "fields" in ck:
+        if field not in ck["fields"]:
+            raise ValueError(f"{path} has no list models for the {field} "
+                             f"field.")
+        ck = ck["fields"][field]
     s = {k: v.float() for k, v in ck["state"].items()}
     X = torch.as_tensor(np.asarray(emb_unique, np.float32))
     if X.shape[1] != s["W1"].shape[1]:

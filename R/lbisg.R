@@ -40,9 +40,10 @@
 #'   \eqn{Q(K)}.
 #' @param control A list from \code{\link{lbisg_control}}.
 #' @param verbose Print progress.
-#' @param pretrained Optional pre-trained list models: the path of a surname
-#'   model file (\code{.pt}), or a list with paths \code{surname} and,
-#'   optionally, \code{first}. The list scores then come from these models and
+#' @param pretrained Optional saved list models: the path of a file written
+#'   with \code{lbisg_control(save.models = ...)}, which holds the models of
+#'   each name field, or a list with the paths of a \code{surname} model and,
+#'   optionally, a \code{first} model. The list scores then come from these models and
 #'   no list model is fit to \code{names}; \code{lists} and \code{first.lists}
 #'   are not used. \code{prior} is required, and its groups need not match the
 #'   lists of the model, because the scores are used only to cluster the names.
@@ -173,6 +174,10 @@ lbisg <- function(names, geo, lists = NULL, prior = NULL, coarse.prior = NULL,
     post <- fields$surname$posterior
   }
   colnames(post) <- paste0("pred.", colnames(prior))
+  if (!is.null(control$save.models)) {
+    lbisg_save_models(mod, control$save.models, fields, verbose)
+  }
+  fields <- lapply(fields, function(f) f[names(f) != "model.state"])
 
   structure(
     list(posterior = as.data.frame(post), prior = prior, fields = fields,
@@ -224,10 +229,12 @@ lbisg <- function(names, geo, lists = NULL, prior = NULL, coarse.prior = NULL,
 #' @param embedding.model Sentence-transformer used for the name embeddings:
 #'   any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 #'   required, because the list models are trained on the supplied lists.
-#' @param save.models Optional file prefix. The list models of each name field
-#'   are then also fit to all the distinct names and saved as
-#'   \code{<prefix>_surname.pt} and \code{<prefix>_first.pt}, which can be
-#'   passed to \code{\link{lbisg}} as \code{pretrained} in later runs.
+#' @param save.models Optional path of a file (for example
+#'   \code{"models/my_models.pt"}) to which the list models are saved. After
+#'   the run, the list models of each name field are fit to all the distinct
+#'   names and saved together in this file, which can be passed to
+#'   \code{\link{lbisg}} as \code{pretrained} in later runs. The directory is
+#'   created if it does not exist.
 #' @return A named list.
 #' @export
 lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
@@ -384,7 +391,9 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     uniq, transformer = lbisg_transformer(control$embedding.model)
   )
   if (!is.null(pretrained)) {
-    sc <- mod$pretrained_scores(emb, pretrained)
+    sc <- mod$pretrained_scores(
+      emb, pretrained, field = if (label == "surname") "surname" else "first"
+    )
     res <- mod$lbisg_field_scores(
       F = as.matrix(sc[[1]])[match(nm, uniq), , drop = FALSE],
       geo = geo_idx, prior = prior,
@@ -436,9 +445,7 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     k_method = control$K.method,
     val_frac = as.numeric(control$val.frac),
     split_seed = as.integer(control$split.seed),
-    save_path = if (is.null(control$save.models)) NULL else
-      paste0(control$save.models, "_",
-             if (label == "surname") "surname" else "first", ".pt"),
+    keep_model = !is.null(control$save.models),
     groups = names(lst),
     embedding = lbisg_transformer(control$embedding.model)
   )
@@ -452,8 +459,19 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     K = res$K,
     K.used = res$K_used,
     Q = Q,
-    epochs = unlist(res$epochs)
+    epochs = unlist(res$epochs),
+    model.state = res$model_state
   )
+}
+
+
+# Save the list models of each name field to one file, for 'pretrained'.
+lbisg_save_models <- function(mod, path, fields, verbose) {
+  path <- path.expand(path)
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  mod$save_models(path, lapply(fields, `[[`, "model.state"))
+  if (verbose) message("Saved the list models to ", path)
+  invisible(path)
 }
 
 
@@ -462,17 +480,30 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
 # then estimated from the people in the data as usual.
 lbisg_fit_pretrained <- function(names, geo, prior, first.names, K, control,
                                  verbose, pretrained) {
+  ensure_lbisg_python()
+  mod <- get_lbisg_module()
   if (is.character(pretrained) && length(pretrained) == 1) {
-    pretrained <- list(surname = pretrained)
+    if (!file.exists(pretrained)) {
+      stop("Saved list models not found: ", pretrained)
+    }
+    p <- normalizePath(pretrained)
+    saved <- unlist(mod$model_fields(p))
+    pretrained <- list(
+      surname = p,
+      first = if ("first" %in% saved) p else NULL
+    )
+    if (!is.null(saved) && !"surname" %in% saved) {
+      stop(pretrained$surname, " has no list models for surnames.")
+    }
   }
   if (!is.list(pretrained) || is.null(pretrained$surname)) {
-    stop("'pretrained' must be the path of a surname model, or a list with ",
-         "paths 'surname' and, optionally, 'first'.")
+    stop("'pretrained' must be the path of a file of saved list models, or a ",
+         "list with paths 'surname' and, optionally, 'first'.")
   }
   for (f in c("surname", "first")) {
     p <- pretrained[[f]]
     if (!is.null(p) && !file.exists(p)) {
-      stop("Pre-trained ", f, " model not found: ", p)
+      stop("Saved ", f, " models not found: ", p)
     }
     if (!is.null(p)) pretrained[[f]] <- normalizePath(p)
   }
@@ -492,8 +523,6 @@ lbisg_fit_pretrained <- function(names, geo, prior, first.names, K, control,
     stop("'K' must be at least the number of groups (", ncol(prior), ").")
   }
   geo_idx <- as.integer(factor(as.character(geo))) - 1L
-  ensure_lbisg_python()
-  mod <- get_lbisg_module()
 
   fields <- list(
     surname = lbisg_fit_field(names, NULL, "surname", geo_idx, prior, K,

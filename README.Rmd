@@ -495,17 +495,22 @@ Any sentence-transformer on HuggingFace can be passed as `embedding.model`. When
 
 #### Saving and reusing list models
 
-By default, `lBISG` trains the list models on the names being predicted. The list models can also be trained once, saved to a file, and reused in later runs. `lbisg_train_lists()` trains them on the lists alone, without any other names: the model for each list learns to separate the names on that list from the names on the other lists. To save the list models from an ordinary run instead, use `lbisg_control(save.models = "prefix")`, which writes `prefix_surname.pt` and `prefix_first.pt`. A saved file is passed to `lbisg()` with `pretrained`:
+The list models trained in a run can be saved and reused in later runs, which then skip the training of the list models. To save them, set `save.models` in `lbisg_control()` to the path of a file. After the run, the list models of each name field are fit to all the distinct names and saved together in that file, and its directory is created if it does not exist:
 
 ``` r
-lbisg_train_lists(surname_lists, "surname_models.pt")
-lbisg_train_lists(first_lists, "first_models.pt")
-fit <- lbisg(names = df$surname, geo = df$tract, prior = tract_shares,
-             first.names = df$first,
-             pretrained = list(surname = "surname_models.pt", first = "first_models.pt"))
+fit <- lbisg(names = df$surname, geo = df$tract, lists = surname_lists, prior = tract_shares,
+             first.names = df$first, first.lists = first_lists,
+             control = lbisg_control(save.models = "models/my_models.pt"))
 ```
 
-The names and the geographic prior are still required, since the clusters and the probability of each cluster within each group are estimated from the individuals in `df`. The groups in `prior` do not need to match the lists used to train the models, because the models are only used to define the clusters. `pretrained` cannot be used without `prior`, since recovering the geographic prevalence of each group requires the lists themselves.
+In a later run, pass the same path to `pretrained`. The lists are then not needed:
+
+``` r
+fit2 <- lbisg(names = df2$surname, geo = df2$tract, prior = tract_shares2,
+              first.names = df2$first, pretrained = "models/my_models.pt")
+```
+
+The names and the geographic prior are still required, since the clusters and the probability of each cluster within each group are estimated from the individuals in `df2`. The groups in `prior` do not need to match the lists used to train the models, because the models are only used to define the clusters. `pretrained` cannot be used without `prior`, since recovering the geographic prevalence of each group requires the lists themselves.
 
 For methodological details on `lBISG`, see Chasalow, K., Dasanaike, N. and Imai, K. (2026). "[Probabilistic Race and Ethnicity Prediction Using Group-Specific Name Lists](https://arxiv.org/abs/2610.06273)" (arXiv:2610.06273).
 

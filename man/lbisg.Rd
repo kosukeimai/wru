@@ -58,9 +58,10 @@ selected for each name field by maximizing the held-out criterion
 
 \item{verbose}{Print progress.}
 
-\item{pretrained}{Optional pre-trained list models: the path of a surname
-model file (\code{.pt}), or a list with paths \code{surname} and,
-optionally, \code{first}. The list scores then come from these models and
+\item{pretrained}{Optional saved list models: the path of a file written
+with \code{lbisg_control(save.models = ...)}, which holds the models of
+each name field, or a list with the paths of a \code{surname} model and,
+optionally, a \code{first} model. The list scores then come from these models and
 no list model is fit to \code{names}; \code{lists} and \code{first.lists}
 are not used. \code{prior} is required, and its groups need not match the
 lists of the model, because the scores are used only to cluster the names.

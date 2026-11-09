@@ -76,10 +76,12 @@ when
 any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 required, because the list models are trained on the supplied lists.}
 
-\item{save.models}{Optional file prefix. The list models of each name field
-are then also fit to all the distinct names and saved as
-\code{<prefix>_surname.pt} and \code{<prefix>_first.pt}, which can be
-passed to \code{\link{lbisg}} as \code{pretrained} in later runs.}
+\item{save.models}{Optional path of a file (for example
+\code{"models/my_models.pt"}) to which the list models are saved. After
+the run, the list models of each name field are fit to all the distinct
+names and saved together in this file, which can be passed to
+\code{\link{lbisg}} as \code{pretrained} in later runs. The directory is
+created if it does not exist.}
 }
 \value{
 A named list.
