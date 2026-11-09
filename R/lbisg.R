@@ -40,6 +40,16 @@
 #'   \eqn{Q(K)}.
 #' @param control A list from \code{\link{lbisg_control}}.
 #' @param verbose Print progress.
+#' @param pretrained Optional pre-trained list models: the path of a surname
+#'   model file (\code{.pt}), or a list with paths \code{surname} and,
+#'   optionally, \code{first}. The list scores then come from these models and
+#'   no list model is fit to \code{names}; \code{lists} and \code{first.lists}
+#'   are not used. \code{prior} is required, and its groups need not match the
+#'   lists of the model, because the scores are used only to cluster the names.
+#'   A model file holds one network per list (embedding -> 256 -> 128 -> 1,
+#'   ReLU) as stacked weights \code{W1}, \code{b1}, \code{W2}, \code{b2},
+#'   \code{W3}, \code{b3}, with the list names in \code{groups}; names are
+#'   upper-cased with internal spaces collapsed before they are embedded.
 #'
 #' @return An object of class \code{"lbisg"}: a list with \code{posterior} (a
 #'   data frame with one column \code{pred.<group>} per group), \code{prior}
@@ -56,13 +66,18 @@
 #' head(fit$posterior)
 #' }
 #' @export
-lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
+lbisg <- function(names, geo, lists = NULL, prior = NULL, coarse.prior = NULL,
                   coarse.map = NULL, first.names = NULL, first.lists = NULL,
-                  K = NULL, control = lbisg_control(), verbose = TRUE) {
+                  K = NULL, control = lbisg_control(), verbose = TRUE,
+                  pretrained = NULL) {
   control <- utils::modifyList(lbisg_control(), control)
   n <- length(names)
   if (length(geo) != n) {
     stop("'names' and 'geo' must have the same length.")
+  }
+  if (!is.null(pretrained)) {
+    return(lbisg_fit_pretrained(names, geo, prior, first.names, K, control,
+                                verbose, pretrained))
   }
   lists <- lbisg_check_lists(lists, "lists")
   groups <- names(lists)
@@ -209,6 +224,10 @@ lbisg <- function(names, geo, lists, prior = NULL, coarse.prior = NULL,
 #' @param embedding.model Sentence-transformer used for the name embeddings:
 #'   any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 #'   required, because the list models are trained on the supplied lists.
+#' @param save.models Optional file prefix. The list models of each name field
+#'   are then also fit to all the distinct names and saved as
+#'   \code{<prefix>_surname.pt} and \code{<prefix>_first.pt}, which can be
+#'   passed to \code{\link{lbisg}} as \code{pretrained} in later runs.
 #' @return A named list.
 #' @export
 lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
@@ -216,7 +235,8 @@ lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
                           K.grid = NULL, max.epochs = 100, patience = 5,
                           batch.size = 512, seed = 42, lambda = 0,
                           gamma = 0, exhaustive = FALSE,
-                          embedding.model = "intfloat/multilingual-e5-large") {
+                          embedding.model = "intfloat/multilingual-e5-large",
+                          save.models = NULL) {
   K.method <- match.arg(K.method)
   if (!(val.frac > 0 && val.frac < 1)) {
     stop("'val.frac' must be between 0 and 1.")
@@ -230,7 +250,7 @@ lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
     split.seed = split.seed, geo.folds = geo.folds, K.grid = K.grid,
     max.epochs = max.epochs, patience = patience, batch.size = batch.size,
     seed = seed, lambda = lambda, gamma = gamma, exhaustive = exhaustive,
-    embedding.model = embedding.model
+    embedding.model = embedding.model, save.models = save.models
   )
 }
 
@@ -348,8 +368,10 @@ print.lbisg <- function(x, ...) {
 
 # Fit lBISG to one name field, and select K when K is NULL.
 lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
-                            verbose) {
+                            verbose, pretrained = NULL) {
   nm <- lbisg_clean(nm)
+  # Pre-trained models were fit on names with internal spaces collapsed.
+  if (!is.null(pretrained)) nm <- gsub("\\s+", " ", nm)
   if (any(is.na(nm) | nm == "")) {
     stop(
       "lBISG requires a non-missing ", label, " for each person. ",
@@ -361,6 +383,25 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
   emb <- ebisg_embed_names(
     uniq, transformer = lbisg_transformer(control$embedding.model)
   )
+  if (!is.null(pretrained)) {
+    sc <- mod$pretrained_scores(emb, pretrained)
+    res <- mod$lbisg_field_scores(
+      F = as.matrix(sc[[1]])[match(nm, uniq), , drop = FALSE],
+      geo = geo_idx, prior = prior,
+      K = if (is.null(K)) NULL else as.integer(K),
+      grid = if (is.null(control$K.grid)) NULL else as.integer(control$K.grid),
+      geo_folds_J = as.integer(control$geo.folds), verbose = verbose,
+      k_method = control$K.method, val_frac = as.numeric(control$val.frac),
+      split_seed = as.integer(control$split.seed)
+    )
+    Q <- NULL
+    if (!is.null(res$Q)) {
+      Q <- data.frame(K = sapply(res$Q, `[[`, 1), Q = sapply(res$Q, `[[`, 2))
+    }
+    return(list(posterior = as.matrix(res$posterior), K = res$K,
+                K.used = res$K_used, Q = Q, epochs = NULL,
+                lists = unlist(sc[[2]])))
+  }
   onm <- lbisg_list_matrix(uniq, lst)
 
   if (verbose) {
@@ -394,7 +435,12 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     verbose = verbose,
     k_method = control$K.method,
     val_frac = as.numeric(control$val.frac),
-    split_seed = as.integer(control$split.seed)
+    split_seed = as.integer(control$split.seed),
+    save_path = if (is.null(control$save.models)) NULL else
+      paste0(control$save.models, "_",
+             if (label == "surname") "surname" else "first", ".pt"),
+    groups = names(lst),
+    embedding = lbisg_transformer(control$embedding.model)
   )
 
   Q <- NULL
@@ -408,6 +454,132 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     Q = Q,
     epochs = unlist(res$epochs)
   )
+}
+
+
+# lBISG with pre-trained list models: the list scores of each name field come
+# from a model fit on the lists alone; the clusters, K and the posterior are
+# then estimated from the people in the data as usual.
+lbisg_fit_pretrained <- function(names, geo, prior, first.names, K, control,
+                                 verbose, pretrained) {
+  if (is.character(pretrained) && length(pretrained) == 1) {
+    pretrained <- list(surname = pretrained)
+  }
+  if (!is.list(pretrained) || is.null(pretrained$surname)) {
+    stop("'pretrained' must be the path of a surname model, or a list with ",
+         "paths 'surname' and, optionally, 'first'.")
+  }
+  for (f in c("surname", "first")) {
+    p <- pretrained[[f]]
+    if (!is.null(p) && !file.exists(p)) {
+      stop("Pre-trained ", f, " model not found: ", p)
+    }
+    if (!is.null(p)) pretrained[[f]] <- normalizePath(p)
+  }
+  if (is.null(prior)) {
+    stop("Pre-trained list models require 'prior', because the geographic ",
+         "prior can only be estimated from the name lists themselves.")
+  }
+  n <- length(names)
+  prior <- as.matrix(prior)
+  lbisg_check_shares(prior, "prior")
+  if (nrow(prior) != n || is.null(colnames(prior))) {
+    stop("'prior' must have one row per person and one named column per ",
+         "group.")
+  }
+  prior <- prior / rowSums(prior)
+  if (!is.null(K) && K < ncol(prior)) {
+    stop("'K' must be at least the number of groups (", ncol(prior), ").")
+  }
+  geo_idx <- as.integer(factor(as.character(geo))) - 1L
+  ensure_lbisg_python()
+  mod <- get_lbisg_module()
+
+  fields <- list(
+    surname = lbisg_fit_field(names, NULL, "surname", geo_idx, prior, K,
+                              control, mod, verbose,
+                              pretrained = pretrained$surname)
+  )
+  if (!is.null(first.names) && !is.null(pretrained$first)) {
+    fields$first <- lbisg_fit_field(first.names, NULL, "first name", geo_idx,
+                                    prior, K, control, mod, verbose,
+                                    pretrained = pretrained$first)
+    post <- as.matrix(mod$combine_fields(
+      unname(lapply(fields, `[[`, "posterior")), prior
+    ))
+  } else {
+    if (!is.null(first.names)) {
+      warning("'first.names' is ignored because 'pretrained' has no 'first' ",
+              "model.")
+    }
+    post <- fields$surname$posterior
+  }
+  colnames(post) <- paste0("pred.", colnames(prior))
+  structure(
+    list(posterior = as.data.frame(post), prior = prior, fields = fields,
+         recovered = NULL),
+    class = "lbisg"
+  )
+}
+
+
+#' Fit list models on name lists alone
+#'
+#' Fits a network for membership in each list on the names of the lists
+#' themselves, with no names from a population: a name is labelled 1 for each
+#' list it is on and 0 for the others, so each list is contrasted with the
+#' other lists. The number of training epochs is chosen by cross-validation
+#' over folds of the names. The models are saved to \code{file} and can be
+#' passed to \code{\link{lbisg}} as \code{pretrained}, which then needs no
+#' lists.
+#'
+#' @param lists Named list of character vectors: the name list of each group.
+#'   At least two lists are needed.
+#' @param file Path of the model file to write (\code{.pt}).
+#' @param max.epochs,patience Limits on the number of epochs: training of the
+#'   cross-validation models stops once the mean held-out loss has not
+#'   improved for \code{patience} epochs, or at \code{max.epochs}.
+#' @param batch.size Minibatch size, in names.
+#' @param n.folds Number of folds of names for choosing the number of epochs.
+#' @param seed Random seed.
+#' @param embedding.model Sentence-transformer for the name embeddings; use
+#'   the same model when the file is used in \code{\link{lbisg}}.
+#' @param verbose Print progress.
+#' @return The path of the model file, invisibly.
+#' @examples
+#' \dontrun{
+#' lbisg_train_lists(my_lists, "surname_models.pt")
+#' fit <- lbisg(df$surname, df$tract, prior = tract_shares,
+#'              pretrained = "surname_models.pt")
+#' }
+#' @export
+lbisg_train_lists <- function(lists, file, max.epochs = 100, patience = 100,
+                              batch.size = 64, n.folds = 5, seed = 42,
+                              embedding.model =
+                                "intfloat/multilingual-e5-large",
+                              verbose = TRUE) {
+  lists <- lbisg_check_lists(lists, "lists")
+  if (length(lists) < 2) {
+    stop("At least two lists are needed: each list is contrasted with the ",
+         "others.")
+  }
+  lists <- lapply(lists, function(l) unique(gsub("\\s+", " ", lbisg_clean(l))))
+  uniq <- sort(unique(unlist(lists)))
+  uniq <- uniq[!is.na(uniq) & uniq != ""]
+  ensure_lbisg_python()
+  mod <- get_lbisg_module()
+  if (verbose) message("Embedding ", length(uniq), " distinct list names...")
+  emb <- ebisg_embed_names(uniq,
+                           transformer = lbisg_transformer(embedding.model))
+  res <- mod$fit_list_model(
+    emb = emb, onmat = lbisg_list_matrix(uniq, lists),
+    counts = rep(1, length(uniq)), groups = names(lists),
+    path = path.expand(file), J = as.integer(n.folds),
+    max_epochs = as.integer(max.epochs), patience = as.integer(patience),
+    batch_size = as.integer(batch.size), seed = as.integer(seed),
+    embedding = lbisg_transformer(embedding.model), verbose = verbose
+  )
+  invisible(file)
 }
 
 

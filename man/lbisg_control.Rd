@@ -18,7 +18,8 @@ lbisg_control(
   lambda = 0,
   gamma = 0,
   exhaustive = FALSE,
-  embedding.model = "intfloat/multilingual-e5-large"
+  embedding.model = "intfloat/multilingual-e5-large",
+  save.models = NULL
 )
 }
 \arguments{
@@ -74,6 +75,11 @@ when
 \item{embedding.model}{Sentence-transformer used for the name embeddings:
 any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 required, because the list models are trained on the supplied lists.}
+
+\item{save.models}{Optional file prefix. The list models of each name field
+are then also fit to all the distinct names and saved as
+\code{<prefix>_surname.pt} and \code{<prefix>_first.pt}, which can be
+passed to \code{\link{lbisg}} as \code{pretrained} in later runs.}
 }
 \value{
 A named list.

@@ -7,7 +7,7 @@
 lbisg(
   names,
   geo,
-  lists,
+  lists = NULL,
   prior = NULL,
   coarse.prior = NULL,
   coarse.map = NULL,
@@ -15,7 +15,8 @@ lbisg(
   first.lists = NULL,
   K = NULL,
   control = lbisg_control(),
-  verbose = TRUE
+  verbose = TRUE,
+  pretrained = NULL
 )
 }
 \arguments{
@@ -56,6 +57,17 @@ selected for each name field by maximizing the held-out criterion
 \item{control}{A list from \code{\link{lbisg_control}}.}
 
 \item{verbose}{Print progress.}
+
+\item{pretrained}{Optional pre-trained list models: the path of a surname
+model file (\code{.pt}), or a list with paths \code{surname} and,
+optionally, \code{first}. The list scores then come from these models and
+no list model is fit to \code{names}; \code{lists} and \code{first.lists}
+are not used. \code{prior} is required, and its groups need not match the
+lists of the model, because the scores are used only to cluster the names.
+A model file holds one network per list (embedding -> 256 -> 128 -> 1,
+ReLU) as stacked weights \code{W1}, \code{b1}, \code{W2}, \code{b2},
+\code{W3}, \code{b3}, with the list names in \code{groups}; names are
+upper-cased with internal spaces collapsed before they are embedded.}
 }
 \value{
 An object of class \code{"lbisg"}: a list with \code{posterior} (a

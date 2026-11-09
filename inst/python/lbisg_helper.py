@@ -273,6 +273,83 @@ def list_scores_oof(
     return scores, info
 
 
+def save_list_model(model: PerListModel, groups: Sequence[str], path: str,
+                    embedding: str = "intfloat/multilingual-e5-large") -> None:
+    """Save the networks of `model` in the format read by pretrained_scores().
+
+    The per-list networks are stored as stacked weights W1 (L, D, 256),
+    b1 (L, 256), W2 (L, 256, 128), b2 (L, 128), W3 (L, 128) and b3 (L), in
+    half precision, with the list names in `groups`.
+    """
+    lin = [[m for m in net if isinstance(m, nn.Linear)] for net in model.nets]
+    stack = lambda f: torch.stack([f(l) for l in lin]).detach().half().cpu()
+    state = dict(
+        W1=stack(lambda l: l[0].weight.T), b1=stack(lambda l: l[0].bias),
+        W2=stack(lambda l: l[1].weight.T), b2=stack(lambda l: l[1].bias),
+        W3=stack(lambda l: l[2].weight[0]), b3=stack(lambda l: l[2].bias[0]))
+    torch.save(dict(state=state, groups=[str(g) for g in groups],
+                    embedding=embedding,
+                    normalisation="upper case, internal spaces collapsed"),
+               path)
+
+
+def fit_list_model(emb: npt.ArrayLike, onmat: npt.ArrayLike,
+                   counts: npt.ArrayLike, groups: Sequence[str], path: str,
+                   epochs: int | None = None, J: int = 5,
+                   max_epochs: int = 100, patience: int = 100,
+                   batch_size: int = 64, seed: int = 42,
+                   fold_seed: int = 2026,
+                   embedding: str = "intfloat/multilingual-e5-large",
+                   verbose: bool = True) -> dict[str, Any]:
+    """Fit the list models on all names and save them for pretrained_scores().
+
+    With `epochs` None, the number of epochs minimizes the mean held-out loss
+    over J folds of the names (training stops once it has not improved for
+    `patience` epochs, or at `max_epochs`). The model is then fit to all names
+    for that number of epochs. To fit on the lists alone, pass the union of the
+    lists as the names, with a count of one for each.
+
+    Returns:
+        dict with the number of epochs and the cross-validation curve.
+    """
+    device = _device()
+    X = torch.as_tensor(np.ascontiguousarray(emb, np.float32), device=device)
+    Y = torch.as_tensor(np.ascontiguousarray(onmat, np.float32),
+                        device=device)
+    W = torch.as_tensor(np.maximum(np.asarray(counts, np.float32), 1e-4),
+                        device=device)
+    input_dim, n_lists = X.shape[1], Y.shape[1]
+    curve: list[float] = []
+    if epochs is None:
+        fold = name_folds(counts, J, fold_seed)
+        cv = [dict(model=PerListModel(input_dim, n_lists, seed + j, device),
+                   rng=np.random.RandomState(seed + j),
+                   train=np.flatnonzero(fold != j),
+                   valid=np.flatnonzero(fold == j)) for j in range(J)]
+        best_loss, epochs = np.inf, 1
+        for epoch in range(1, max_epochs + 1):
+            losses = []
+            for m in cv:
+                m["model"].train_epoch(X, Y, W, m["train"], m["rng"],
+                                       batch_size)
+                losses.append(m["model"].heldout_bce(X, Y, W, m["valid"]))
+            curve.append(float(np.mean(losses)))
+            if curve[-1] < best_loss:
+                best_loss, epochs = curve[-1], epoch
+            elif epoch - epochs >= patience:
+                break
+        del cv
+    model = PerListModel(input_dim, n_lists, seed, device)
+    rng = np.random.RandomState(seed)
+    allnames = np.arange(len(X))
+    for _ in range(int(epochs)):
+        model.train_epoch(X, Y, W, allnames, rng, batch_size)
+    save_list_model(model, groups, path, embedding)
+    _log(verbose, f"  saved list models ({n_lists} lists, {epochs} epochs) "
+                  f"to {path}")
+    return dict(epochs=int(epochs), cv_curve=curve)
+
+
 # ---------------------------------------------------------------------------
 # Clusters, the number of clusters and the posterior
 # ---------------------------------------------------------------------------
@@ -517,8 +594,15 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
                 patience: int = 5, batch_size: int = 512, seed: int = 42,
                 verbose: bool = True, k_method: str = "split",
                 val_frac: float = 0.2,
-                split_seed: int = 0) -> dict[str, Any]:
+                split_seed: int = 0, save_path: str | None = None,
+                groups: Sequence[str] | None = None,
+                embedding: str = "intfloat/multilingual-e5-large",
+                ) -> dict[str, Any]:
     """lBISG for one name field.
+
+    With `save_path`, the list models are also fit to all the distinct names,
+    for the mean of the numbers of epochs selected in the folds, and saved
+    there for later use with pretrained_scores().
 
     Args:
         emb_unique: (n_names, D) embeddings of the distinct names.
@@ -554,8 +638,44 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
         counts[used], J=int(n_folds), max_epochs=int(max_epochs),
         patience=int(patience), batch_size=int(batch_size), seed=int(seed),
         verbose=verbose)
-    F = scores[remap[idx]]
+    if save_path is not None:
+        ep = max(1, int(round(np.mean([info[k]["selected_epochs"]
+                                       for k in info]))))
+        fit_list_model(emb_unique[used], np.asarray(onmat_unique)[used],
+                       counts[used], groups or [], save_path, epochs=ep,
+                       batch_size=int(batch_size), seed=int(seed),
+                       embedding=embedding, verbose=verbose)
+    res = lbisg_field_scores(scores[remap[idx]], geo, prior, K=K, grid=grid,
+                             geo_folds_J=geo_folds_J, verbose=verbose,
+                             k_method=k_method, val_frac=val_frac,
+                             split_seed=split_seed)
+    res["epochs"] = [info[k]["selected_epochs"] for k in sorted(info)]
+    return res
 
+
+def lbisg_field_scores(F: npt.ArrayLike, geo: npt.ArrayLike,
+                       prior: npt.ArrayLike, K: int | None = None,
+                       grid: Sequence[int] | None = None,
+                       geo_folds_J: int = 5, verbose: bool = True,
+                       k_method: str = "split", val_frac: float = 0.2,
+                       split_seed: int = 0) -> dict[str, Any]:
+    """lBISG for one name field from given list scores.
+
+    Clusters the scores, selects K when K is None, and computes the
+    posterior. lbisg_field() calls it after fitting the list scores; with
+    pre-trained list models it is called on the scores of pretrained_scores().
+
+    Args:
+        F: (N, L) list scores per person, in (0, 1).
+        geo, prior, K, grid, geo_folds_J, verbose, k_method, val_frac,
+            split_seed: see lbisg_field().
+
+    Returns:
+        dict with posterior (N, R), K, K_used, Q (list of (K, Q(K)) or None)
+        and scores (N, L).
+    """
+    F = np.asarray(F, float)
+    geo = np.asarray(geo, np.int64)
     curve: list[tuple[int, float]] | None = None
     if K is None:
         K, curve = select_K(F, geo, prior, grid=grid, J=int(geo_folds_J),
@@ -565,8 +685,43 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
         _log(verbose, f"  selected K = {K}")
     post, _, K_used, _ = fit_posterior(F, geo, prior, int(K))
     return dict(posterior=post, K=int(K), K_used=int(K_used), Q=curve,
-                scores=F,
-                epochs=[info[k]["selected_epochs"] for k in sorted(info)])
+                scores=F)
+
+
+def pretrained_scores(emb_unique: npt.ArrayLike,
+                      path: str) -> tuple[Array, list[str]]:
+    """List scores from a pre-trained list model fit on the lists alone.
+
+    The checkpoint holds one network per list (D -> 256 -> 128 -> 1, ReLU),
+    stored as stacked weights W1 (L, D, 256), b1 (L, 256), W2 (L, 256, 128),
+    b2 (L, 128), W3 (L, 128) and b3 (L), with the list identifiers in
+    `groups`. The networks share no parameters. Dropout is off at prediction.
+
+    Args:
+        emb_unique: (n_names, D) embeddings of the distinct names, from the
+            embedding model named in the checkpoint.
+        path: path to the .pt checkpoint.
+
+    Returns:
+        (scores, groups): the (n_names, L) scores and the list identifiers.
+    """
+    ck = torch.load(path, map_location="cpu", weights_only=False)
+    s = {k: v.float() for k, v in ck["state"].items()}
+    X = torch.as_tensor(np.asarray(emb_unique, np.float32))
+    if X.shape[1] != s["W1"].shape[1]:
+        raise ValueError(f"The embeddings have {X.shape[1]} dimensions; the "
+                         f"model expects {s['W1'].shape[1]}.")
+    out = []
+    with torch.no_grad():
+        for i in range(0, len(X), 4096):
+            x = X[i:i + 4096]
+            h = torch.relu(torch.einsum("bd,ldh->blh", x, s["W1"]) + s["b1"])
+            h = torch.relu(torch.einsum("blh,lhk->blk", h, s["W2"]) + s["b2"])
+            out.append(torch.sigmoid(
+                torch.einsum("blk,lk->bl", h, s["W3"]) + s["b3"]).numpy())
+    scores = (np.concatenate(out) if out
+              else np.zeros((0, s["b3"].shape[0]), np.float32))
+    return scores, [str(g) for g in ck["groups"]]
 
 
 def combine_fields(posteriors: Sequence[npt.ArrayLike],
