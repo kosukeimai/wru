@@ -1,0 +1,43 @@
+name: Python tests
+
+on:
+  push:
+    paths:
+      - "inst/python/**"
+      - ".github/workflows/python-tests.yaml"
+  pull_request:
+    paths:
+      - "inst/python/**"
+      - ".github/workflows/python-tests.yaml"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+
+    defaults:
+      run:
+        working-directory: inst/python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: inst/python/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Check types
+        run: uv run mypy

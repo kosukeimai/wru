@@ -26,7 +26,8 @@ predict_race(
   name.dictionaries = NULL,
   names.to.use = "surname",
   control = NULL,
-  ebisg.model = "intfloat/multilingual-e5-large"
+  ebisg.model = "intfloat/multilingual-e5-large",
+  lists = NULL
 )
 }
 \arguments{
@@ -129,10 +130,13 @@ will break and provide error message with a list of offending geolocations.}
 available in \var{census.data}?}
 
 \item{model}{Character string: "BISG" (default), "fBISG" (fully-Bayesian with
-error correction), or "eBISG" (embedding-supplemented BISG, which uses
+error correction), "eBISG" (embedding-supplemented BISG, which uses
 text embeddings to predict race probabilities for names not found
-in Census surname lists). The eBISG model requires Python with
-sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.}
+in Census surname lists), or "lBISG" (list-powered BISG, which uses a name
+list for each group instead of a name-by-race table). The eBISG and lBISG
+models require Python with sentence-transformers and torch (and, for lBISG,
+scikit-learn and scipy). Run
+\code{\link{setup_ebisg}} or \code{\link{setup_lbisg}} to install them.}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
 Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
@@ -147,7 +151,8 @@ follow the same structure as \code{last_c}, \code{first_c},
 \item{names.to.use}{One of 'surname', 'surname, first', or  'surname, first,
 middle'. Defaults to 'surname'.}
 
-\item{control}{List of control arguments only used when \code{model="fBISG"}, including
+\item{control}{List of control arguments. For \code{model = "lBISG"}, a
+list from \code{\link{lbisg_control}}. For \code{model = "fBISG"}, a list including
 \describe{
 \item{iter}{Number of MCMC iterations. Defaults to 1000.}
 \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
@@ -164,6 +169,19 @@ consistency with the Python side. To use a different sentence-transformer,
 pass a named list with elements \code{transformer} (HuggingFace model ID),
 \code{dim} (embedding dimension), and \code{surname_mlp},
 \code{firstname_mlp} (paths to custom .pt checkpoints).}
+
+\item{lists}{Required when \code{model = "lBISG"}. A named list with any of
+\code{"whi"}, \code{"bla"}, \code{"his"}, \code{"asi"} and \code{"oth"},
+each a vector of names typical of that group. To divide a group into
+subgroups, give a named list of vectors instead, for example
+\code{asi = list(chinese = ..., japanese = ..., other_asian = ...)}, and set
+\code{control = lbisg_control(exhaustive = TRUE)}. The output then contains
+a \code{pred.<subgroup>} column for each subgroup. Any of \code{"whi"},
+\code{"bla"}, \code{"his"} and \code{"asi"} without a list is assigned a
+list constructed from the Census name table, and \code{"oth"} without a list
+is the residual group. To use first names as well, pass
+\code{list(surname = <lists>, first = <lists>)}. See \code{\link{lbisg}}
+for groups outside the Census categories.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
