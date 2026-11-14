@@ -93,7 +93,7 @@ census_helper <- function(
   }
 
   states <- toupper(states)
-  if (states == "ALL") {
+  if (identical(states, "ALL")) {
     states <- toupper(as.character(unique(voter.file$state)))
   }
 
