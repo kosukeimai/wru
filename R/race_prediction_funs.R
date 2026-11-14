@@ -635,8 +635,17 @@ predict_race_embedding <- function(
     model = "BISG"
   )
 
-  ## Load the surname dictionary to identify which names were actually matched
-  last_dict <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
+  ## Load the name dictionaries (respecting name_source and any custom
+  ## name.dictionaries) to identify which names were actually matched
+  loaded_dicts <- load_name_dictionaries(
+    namesToUse = names.to.use,
+    name_source = name_source,
+    year = year,
+    table.surnames = name.dictionaries[["surname"]],
+    table.first = name.dictionaries[["first"]],
+    table.middle = name.dictionaries[["middle"]]
+  )
+  last_dict <- loaded_dicts$last
   known_surnames <- toupper(last_dict[[1]])  # first column is the name
 
   ## Initialized lazily on first use; both the surname and first-name
@@ -704,11 +713,12 @@ predict_race_embedding <- function(
   ## rows are unmatched, but the text we embed comes from the original
   ## first-name column.
   if (grepl("first", names.to.use) && !is.null(cfg$firstname_mlp)) {
-    first_dict <- readRDS(file.path(path, "wru-data-first_c.rds"))
+    first_dict <- loaded_dicts$first
     known_firstnames    <- toupper(first_dict[[1]])
     cleaned_firstnames  <- toupper(voter.file$firstname.match)
     original_firstnames <- toupper(as.character(voter.file$first))
-    unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames)
+    unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames) |
+                            (cleaned_firstnames == "NA" & original_firstnames != "NA")
     embed_first_mask     <- unmatched_first_mask &
                             !is.na(original_firstnames) &
                             original_firstnames != ""
