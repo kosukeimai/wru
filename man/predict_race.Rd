@@ -90,14 +90,16 @@ Can be generated using \code{get_census_data} function.}
 condition race predictions on age (in addition to surname and geolocation).
 Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
 May only be set to \code{TRUE} if \code{census.geo} option is specified.
-If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.}
+If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
+Not supported when \code{model = "fBISG"}, which does not condition on age.}
 
 \item{sex}{optional \code{TRUE}/\code{FALSE} object specifying whether to
 condition race predictions on sex (in addition to surname and geolocation).
 Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
 May only be set to \code{TRUE} if \code{census.geo} option is specified.
 If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
-where \code{\var{sex}} is coded as 0 for males and 1 for females.}
+where \code{\var{sex}} is coded as 0 for males and 1 for females.
+Not supported when \code{model = "fBISG"}, which does not condition on sex.}
 
 \item{year}{An optional character vector specifying the year of U.S. Census geographic
 data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
