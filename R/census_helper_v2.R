@@ -133,7 +133,7 @@ census_helper_new <- function(
         census <- census.data[[toupper(state)]]$block_group
       }
     } else if (geo == "block") {
-      if (!is.null(census.data[[state]]$block) && "block_group" %in% names(census.data[[state]]$block)) {
+      if(any(names(census.data) == "block_group")) {
         geo.merge <- c("county", "tract", "block_group", "block")
       } else {
         geo.merge <- c("county", "tract", "block")
