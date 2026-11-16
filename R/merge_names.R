@@ -179,7 +179,7 @@ merge_names <- function(voter.file, namesToUse, name_source = "mixed", year = "2
 
         ## Remove Jr/Sr/III Suffixes for last names
         suffix <- c("JUNIOR", "SENIOR", "THIRD", "III", "JR", " II", " J R", " S R", " IV")
-        for (i in 1:length(suffix)) {
+        for (i in seq_along(suffix)) {
           df2$lastname.match <- ifelse(substr(df2$lastname.match, nchar(df2$lastname.match) - (nchar(suffix)[i] - 1), nchar(df2$lastname.match)) == suffix[i],
             substr(df2$lastname.match, 1, nchar(df2$lastname.match) - nchar(suffix)[i]),
             df2$lastname.match

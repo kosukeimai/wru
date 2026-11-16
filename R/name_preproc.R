@@ -22,7 +22,7 @@
   match_tmp <- post_names %in% target_names
   ## 4) Remove suffixes
   suffix <- c("JUNIOR", "SENIOR", "THIRD", "III", "JR", " II", " J R", " S R", " IV")
-  for (i in 1:length(suffix)) {
+  for (i in seq_along(suffix)) {
     post_names[!match_tmp] <- ifelse(substr(post_names[!match_tmp],
                                        nchar(post_names[!match_tmp]) - (nchar(suffix)[i] - 1),
                                        nchar(post_names[!match_tmp])) == suffix[i], 

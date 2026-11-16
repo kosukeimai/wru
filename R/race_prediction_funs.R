@@ -273,7 +273,7 @@ predict_race_me <- function(
   orig.names <- names(voter.file)
   orig.state <- voter.file$state
   voter.file$state <- toupper(voter.file$state)
-  voter.file$rec_id_ <- 1:nrow(voter.file)
+  voter.file$rec_id_ <- seq_len(nrow(voter.file))
   
   
   ## Set RNG seed

@@ -230,7 +230,7 @@ predict_race <- function(
   }
   
   # Adjust voter.file with caseid for ordering at the end
-  voter.file$caseid <- 1:nrow(voter.file)
+  voter.file$caseid <- seq_len(nrow(voter.file))
   
   if (surname.only == FALSE && is.null(census.data)) {
     # Otherwise predict_race_new and predict_race_me will both
