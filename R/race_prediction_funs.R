@@ -383,9 +383,9 @@ predict_race_me <- function(
       u_vf_names <- u_vf_names[reord]
       w_names <- match(proc_names_vf, u_vf_names)
       w_names <- split(w_names, voter.file$state_cluster)
-      pi_ <- as.matrix(ntab[which(kw_in_vf), -1])
+      pi_ <- as.matrix(ntab[which(kw_in_vf), -1, drop = FALSE])
       #pi_ <- apply(M_, 2, function(x) x / sum(x, na.rm = TRUE))
-      if (impute.missing) {
+      if (impute.missing && nrow(pi_) > 0) {
         pi_miss <- colMeans(pi_, na.rm = TRUE)
       } else {
         pi_miss <- rep(1, n_race)
@@ -458,7 +458,7 @@ predict_race_me <- function(
   }
   ## Get posterior race probabilities and append to voter.file
   race_samples <- do.call(rbind, race_samples)
-  race_samples <- race_samples[order(race_samples[, 1]), -1]
+  race_samples <- race_samples[order(race_samples[, 1]), -1, drop = FALSE]
   race_probs <- proportions(race_samples, 1)
   colnames(race_probs) <- paste0("pred.", race.suff)
   voter.file <- cbind(voter.file[, orig.names], race_probs)
