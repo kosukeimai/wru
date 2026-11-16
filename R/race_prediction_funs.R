@@ -186,7 +186,7 @@ predict_race_new <- function(
   }
   
   if(impute.missing){
-   for(i in ncol(preds)){
+   for(i in seq_len(ncol(preds))){
      preds[, i] <- dplyr::coalesce(preds[, i], race.margin[i])
    }
   }
