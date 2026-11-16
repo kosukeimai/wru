@@ -21,3 +21,9 @@ ChangeLog
 ^ebisg-surname-mlp\.pt$
 ^inst/python/__pycache__$
 wru-data-.*\.rds$
+^inst/python/tests$
+^inst/python/pyproject\.toml$
+^inst/python/uv\.lock$
+^inst/python/\.venv$
+^inst/python/\.pytest_cache$
+^inst/python/\.mypy_cache$

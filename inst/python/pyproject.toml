@@ -1,0 +1,44 @@
+[project]
+name = "wru-python"
+version = "0.1.0"
+description = "Python helpers for the eBISG and lBISG models in the wru R package"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "scikit-learn>=1.3",
+    "torch>=2.1",
+    "sentence-transformers>=2.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+]
+
+# The helpers are imported from R by path, not installed as a package.
+[tool.uv]
+package = false
+
+# CPU wheels keep the CI environment small.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["ebisg_helper.py", "lbisg_helper.py"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["sentence_transformers.*", "transformers.*", "sklearn.*"]
+follow_imports = "skip"

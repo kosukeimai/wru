@@ -524,6 +524,10 @@ predict_race_embedding <- function(
   # Define 2020 race marginal
   race.margin <- c(r_whi = 0.5783619, r_bla = 0.1205021, r_his = 0.1872988,
                    r_asi = 0.06106737, r_oth = 0.05276981)
+  ## Race mix of the data the MLPs were trained on; custom models without one
+  ## fall back to the 2020 national mix.
+  surname_margin   <- if (is.null(cfg$surname_margin)) unname(race.margin) else cfg$surname_margin
+  firstname_margin <- if (is.null(cfg$firstname_margin)) unname(race.margin) else cfg$firstname_margin
 
   census.geo <- tolower(census.geo)
   census.geo <- rlang::arg_match(census.geo)
@@ -690,6 +694,10 @@ predict_race_embedding <- function(
     mlp_path   <- if (is.null(cfg$tag)) cfg$surname_mlp else file.path(model_dir, cfg$surname_mlp)
     probs_6    <- ebisg_predict_mlp(embeddings, mlp_path)
     probs_5    <- map_6class_to_5class(probs_6)
+    ## The MLP returns Pr(Race | Surname); matched rows hold Pr(Surname | Race).
+    ## Divide by the race mix of the MLP's training table so both are on the
+    ## Pr(Surname | Race) scale before the Bayesian combination below.
+    probs_5    <- sweep(probs_5, 2, surname_margin, "/")
 
     sn_lookup <- as.data.frame(probs_5)
     rownames(sn_lookup) <- unmatched_surnames
@@ -740,6 +748,7 @@ predict_race_embedding <- function(
       fn_mlp_path   <- if (is.null(cfg$tag)) cfg$firstname_mlp else file.path(model_dir, cfg$firstname_mlp)
       probs_6_fn    <- ebisg_predict_mlp(embeddings_fn, fn_mlp_path)
       probs_5_fn    <- map_6class_to_5class(probs_6_fn)
+      probs_5_fn    <- sweep(probs_5_fn, 2, firstname_margin, "/")  # Pr(Race | First) to Pr(First | Race) scale
 
       fn_lookup <- as.data.frame(probs_5_fn)
       rownames(fn_lookup) <- unmatched_firstnames
