@@ -61,12 +61,14 @@
 #' Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
 #' May only be set to \code{TRUE} if \code{census.geo} option is specified.
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
+#' Not supported when \code{model = "fBISG"}, which does not condition on age.
 #' @param sex optional \code{TRUE}/\code{FALSE} object specifying whether to
 #' condition race predictions on sex (in addition to surname and geolocation).
 #' Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
 #' May only be set to \code{TRUE} if \code{census.geo} option is specified.
 #' If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
 #' where \code{\var{sex}} is coded as 0 for males and 1 for females.
+#' Not supported when \code{model = "fBISG"}, which does not condition on sex.
 #' @param year An optional character vector specifying the year of U.S. Census geographic
 #' data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.
 #' @param party Deprecated and currently has no effect. Party registration was
@@ -210,6 +212,17 @@ predict_race <- function(
     )
   }
   
+  ## The fBISG sampler uses race-by-geography counts only, so it cannot
+  ## condition on age or sex. Refuse the combination rather than return
+  ## predictions that ignore the request.
+  if (model == "fBISG" && (isTRUE(age) || isTRUE(sex))) {
+    stop(
+      "`age` and `sex` are not supported when model = 'fBISG': fBISG ",
+      "predictions are not conditioned on age or sex. Set both to FALSE, ",
+      "or use model = 'BISG'."
+    )
+  }
+
   if (any(unique(voter.file$state) %in% c("AS","GU","MP","PR","VI"))) {
     stop(
       paste0(
@@ -351,7 +364,7 @@ predict_race <- function(
     
     preds <- predict_race_me(voter.file = voter.file,
                              names.to.use = names.to.use,
-                             year = year, age = age, sex = age, 
+                             year = year,
                              census.geo = census.geo,
                              census.key = census.key,
                              name.dictionaries = name.dictionaries,
