@@ -223,7 +223,7 @@ predict_race <- function(
     )
   }
 
-  if (any(unique(voter.file$state) %in% c("AS","GU","MP","PR","VI"))) {
+  if (any(toupper(unique(voter.file$state)) %in% c("AS","GU","MP","PR","VI"))) {
     stop(
       paste0(
         "The wru package does not support US territories", 
