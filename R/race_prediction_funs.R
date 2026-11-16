@@ -211,8 +211,6 @@ predict_race_me <- function(
     voter.file,
     names.to.use,
     year = "2020",
-    age = FALSE,
-    sex = FALSE, 
     census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
     name.dictionaries,
@@ -273,7 +271,7 @@ predict_race_me <- function(
   orig.names <- names(voter.file)
   orig.state <- voter.file$state
   voter.file$state <- toupper(voter.file$state)
-  voter.file$rec_id_ <- 1:nrow(voter.file)
+  voter.file$rec_id_ <- seq_len(nrow(voter.file))
   
   
   ## Set RNG seed

@@ -1,5 +1,10 @@
 # wru (development version)
 
+* `predict_race()` now raises an error when `model = "fBISG"` is combined with
+  `age = TRUE` or `sex = TRUE`. fBISG has never conditioned on age or sex: its
+  sampler uses race-by-geography counts only. The combination was previously
+  accepted, and the predictions returned ignored both arguments. The unused
+  `age` and `sex` arguments of the internal `predict_race_me()` are removed.
 * `predict_race()` gains a `name_source` argument. It selects the dictionaries
   that supply the name probabilities. The default `"mixed"` combines the Census
   and voter-file dictionaries. For a name that both hold, the Census
