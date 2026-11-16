@@ -341,10 +341,11 @@ def fit_list_model(emb: npt.ArrayLike, onmat: npt.ArrayLike,
     curve: list[float] = []
     if epochs is None:
         fold = name_folds(counts, J, fold_seed)
-        cv = [dict(model=PerListModel(input_dim, n_lists, seed + j, device),
-                   rng=np.random.RandomState(seed + j),
-                   train=np.flatnonzero(fold != j),
-                   valid=np.flatnonzero(fold == j)) for j in range(J)]
+        cv: list[dict[str, Any]] = [
+            dict(model=PerListModel(input_dim, n_lists, seed + j, device),
+                 rng=np.random.RandomState(seed + j),
+                 train=np.flatnonzero(fold != j),
+                 valid=np.flatnonzero(fold == j)) for j in range(J)]
         best_loss, epochs = np.inf, 1
         for epoch in range(1, max_epochs + 1):
             losses = []
