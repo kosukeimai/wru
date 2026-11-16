@@ -186,7 +186,7 @@ predict_race_new <- function(
   }
   
   if(impute.missing){
-   for(i in ncol(preds)){
+   for(i in seq_len(ncol(preds))){
      preds[, i] <- dplyr::coalesce(preds[, i], race.margin[i])
    }
   }
@@ -211,8 +211,6 @@ predict_race_me <- function(
     voter.file,
     names.to.use,
     year = "2020",
-    age = FALSE,
-    sex = FALSE, 
     census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
     census.key = Sys.getenv("CENSUS_API_KEY"),
     name.dictionaries,
@@ -273,7 +271,7 @@ predict_race_me <- function(
   orig.names <- names(voter.file)
   orig.state <- voter.file$state
   voter.file$state <- toupper(voter.file$state)
-  voter.file$rec_id_ <- 1:nrow(voter.file)
+  voter.file$rec_id_ <- seq_len(nrow(voter.file))
   
   
   ## Set RNG seed
@@ -385,9 +383,9 @@ predict_race_me <- function(
       u_vf_names <- u_vf_names[reord]
       w_names <- match(proc_names_vf, u_vf_names)
       w_names <- split(w_names, voter.file$state_cluster)
-      pi_ <- as.matrix(ntab[which(kw_in_vf), -1])
+      pi_ <- as.matrix(ntab[which(kw_in_vf), -1, drop = FALSE])
       #pi_ <- apply(M_, 2, function(x) x / sum(x, na.rm = TRUE))
-      if (impute.missing) {
+      if (impute.missing && nrow(pi_) > 0) {
         pi_miss <- colMeans(pi_, na.rm = TRUE)
       } else {
         pi_miss <- rep(1, n_race)
@@ -460,7 +458,7 @@ predict_race_me <- function(
   }
   ## Get posterior race probabilities and append to voter.file
   race_samples <- do.call(rbind, race_samples)
-  race_samples <- race_samples[order(race_samples[, 1]), -1]
+  race_samples <- race_samples[order(race_samples[, 1]), -1, drop = FALSE]
   race_probs <- proportions(race_samples, 1)
   colnames(race_probs) <- paste0("pred.", race.suff)
   voter.file <- cbind(voter.file[, orig.names], race_probs)
@@ -639,8 +637,17 @@ predict_race_embedding <- function(
     model = "BISG"
   )
 
-  ## Load the surname dictionary to identify which names were actually matched
-  last_dict <- load_name_dictionaries(namesToUse = "surname", name_source = name_source, year = year)$last
+  ## Load the name dictionaries (respecting name_source and any custom
+  ## name.dictionaries) to identify which names were actually matched
+  loaded_dicts <- load_name_dictionaries(
+    namesToUse = names.to.use,
+    name_source = name_source,
+    year = year,
+    table.surnames = name.dictionaries[["surname"]],
+    table.first = name.dictionaries[["first"]],
+    table.middle = name.dictionaries[["middle"]]
+  )
+  last_dict <- loaded_dicts$last
   known_surnames <- toupper(last_dict[[1]])  # first column is the name
 
   ## Initialized lazily on first use; both the surname and first-name
@@ -712,11 +719,12 @@ predict_race_embedding <- function(
   ## rows are unmatched, but the text we embed comes from the original
   ## first-name column.
   if (grepl("first", names.to.use) && !is.null(cfg$firstname_mlp)) {
-    first_dict <- readRDS(file.path(path, "wru-data-first_c.rds"))
+    first_dict <- loaded_dicts$first
     known_firstnames    <- toupper(first_dict[[1]])
     cleaned_firstnames  <- toupper(voter.file$firstname.match)
     original_firstnames <- toupper(as.character(voter.file$first))
-    unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames)
+    unmatched_first_mask <- !(cleaned_firstnames %in% known_firstnames) |
+                            (cleaned_firstnames == "NA" & original_firstnames != "NA")
     embed_first_mask     <- unmatched_first_mask &
                             !is.na(original_firstnames) &
                             original_firstnames != ""

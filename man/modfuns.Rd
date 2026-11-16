@@ -44,8 +44,6 @@ predict_race_me(
   voter.file,
   names.to.use,
   year = "2020",
-  age = FALSE,
-  sex = FALSE,
   census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
   name.dictionaries,

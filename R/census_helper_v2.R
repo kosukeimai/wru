@@ -93,14 +93,14 @@ census_helper_new <- function(
     key <- validate_key(key)
   } 
   
-  if (toupper(states) == "ALL") {
+  if (identical(toupper(states), "ALL")) {
     states <- toupper(as.character(unique(voter.file$state)))
   }
   states <- as_state_abbreviation(states)
   
   df.out <- NULL
   
-  for (s in 1:length(states)) {
+  for (s in seq_along(states)) {
     
     message(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
@@ -111,7 +111,7 @@ census_helper_new <- function(
         if(use.counties) {
           census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry)
         }
@@ -124,7 +124,7 @@ census_helper_new <- function(
         if(use.counties) {
           census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry)
         }
@@ -143,7 +143,7 @@ census_helper_new <- function(
         if(use.counties) {
           census <- census_geo_api(key, state, geo = "block", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "block", age, sex, year, retry)
         }
