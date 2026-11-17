@@ -88,6 +88,16 @@ test_that("lbisg_control sets and checks the options for K and the sensitivity a
   expect_error(lbisg_control(lambda = 1), "in \\[0, 1\\)")
 })
 
+test_that("lbisg_control checks the shrinkage weight", {
+  expect_equal(lbisg_control()$shrink, 0)
+  expect_equal(lbisg_control(shrink = "auto")$shrink, "auto")
+  expect_equal(lbisg_control(shrink = 0.1, shrink.grid = c(0, 0.1))$shrink.grid,
+               c(0, 0.1))
+  expect_error(lbisg_control(shrink = 1), "shrink")
+  expect_error(lbisg_control(shrink = -0.1), "shrink")
+  expect_error(lbisg_control(shrink = "yes"), "shrink")
+})
+
 test_that("priors whose rows do not sum to one are rejected", {
   skip_if_no_lbisg()
   s <- sim_lists()

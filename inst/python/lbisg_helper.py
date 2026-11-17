@@ -455,6 +455,19 @@ def wls_pi(C: sparse.csr_matrix, M: Array, w: Array, take: Array) -> Array:
     return Pi / Pi.sum(1, keepdims=True)
 
 
+def shrink_pi(Pi: Array, p_b: npt.ArrayLike, shrink: float) -> Array:
+    """Shrink P(B = b | R = r) toward the cluster share P(B = b).
+
+    Returns (1 - shrink) * Pi + shrink * p_b for every group r. With
+    shrink > 0 no cell falls below shrink * P(B = b), so a cluster whose
+    estimate hit the floor can no longer drive a group's posterior to zero
+    whatever the geography says. shrink = 0 returns Pi unchanged.
+    """
+    if shrink <= 0:
+        return Pi
+    return (1 - shrink) * Pi + shrink * np.asarray(p_b, float)[None, :]
+
+
 def geo_folds(geo: IntArray, J: int) -> IntArray:
     """J folds of geographic units with approximately equal numbers of people.
 
@@ -583,19 +596,76 @@ def select_K(F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike,
     return best, sorted(curve)
 
 
+DEFAULT_SHRINK_GRID = [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5]
+
+
+def select_shrink(F: npt.ArrayLike, geo: npt.ArrayLike,
+                  prior: npt.ArrayLike, K: int,
+                  grid: Sequence[float] | None = None, J: int = 5,
+                  seed: int = 0, verbose: bool = True,
+                  method: str = "split", val_frac: float = 0.2,
+                  split_seed: int = 0) -> tuple[float, list[tuple[float, float]]]:
+    """Choose the shrinkage weight of shrink_pi() by the held-out Q.
+
+    The held-out units are those of select_K() with the same method,
+    val_frac, split_seed and J. On each held-out set, the clusters and
+    P(B = b | R = r) are fit on the other units, and each candidate weight is
+    scored by the mean held-out log P(B | G) - log P(B) under the shrunk
+    matrix. No group labels are used.
+
+    Returns:
+        (shrink_star, curve): the selected weight and a sorted list of
+        (shrink, Q).
+    """
+    Z = logodds(F)
+    geo, prior, n_geo, w, M = _geo_setup(geo, prior)
+    if method == "split":
+        fold = split_units(n_geo, val_frac, split_seed)
+        held = [1]
+    elif method == "crossfit":
+        fold = geo_folds(geo, J)
+        held = list(range(J))
+    else:
+        raise ValueError("method must be 'split' or 'crossfit'")
+    cand = sorted({float(v) for v in (grid or DEFAULT_SHRINK_GRID)
+                   if 0 <= float(v) < 1})
+    total = np.zeros(len(cand))
+    n_held = 0
+    for j in held:
+        train = np.flatnonzero(fold[geo] != j)
+        test = np.flatnonzero(fold[geo] == j)
+        n_held += len(test)
+        bins, K_used = kmeans_occupied(Z, train, K, seed)
+        C = sparse.coo_matrix(
+            (np.ones(len(train)), (geo[train], bins[train])),
+            shape=(n_geo, K_used)).tocsr()
+        Pi = wls_pi(C, M, w, (fold != j).astype(float))
+        p_b = np.bincount(bins[train], minlength=K_used) / len(train)
+        for i, v in enumerate(cand):
+            pbg = np.einsum("ir,ri->i", M[geo[test]],
+                            shrink_pi(Pi, p_b, v)[:, bins[test]])
+            total[i] += float((np.log(pbg) - np.log(p_b[bins[test]])).sum())
+    curve = [(v, t / n_held) for v, t in zip(cand, total)]
+    for v, q in curve:
+        _log(verbose, f"  Q(shrink = {v:g}) = {q:.6f}")
+    best = max(curve, key=lambda vq: vq[1])[0]
+    return best, curve
+
+
 def fit_posterior(
         F: npt.ArrayLike, geo: npt.ArrayLike, prior: npt.ArrayLike, K: int,
-        seed: int = 0,
+        seed: int = 0, shrink: float = 0.0,
 ) -> tuple[Array, IntArray, int, Array]:
     """lBISG posterior for all observations.
 
     The observations are clustered, P(B = b | R = r) is estimated by weighted
-    least squares, and the posterior is computed by Bayes' rule.
+    least squares (and shrunk toward the cluster share when shrink > 0), and
+    the posterior is computed by Bayes' rule.
 
     Returns:
         (posterior, bins, K_used, Pi): the (N, R) posterior, the cluster of
         each person, the number of clusters used, and the (R, K_used) matrix
-        of P(B = b | R = r).
+        of P(B = b | R = r), after any shrinkage.
     """
     Z = logodds(F)
     geo, prior, n_geo, w, M = _geo_setup(geo, prior)
@@ -603,6 +673,8 @@ def fit_posterior(
     C = sparse.coo_matrix((np.ones(len(Z)), (geo, bins)),
                           shape=(n_geo, K_used)).tocsr()
     Pi = wls_pi(C, M, w, np.ones(n_geo))
+    p_b = np.bincount(bins, minlength=K_used) / len(bins)
+    Pi = shrink_pi(Pi, p_b, float(shrink))
     post = prior * Pi[:, bins].T
     post = post / np.maximum(post.sum(1, keepdims=True), 1e-300)
     return post, bins, K_used, Pi
@@ -619,6 +691,8 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
                 split_seed: int = 0, keep_model: bool = False,
                 groups: Sequence[str] | None = None,
                 embedding: str = "intfloat/multilingual-e5-large",
+                shrink: float | str = 0.0,
+                shrink_grid: Sequence[float] | None = None,
                 ) -> dict[str, Any]:
     """lBISG for one name field.
 
@@ -641,10 +715,14 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
         verbose: print progress.
         k_method, val_frac, split_seed: see select_K() (method, val_frac,
             split_seed).
+        shrink: weight on the cluster share in P(B = b | R = r), a number in
+            [0, 1), or "auto" to choose it with select_shrink().
+        shrink_grid: candidate weights for shrink="auto".
 
     Returns:
         dict with posterior (N, R), K, K_used, Q (list of (K, Q(K)) or None),
-        scores (N, L) and the epochs selected in each name fold.
+        shrink, Q_shrink, scores (N, L) and the epochs selected in each name
+        fold.
     """
     idx = np.asarray(idx, np.int64)
     geo = np.asarray(geo, np.int64)
@@ -671,7 +749,8 @@ def lbisg_field(emb_unique: npt.ArrayLike, idx: npt.ArrayLike,
     res = lbisg_field_scores(scores[remap[idx]], geo, prior, K=K, grid=grid,
                              geo_folds_J=geo_folds_J, verbose=verbose,
                              k_method=k_method, val_frac=val_frac,
-                             split_seed=split_seed)
+                             split_seed=split_seed, shrink=shrink,
+                             shrink_grid=shrink_grid)
     res["epochs"] = [info[k]["selected_epochs"] for k in sorted(info)]
     res["model_state"] = state
     return res
@@ -682,7 +761,9 @@ def lbisg_field_scores(F: npt.ArrayLike, geo: npt.ArrayLike,
                        grid: Sequence[int] | None = None,
                        geo_folds_J: int = 5, verbose: bool = True,
                        k_method: str = "split", val_frac: float = 0.2,
-                       split_seed: int = 0) -> dict[str, Any]:
+                       split_seed: int = 0, shrink: float | str = 0.0,
+                       shrink_grid: Sequence[float] | None = None,
+                       ) -> dict[str, Any]:
     """lBISG for one name field from given list scores.
 
     Clusters the scores, selects K when K is None, and computes the
@@ -692,11 +773,11 @@ def lbisg_field_scores(F: npt.ArrayLike, geo: npt.ArrayLike,
     Args:
         F: (N, L) list scores per person, in (0, 1).
         geo, prior, K, grid, geo_folds_J, verbose, k_method, val_frac,
-            split_seed: see lbisg_field().
+            split_seed, shrink, shrink_grid: see lbisg_field().
 
     Returns:
-        dict with posterior (N, R), K, K_used, Q (list of (K, Q(K)) or None)
-        and scores (N, L).
+        dict with posterior (N, R), K, K_used, Q (list of (K, Q(K)) or None),
+        shrink, Q_shrink (list of (shrink, Q) or None) and scores (N, L).
     """
     F = np.asarray(F, float)
     geo = np.asarray(geo, np.int64)
@@ -707,9 +788,21 @@ def lbisg_field_scores(F: npt.ArrayLike, geo: npt.ArrayLike,
                             val_frac=float(val_frac),
                             split_seed=int(split_seed))
         _log(verbose, f"  selected K = {K}")
-    post, _, K_used, _ = fit_posterior(F, geo, prior, int(K))
+    shrink_curve: list[tuple[float, float]] | None = None
+    if isinstance(shrink, str):
+        if shrink != "auto":
+            raise ValueError("shrink must be a number in [0, 1) or 'auto'")
+        shrink, shrink_curve = select_shrink(
+            F, geo, prior, int(K), grid=shrink_grid, J=int(geo_folds_J),
+            verbose=verbose, method=k_method, val_frac=float(val_frac),
+            split_seed=int(split_seed))
+        _log(verbose, f"  selected shrink = {shrink:g}")
+    shrink = float(shrink)
+    if not 0 <= shrink < 1:
+        raise ValueError("shrink must be in [0, 1)")
+    post, _, K_used, _ = fit_posterior(F, geo, prior, int(K), shrink=shrink)
     return dict(posterior=post, K=int(K), K_used=int(K_used), Q=curve,
-                scores=F)
+                shrink=shrink, Q_shrink=shrink_curve, scores=F)
 
 
 def pretrained_scores(emb_unique: npt.ArrayLike, path: str,

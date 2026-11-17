@@ -74,8 +74,10 @@ upper-cased with internal spaces collapsed before they are embedded.}
 An object of class \code{"lbisg"}: a list with \code{posterior} (a
 data frame with one column \code{pred.<group>} per group), \code{prior}
 (the geographic prior used), and \code{fields}, which contains for each
-name field the selected \code{K}, the \code{Q} curve, and the number of
-training epochs selected in each fold. When the prior was estimated,
+name field the selected \code{K}, the \code{Q} curve, the shrinkage
+weight used (\code{shrink}, with its \code{Q.shrink} curve when it was
+chosen with \code{shrink = "auto"}), and the number of training epochs
+selected in each fold. When the prior was estimated,
 \code{recovered} contains the estimated list coverages. With
 \code{gamma = 0}, the coverage is \code{NA} for groups that were not
 divided, for which the share is the share of the coarse group.

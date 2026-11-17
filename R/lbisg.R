@@ -55,8 +55,10 @@
 #' @return An object of class \code{"lbisg"}: a list with \code{posterior} (a
 #'   data frame with one column \code{pred.<group>} per group), \code{prior}
 #'   (the geographic prior used), and \code{fields}, which contains for each
-#'   name field the selected \code{K}, the \code{Q} curve, and the number of
-#'   training epochs selected in each fold. When the prior was estimated,
+#'   name field the selected \code{K}, the \code{Q} curve, the shrinkage
+#'   weight used (\code{shrink}, with its \code{Q.shrink} curve when it was
+#'   chosen with \code{shrink = "auto"}), and the number of training epochs
+#'   selected in each fold. When the prior was estimated,
 #'   \code{recovered} contains the estimated list coverages. With
 #'   \code{gamma = 0}, the coverage is \code{NA} for groups that were not
 #'   divided, for which the share is the share of the coarse group.
@@ -226,6 +228,18 @@ lbisg <- function(names, geo, lists = NULL, prior = NULL, coarse.prior = NULL,
 #'   names in the coarse group that do not appear on any subgroup list. Ignored
 #'   when
 #'   \code{prior} is supplied.
+#' @param shrink Shrinkage of \eqn{P(B = b \mid R = r)} toward the overall
+#'   cluster share \eqn{P(B = b)}: the estimate becomes
+#'   \eqn{(1 - s) \hat{P}(B = b \mid R = r) + s P(B = b)}. The default of 0
+#'   gives the estimator of the paper, which sets negative least squares
+#'   estimates to \code{1e-9}; a cluster with such an estimate can make a
+#'   group's posterior nearly zero whatever the geography. A number in
+#'   \eqn{[0, 1)} fixes the weight. With \code{"auto"}, the weight is selected
+#'   from \code{shrink.grid} by the held-out \eqn{Q} at the selected \eqn{K},
+#'   on the same held-out units as \eqn{K} (\code{K.method}), without group
+#'   labels.
+#' @param shrink.grid Candidate weights for \code{shrink = "auto"}. The default
+#'   is 0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3 and 0.5.
 #' @param embedding.model Sentence-transformer used for the name embeddings:
 #'   any HuggingFace model ID (default E5-Large). No eBISG checkpoint is
 #'   required, because the list models are trained on the supplied lists.
@@ -242,9 +256,15 @@ lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
                           K.grid = NULL, max.epochs = 100, patience = 5,
                           batch.size = 512, seed = 42, lambda = 0,
                           gamma = 0, exhaustive = FALSE,
+                          shrink = 0, shrink.grid = NULL,
                           embedding.model = "intfloat/multilingual-e5-large",
                           save.models = NULL) {
   K.method <- match.arg(K.method)
+  if (!(identical(shrink, "auto") ||
+        (is.numeric(shrink) && length(shrink) == 1 && shrink >= 0 &&
+         shrink < 1))) {
+    stop("'shrink' must be a number in [0, 1) or \"auto\".")
+  }
   if (!(val.frac > 0 && val.frac < 1)) {
     stop("'val.frac' must be between 0 and 1.")
   }
@@ -257,8 +277,35 @@ lbisg_control <- function(n.folds = 5, K.method = c("split", "crossfit"),
     split.seed = split.seed, geo.folds = geo.folds, K.grid = K.grid,
     max.epochs = max.epochs, patience = patience, batch.size = batch.size,
     seed = seed, lambda = lambda, gamma = gamma, exhaustive = exhaustive,
+    shrink = shrink, shrink.grid = shrink.grid,
     embedding.model = embedding.model, save.models = save.models
   )
+}
+
+
+# Shrinkage arguments for the Python side.
+lbisg_shrink_args <- function(control) {
+  list(
+    shrink = if (is.character(control$shrink)) control$shrink
+             else as.numeric(control$shrink),
+    shrink_grid = if (is.null(control$shrink.grid)) NULL
+                  else as.list(as.numeric(control$shrink.grid))
+  )
+}
+
+
+# Curves of Q(K) and Q(shrink) as data frames.
+lbisg_curves <- function(res) {
+  Q <- NULL
+  if (!is.null(res$Q)) {
+    Q <- data.frame(K = sapply(res$Q, `[[`, 1), Q = sapply(res$Q, `[[`, 2))
+  }
+  Q.shrink <- NULL
+  if (!is.null(res$Q_shrink)) {
+    Q.shrink <- data.frame(shrink = sapply(res$Q_shrink, `[[`, 1),
+                           Q = sapply(res$Q_shrink, `[[`, 2))
+  }
+  list(Q = Q, Q.shrink = Q.shrink)
 }
 
 
@@ -367,7 +414,8 @@ print.lbisg <- function(x, ...) {
       paste(sub("^pred\\.", "", names(x$posterior)), collapse = ", "), "\n")
   for (f in names(x$fields)) {
     cat(" ", f, ": K =", x$fields[[f]]$K,
-        "(clusters used", x$fields[[f]]$K.used, ")\n")
+        "(clusters used", x$fields[[f]]$K.used, "), shrink =",
+        format(x$fields[[f]]$shrink), "\n")
   }
   invisible(x)
 }
@@ -401,14 +449,14 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
       grid = if (is.null(control$K.grid)) NULL else as.integer(control$K.grid),
       geo_folds_J = as.integer(control$geo.folds), verbose = verbose,
       k_method = control$K.method, val_frac = as.numeric(control$val.frac),
-      split_seed = as.integer(control$split.seed)
+      split_seed = as.integer(control$split.seed),
+      shrink = lbisg_shrink_args(control)$shrink,
+      shrink_grid = lbisg_shrink_args(control)$shrink_grid
     )
-    Q <- NULL
-    if (!is.null(res$Q)) {
-      Q <- data.frame(K = sapply(res$Q, `[[`, 1), Q = sapply(res$Q, `[[`, 2))
-    }
+    cv <- lbisg_curves(res)
     return(list(posterior = as.matrix(res$posterior), K = res$K,
-                K.used = res$K_used, Q = Q, epochs = NULL,
+                K.used = res$K_used, Q = cv$Q, shrink = res$shrink,
+                Q.shrink = cv$Q.shrink, epochs = NULL,
                 lists = unlist(sc[[2]])))
   }
   onm <- lbisg_list_matrix(uniq, lst)
@@ -447,18 +495,19 @@ lbisg_fit_field <- function(nm, lst, label, geo_idx, prior, K, control, mod,
     split_seed = as.integer(control$split.seed),
     keep_model = !is.null(control$save.models),
     groups = names(lst),
-    embedding = lbisg_transformer(control$embedding.model)
+    embedding = lbisg_transformer(control$embedding.model),
+    shrink = lbisg_shrink_args(control)$shrink,
+    shrink_grid = lbisg_shrink_args(control)$shrink_grid
   )
 
-  Q <- NULL
-  if (!is.null(res$Q)) {
-    Q <- data.frame(K = sapply(res$Q, `[[`, 1), Q = sapply(res$Q, `[[`, 2))
-  }
+  cv <- lbisg_curves(res)
   list(
     posterior = as.matrix(res$posterior),
     K = res$K,
     K.used = res$K_used,
-    Q = Q,
+    Q = cv$Q,
+    shrink = res$shrink,
+    Q.shrink = cv$Q.shrink,
     epochs = unlist(res$epochs),
     model.state = res$model_state
   )
@@ -918,6 +967,7 @@ predict_race_lbisg <- function(
   attr(out, "lbisg") <- list(
     K = sapply(fit$fields, `[[`, "K"),
     Q = lapply(fit$fields, `[[`, "Q"),
+    shrink = sapply(fit$fields, `[[`, "shrink"),
     epochs = lapply(fit$fields, `[[`, "epochs"),
     lists = sur$source,
     coverage = fit$recovered

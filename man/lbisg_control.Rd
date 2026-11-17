@@ -18,6 +18,8 @@ lbisg_control(
   lambda = 0,
   gamma = 0,
   exhaustive = FALSE,
+  shrink = 0,
+  shrink.grid = NULL,
   embedding.model = "intfloat/multilingual-e5-large",
   save.models = NULL
 )
@@ -71,6 +73,20 @@ assigned to them. If necessary, add a residual list, such as a list of the
 names in the coarse group that do not appear on any subgroup list. Ignored
 when
 \code{prior} is supplied.}
+
+\item{shrink}{Shrinkage of \eqn{P(B = b \mid R = r)} toward the overall
+cluster share \eqn{P(B = b)}: the estimate becomes
+\eqn{(1 - s) \hat{P}(B = b \mid R = r) + s P(B = b)}. The default of 0
+gives the estimator of the paper, which sets negative least squares
+estimates to \code{1e-9}; a cluster with such an estimate can make a
+group's posterior nearly zero whatever the geography. A number in
+\eqn{[0, 1)} fixes the weight. With \code{"auto"}, the weight is selected
+from \code{shrink.grid} by the held-out \eqn{Q} at the selected \eqn{K},
+on the same held-out units as \eqn{K} (\code{K.method}), without group
+labels.}
+
+\item{shrink.grid}{Candidate weights for \code{shrink = "auto"}. The default
+is 0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3 and 0.5.}
 
 \item{embedding.model}{Sentence-transformer used for the name embeddings:
 any HuggingFace model ID (default E5-Large). No eBISG checkpoint is

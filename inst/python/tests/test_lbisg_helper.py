@@ -241,6 +241,53 @@ def test_fit_posterior_sharpens_the_prior(sim: dict[str, Any]) -> None:
     assert post[own].mean() > sim["prior"][own].mean() + 0.1
 
 
+def test_shrink_pi_bounds_cells_below_and_keeps_rows_normalized() -> None:
+    Pi = np.array([[0.5, 0.5, 0.0], [1e-9, 0.3, 0.7 - 1e-9]])
+    p_b = np.array([0.2, 0.3, 0.5])
+    out = lb.shrink_pi(Pi, p_b, 0.1)
+    np.testing.assert_allclose(out.sum(1), 1)
+    assert (out >= 0.1 * p_b[None, :] - 1e-12).all()
+    np.testing.assert_array_equal(lb.shrink_pi(Pi, p_b, 0.0), Pi)
+
+
+def test_select_shrink_returns_a_value_on_its_curve(
+        sim_small: dict[str, Any]) -> None:
+    for method in ["split", "crossfit"]:
+        lam, curve = lb.select_shrink(
+            sim_small["fields"][0], sim_small["geo"], sim_small["prior"], 10,
+            grid=[0, 0.1, 0.3], J=3, verbose=False, method=method)
+        assert [v for v, _ in curve] == [0, 0.1, 0.3]
+        assert lam == max(curve, key=lambda vq: vq[1])[0]
+        assert all(np.isfinite(q) for _, q in curve)
+
+
+def test_select_shrink_at_zero_is_q_of_k(sim_small: dict[str, Any]) -> None:
+    F = sim_small["fields"][0]
+    _, qk = lb.select_K(F, sim_small["geo"], sim_small["prior"], grid=[10],
+                        extend=False, verbose=False)
+    _, qs = lb.select_shrink(F, sim_small["geo"], sim_small["prior"], 10,
+                             grid=[0], verbose=False)
+    assert qs[0][1] == pytest.approx(qk[0][1])
+
+
+def test_lbisg_field_scores_shrink_options(sim_small: dict[str, Any]) -> None:
+    F, geo, prior = (sim_small["fields"][0], sim_small["geo"],
+                     sim_small["prior"])
+    r0 = lb.lbisg_field_scores(F, geo, prior, K=10, verbose=False)
+    assert r0["shrink"] == 0 and r0["Q_shrink"] is None
+    ra = lb.lbisg_field_scores(F, geo, prior, K=10, shrink="auto",
+                               shrink_grid=[0, 0.1], verbose=False)
+    assert ra["shrink"] in (0, 0.1) and len(ra["Q_shrink"]) == 2
+    np.testing.assert_allclose(ra["posterior"].sum(1), 1)
+    r1 = lb.lbisg_field_scores(F, geo, prior, K=10, shrink=0.2,
+                               verbose=False)
+    assert r1["posterior"].min() > r0["posterior"].min()
+    with pytest.raises(ValueError, match="shrink"):
+        lb.lbisg_field_scores(F, geo, prior, K=10, shrink="x", verbose=False)
+    with pytest.raises(ValueError, match="shrink"):
+        lb.lbisg_field_scores(F, geo, prior, K=10, shrink=1.0, verbose=False)
+
+
 def test_lbisg_field_runs_end_to_end(sim_small: dict[str, Any]) -> None:
     rng = np.random.default_rng(0)
     n_names = 150
