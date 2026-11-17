@@ -8,8 +8,8 @@
 #'
 
 .name_preproc <- function(voter_names, target_names){
-  post_names <- as.character(voter_names)
-  post_names <- toupper(post_names)
+  orig_names <- toupper(as.character(voter_names))
+  post_names <- orig_names
   ## 1) Raw match
   match_tmp <- post_names %in% target_names
   ## 2) remove punctuation
@@ -22,7 +22,7 @@
   match_tmp <- post_names %in% target_names
   ## 4) Remove suffixes
   suffix <- c("JUNIOR", "SENIOR", "THIRD", "III", "JR", " II", " J R", " S R", " IV")
-  for (i in 1:length(suffix)) {
+  for (i in seq_along(suffix)) {
     post_names[!match_tmp] <- ifelse(substr(post_names[!match_tmp],
                                        nchar(post_names[!match_tmp]) - (nchar(suffix)[i] - 1),
                                        nchar(post_names[!match_tmp])) == suffix[i], 
@@ -38,23 +38,27 @@
                                    post_names[!match_tmp]) #Remove "SR" only if name has at least 7 characters
   match_tmp <- post_names %in% target_names
   ## 5) Split double-barreled names, match on first part
-  post_names_tmp <- post_names
-  post_names_tmp[(!match_tmp) & grep("[-, ]", post_names[(!match_tmp)])] <- sapply(strsplit(grep("[-, ]",
-                                                                                                 post_names[(!match_tmp)],
-                                                                                                 value = TRUE),
-                                                                                            "[-, ]"),
-                                                                                   "[", 1) 
-  match_tmp_2 <- post_names_tmp %in% target_names
-  post_names[(match_tmp_2 == TRUE) & (match_tmp == FALSE)] <- post_names_tmp[(match_tmp_2 == TRUE) & (match_tmp == FALSE)]
-  match_tmp <- post_names %in% target_names
+  has_delim <- !match_tmp & !is.na(orig_names) & grepl("[-, ]", orig_names)
+  if (any(has_delim)) {
+    post_names_tmp <- post_names
+    post_names_tmp[has_delim] <- vapply(
+      strsplit(orig_names[has_delim], "[-, ]"),
+      `[`, character(1), 1L
+    )
+    match_tmp_2 <- post_names_tmp %in% target_names
+    post_names[match_tmp_2 & !match_tmp] <- post_names_tmp[match_tmp_2 & !match_tmp]
+    match_tmp <- post_names %in% target_names
+  }
   ## 6) Split double-barreled names, match on second part
-  post_names_tmp <- post_names
-  post_names_tmp[(!match_tmp) & grep("[-, ]", post_names[(!match_tmp)])] <- sapply(strsplit(grep("[-, ]",
-                                                                                                 post_names[(!match_tmp)],
-                                                                                                 value = TRUE),
-                                                                                            "[-, ]"),
-                                                                                   "[", 2) 
-  match_tmp_2 <- post_names_tmp %in% target_names
-  post_names[(match_tmp_2 == TRUE) & (match_tmp == FALSE)] <- post_names_tmp[(match_tmp_2 == TRUE) & (match_tmp == FALSE)]
+  has_delim <- !match_tmp & !is.na(orig_names) & grepl("[-, ]", orig_names)
+  if (any(has_delim)) {
+    post_names_tmp <- post_names
+    post_names_tmp[has_delim] <- vapply(
+      strsplit(orig_names[has_delim], "[-, ]"),
+      `[`, character(1), 2L
+    )
+    match_tmp_2 <- post_names_tmp %in% target_names
+    post_names[match_tmp_2 & !match_tmp] <- post_names_tmp[match_tmp_2 & !match_tmp]
+  }
   return(unlist(post_names))
 }

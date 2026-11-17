@@ -6,7 +6,8 @@
 \usage{
 predict_race(
   voter.file,
-  census.surname = TRUE,
+  census.surname = NULL,
+  name_source = c("mixed", "census_only", "vf_only"),
   surname.only = FALSE,
   census.geo = c("tract", "block", "block_group", "county", "place", "zcta"),
   census.key = Sys.getenv("CENSUS_API_KEY"),
@@ -16,6 +17,7 @@ predict_race(
   year = "2020",
   party = NULL,
   retry = 3,
+  return.unmatched = FALSE,
   impute.missing = TRUE,
   skip_bad_geos = FALSE,
   use.counties = FALSE,
@@ -24,7 +26,8 @@ predict_race(
   name.dictionaries = NULL,
   names.to.use = "surname",
   control = NULL,
-  ebisg.model = "intfloat/multilingual-e5-large"
+  ebisg.model = "intfloat/multilingual-e5-large",
+  lists = NULL
 )
 }
 \arguments{
@@ -44,11 +47,14 @@ tract is six characters, block group is usually a single character and block
 is four characters. Place is five characters.
 See below for other optional fields.}
 
-\item{census.surname}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE},
-function will call \code{merge_surnames} to merge in Pr(Race | Surname)
-from U.S. Census Surname List (2000, 2010, or 2020) and Spanish Surname List.
-If \code{FALSE}, user must provide a \code{name.dictionary} (see below).
-Default is \code{TRUE}.}
+\item{census.surname}{Deprecated in favor of \code{name_source}. If supplied,
+\code{TRUE} maps to \code{name_source = "mixed"} and \code{FALSE} to
+\code{name_source = "vf_only"}, with a warning. Default \code{NULL}.}
+
+\item{name_source}{One of \code{"mixed"} (default; union of the Census and
+voter-file dictionaries, Census winning on overlapping names), \code{"census_only"}
+(Census dictionaries only; errors if middle names are requested), or
+\code{"vf_only"} (augmented voter-file dictionaries only).}
 
 \item{surname.only}{A \code{TRUE}/\code{FALSE} object. If \code{TRUE}, race predictions will
 only use surname data and calculate Pr(Race | Surname). Default is \code{FALSE}.}
@@ -85,26 +91,36 @@ Can be generated using \code{get_census_data} function.}
 condition race predictions on age (in addition to surname and geolocation).
 Default is \code{FALSE}. Must be same as \code{\var{age}} in \code{\var{census.data}} object.
 May only be set to \code{TRUE} if \code{census.geo} option is specified.
-If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.}
+If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{age}}.
+Not supported when \code{model = "fBISG"}, which does not condition on age.}
 
 \item{sex}{optional \code{TRUE}/\code{FALSE} object specifying whether to
 condition race predictions on sex (in addition to surname and geolocation).
 Default is \code{FALSE}. Must be same as \code{\var{sex}} in \code{\var{census.data}} object.
 May only be set to \code{TRUE} if \code{census.geo} option is specified.
 If \code{TRUE}, \code{\var{voter.file}} should include a numerical variable \code{\var{sex}},
-where \code{\var{sex}} is coded as 0 for males and 1 for females.}
+where \code{\var{sex}} is coded as 0 for males and 1 for females.
+Not supported when \code{model = "fBISG"}, which does not condition on sex.}
 
 \item{year}{An optional character vector specifying the year of U.S. Census geographic
 data to be downloaded. Use \code{"2010"}, or \code{"2020"}. Default is \code{"2020"}.}
 
-\item{party}{An optional character object specifying party registration field
-in \code{\var{voter.file}}, e.g., \code{\var{party} = "PartyReg"}.
-If specified, race/ethnicity predictions will be conditioned
-on individual's party registration (in addition to geolocation).
-Whatever the name of the party registration field in \code{\var{voter.file}},
-it should be coded as 1 for Democrat, 2 for Republican, and 0 for Other.}
+\item{party}{Deprecated and currently has no effect. Party registration was
+used to condition the priors by the pre-2.0 implementation
+(\code{.predict_race_old}), which the "BISG", "fBISG" and "eBISG" models
+replaced; none of them accept it. Supplying it now raises a warning and the
+predictions are unchanged.}
 
 \item{retry}{The number of retries at the census website if network interruption occurs.}
+
+\item{return.unmatched}{Logical, defaults to FALSE. If TRUE, appends boolean
+columns reporting whether each name was found in the name dictionary:
+\code{last_matched}, plus \code{first_matched} and \code{middle_matched}
+when those names are used. The flags use the same dictionary match for every
+\code{model}, so results are comparable across models and name selections.
+They are computed before imputation, so a row whose probabilities were only
+imputed (or, for \code{model = "eBISG"}, supplied by the embedding model)
+still reads as unmatched.}
 
 \item{impute.missing}{Logical, defaults to TRUE. Should missing be imputed?}
 
@@ -116,10 +132,13 @@ will break and provide error message with a list of offending geolocations.}
 available in \var{census.data}?}
 
 \item{model}{Character string: "BISG" (default), "fBISG" (fully-Bayesian with
-error correction), or "eBISG" (embedding-supplemented BISG, which uses
+error correction), "eBISG" (embedding-supplemented BISG, which uses
 text embeddings to predict race probabilities for names not found
-in Census surname lists). The eBISG model requires Python with
-sentence-transformers and torch; run \code{\link{setup_ebisg}} to configure.}
+in Census surname lists), or "lBISG" (list-powered BISG, which uses a name
+list for each group instead of a name-by-race table). The eBISG and lBISG
+models require Python with sentence-transformers and torch (and, for lBISG,
+scikit-learn and scipy). Run
+\code{\link{setup_ebisg}} or \code{\link{setup_lbisg}} to install them.}
 
 \item{race.init}{Vector of initial race for each observation in voter.file.
 Must be an integer vector, with 1=white, 2=black, 3=hispanic, 4=asian, and
@@ -134,7 +153,8 @@ follow the same structure as \code{last_c}, \code{first_c},
 \item{names.to.use}{One of 'surname', 'surname, first', or  'surname, first,
 middle'. Defaults to 'surname'.}
 
-\item{control}{List of control arguments only used when \code{model="fBISG"}, including
+\item{control}{List of control arguments. For \code{model = "lBISG"}, a
+list from \code{\link{lbisg_control}}. For \code{model = "fBISG"}, a list including
 \describe{
 \item{iter}{Number of MCMC iterations. Defaults to 1000.}
 \item{burnin}{Number of iterations discarded as burnin. Defaults to half of \code{iter}.}
@@ -151,6 +171,19 @@ consistency with the Python side. To use a different sentence-transformer,
 pass a named list with elements \code{transformer} (HuggingFace model ID),
 \code{dim} (embedding dimension), and \code{surname_mlp},
 \code{firstname_mlp} (paths to custom .pt checkpoints).}
+
+\item{lists}{Required when \code{model = "lBISG"}. A named list with any of
+\code{"whi"}, \code{"bla"}, \code{"his"}, \code{"asi"} and \code{"oth"},
+each a vector of names typical of that group. To divide a group into
+subgroups, give a named list of vectors instead, for example
+\code{asi = list(chinese = ..., japanese = ..., other_asian = ...)}, and set
+\code{control = lbisg_control(exhaustive = TRUE)}. The output then contains
+a \code{pred.<subgroup>} column for each subgroup. Any of \code{"whi"},
+\code{"bla"}, \code{"his"} and \code{"asi"} without a list is assigned a
+list constructed from the Census name table, and \code{"oth"} without a list
+is the residual group. To use first names as well, pass
+\code{list(surname = <lists>, first = <lists>)}. See \code{\link{lbisg}}
+for groups outside the Census categories.}
 }
 \value{
 Output will be an object of class \code{data.frame}. It will
@@ -168,7 +201,7 @@ predicted probabilities for each of the five major racial categories:
 \details{
 This function implements the Bayesian race prediction methods outlined in
 Imai and Khanna (2015). The function produces probabilistic estimates of
-individual-level race/ethnicity, based on surname, geolocation, and party.
+individual-level race/ethnicity, based on surname and geolocation.
 }
 \examples{
 \donttest{
@@ -184,7 +217,7 @@ try(predict_race(
 \dontrun{
 CensusObj <- try(get_census_data(state = c("NY", "DC", "NJ")))
 try(predict_race(
-  voter.file = voters, census.geo = "tract", census.data = CensusObj, party = "PID")
+  voter.file = voters, census.geo = "tract", census.data = CensusObj)
   )
 }
 \dontrun{

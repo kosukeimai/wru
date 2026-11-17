@@ -38,7 +38,13 @@ ebisg_model_registry <- list(
     dim = 1024L,
     surname_mlp = "ebisg-surname-mlp.pt",
     firstname_mlp = "ebisg-firstname-mlp.pt",
-    tag = "v3.1.1"
+    tag = "v4.0.0",
+    ## Race mix (whi, bla, his, asi, oth) of the 2020 Census name tables the
+    ## MLPs were trained on, weighted by name counts. The MLPs return
+    ## Pr(Race | Name); dividing by this mix makes them proportional to
+    ## Pr(Name | Race), the quantity the dictionaries store.
+    surname_margin = c(0.60022790, 0.11765559, 0.18012701, 0.06208315, 0.03990636),
+    firstname_margin = c(0.59839914, 0.11777467, 0.18207780, 0.06197576, 0.03977263)
   )
 )
 
@@ -48,9 +54,13 @@ ebisg_model_registry <- list(
 #' @param ebisg.model A character string giving the HuggingFace model ID
 #'   of a built-in model (e.g., \code{"intfloat/multilingual-e5-large"}),
 #'   or a named list with elements \code{transformer}, \code{dim},
-#'   \code{surname_mlp}, and optionally \code{firstname_mlp}.
+#'   \code{surname_mlp}, and optionally \code{firstname_mlp},
+#'   \code{surname_margin}, and \code{firstname_margin} (the race mix,
+#'   in the order whi, bla, his, asi, oth, of the data each MLP was trained on;
+#'   defaults to the 2020 national race mix).
 #' @return A list with elements \code{transformer}, \code{dim},
-#'   \code{surname_mlp}, \code{firstname_mlp}, \code{fullname_mlp}, \code{tag}.
+#'   \code{surname_mlp}, \code{firstname_mlp}, \code{fullname_mlp}, \code{tag},
+#'   \code{surname_margin}, \code{firstname_margin}.
 #' @keywords internal
 resolve_ebisg_model <- function(ebisg.model) {
   if (is.character(ebisg.model)) {

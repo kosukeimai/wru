@@ -29,11 +29,16 @@
 #' \code{"county"}, \code{"tract"}, \code{"block"}, and \code{"place"} are supported.
 #' @param retry The number of retries at the census website if network interruption occurs.
 #' @param county.list A named list of character vectors of counties present in your \var{voter.file}, per state. 
-#' @return Output will be an object of class \code{list} indexed by state. 
-#' Output will contain a subset of the following elements: 
-#' \code{state}, \code{age}, \code{sex}, 
+#' @return Output will be an object of class \code{list} indexed by state.
+#' Output will contain a subset of the following elements:
+#' \code{state}, \code{age}, \code{sex},
 #' \code{county}, \code{tract}, \code{block_group}, \code{block}, and \code{place}.
-#' 
+#'
+#' @details A progress bar is shown while Census data is downloaded. To suppress
+#'  it (e.g., in batch or non-interactive runs where it bloats log files) without
+#'  silencing the other progress messages, set \code{options(wru_progress = FALSE)}.
+#'  This also applies to downloads triggered internally by [predict_race()].
+#'
 #' @export
 #'
 #' @examples

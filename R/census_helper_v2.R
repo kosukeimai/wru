@@ -93,25 +93,25 @@ census_helper_new <- function(
     key <- validate_key(key)
   } 
   
-  if (toupper(states) == "ALL") {
+  if (identical(toupper(states), "ALL")) {
     states <- toupper(as.character(unique(voter.file$state)))
   }
   states <- as_state_abbreviation(states)
   
   df.out <- NULL
   
-  for (s in 1:length(states)) {
+  for (s in seq_along(states)) {
     
     message(paste("State ", s, " of ", length(states), ": ", states[s], sep  = ""))
     state <- toupper(states[s])
     
     if (geo == "tract") {
       geo.merge <- c("county", "tract")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use.counties) {
-          census <- census_geo_api(key, state, geo = "tract", age, sex, retry, 
+          census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "tract", age, sex, year, retry)
         }
@@ -120,11 +120,11 @@ census_helper_new <- function(
       }
     } else if (geo == "block_group") {
       geo.merge <- c("county", "tract", "block_group")
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use.counties) {
-          census <- census_geo_api(key, state, geo = "block_group", age, sex, retry, 
+          census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "block_group", age, sex, year, retry)
         }
@@ -139,11 +139,11 @@ census_helper_new <- function(
         geo.merge <- c("county", "tract", "block")
       }
 
-      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != FALSE) || (census.data[[state]]$sex != FALSE)) {#} || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
+      if ((toDownload) || (is.null(census.data[[state]])) || (census.data[[state]]$year != year) || (census.data[[state]]$age != age) || (census.data[[state]]$sex != sex)) {
         if(use.counties) {
-          census <- census_geo_api(key, state, geo = "block", age, sex, retry, 
+          census <- census_geo_api(key, state, geo = "block", age, sex, year, retry,
                                    # Only those counties within the target state
-                                   counties = unique(voter.file$county[voter.file$state == state]))
+                                   counties = unique(voter.file$county[toupper(voter.file$state) == state]))
         } else {
           census <- census_geo_api(key, state, geo = "block", age, sex, year, retry)
         }
@@ -157,9 +157,8 @@ census_helper_new <- function(
       state_must_be_downloaded <- toDownload ||
         is.null(census.data[[state]]) ||
         census.data[[state]]$year != year ||
-        # TODO: Why do we always redownload if sex or age == TRUE?
-        census.data[[state]]$age != FALSE ||
-        census.data[[state]]$sex != FALSE
+        census.data[[state]]$age != age ||
+        census.data[[state]]$sex != sex
       
       if (state_must_be_downloaded) {
         census <- census_geo_api(key, state, geo = geo, age, sex, year, retry)
@@ -176,7 +175,7 @@ census_helper_new <- function(
       # TODO: Add test that we get the same ratios with legacy and new tables for 2020
       # Old table: Redistricting (Pl-some numbers) (does not have age, sex, or ZCTAs)
       # New table: DHC (does have age, sex, and ZCTA)
-      vars_ <- census_geo_api_names_legacy(year = year)
+      vars_ <- census_geo_api_names_legacy(year = year, nms = names(census))
     } else {
       vars_ <- census_geo_api_names(year)
     }

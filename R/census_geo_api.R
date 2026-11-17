@@ -112,7 +112,7 @@ census_geo_api <- function(
         message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
         region_county <- paste("for=tract:*&in=state:", state.fips, "+county:", county_list[county], sep = "")
         get_census_api(data_url = census_data_url, key = key, var.names = unlist(vars), region = region_county, retry)
-      }, .progress = TRUE)
+      }, .progress = isTRUE(getOption("wru_progress", default = TRUE)))
     } else {
       message('There were no intersecting counties in your voter.file data (tract)')
     } 
@@ -138,7 +138,7 @@ census_geo_api <- function(
       message('Running block_group by county...')
       
       census <- purrr::map_dfr(
-        1:length(county_list), 
+        seq_along(county_list), 
         function(county) {
           # too verbose, commenting out
           message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
@@ -177,7 +177,7 @@ census_geo_api <- function(
       message('Running block by county...')
       
       census <- purrr::map_dfr(
-        1:length(county_list), 
+        seq_along(county_list), 
         function(county) {
           # too verbose, commenting out
           message(paste("County ", county, " of ", length(county_list), ": ", county_list[county], sep = ""))
@@ -187,12 +187,12 @@ census_geo_api <- function(
           tract_df <- get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_tract, retry)
           tract_list <- tract_df$tract
           
-          furrr::future_map_dfr(1:length(tract_list), function(tract) {
+          furrr::future_map_dfr(seq_along(tract_list), function(tract) {
             message(paste("Tract ", tract, " of ", length(tract_list), ": ", tract_list[tract], sep = ""))
             
             region_block <- paste("for=block:*&in=state:", state.fips, "+county:", county_list[county], "+tract:", tract_list[tract], sep = "")
             get_census_api(census_data_url, key = key, var.names = unlist(vars), region = region_block, retry)
-          }, .progress = TRUE)
+          }, .progress = isTRUE(getOption("wru_progress", default = TRUE)))
         }
       )
       message("\n") # new line for progress bar

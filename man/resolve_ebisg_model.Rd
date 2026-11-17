@@ -10,11 +10,15 @@ resolve_ebisg_model(ebisg.model)
 \item{ebisg.model}{A character string giving the HuggingFace model ID
 of a built-in model (e.g., \code{"intfloat/multilingual-e5-large"}),
 or a named list with elements \code{transformer}, \code{dim},
-\code{surname_mlp}, and optionally \code{firstname_mlp}.}
+\code{surname_mlp}, and optionally \code{firstname_mlp},
+\code{surname_margin}, and \code{firstname_margin} (the race mix,
+in the order whi, bla, his, asi, oth, of the data each MLP was trained on;
+defaults to the 2020 national race mix).}
 }
 \value{
 A list with elements \code{transformer}, \code{dim},
-\code{surname_mlp}, \code{firstname_mlp}, \code{fullname_mlp}, \code{tag}.
+\code{surname_mlp}, \code{firstname_mlp}, \code{fullname_mlp}, \code{tag},
+\code{surname_margin}, \code{firstname_margin}.
 }
 \description{
 Resolve an ebisg.model argument into a config list

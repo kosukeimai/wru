@@ -93,13 +93,13 @@ census_helper <- function(
   }
 
   states <- toupper(states)
-  if (states == "ALL") {
+  if (identical(states, "ALL")) {
     states <- toupper(as.character(unique(voter.file$state)))
   }
 
   df.out <- NULL
 
-  for (s in 1:length(states)) {
+  for (s in seq_along(states)) {
     message(paste("State ", s, " of ", length(states), ": ", states[s], sep = ""))
     state <- toupper(states[s])
 
@@ -224,7 +224,7 @@ census_helper <- function(
       eth.cen <- c("whi", "bla", "his", "asi", "oth")
       eth.let <- c("I", "B", "H", "D", "F")
 
-      for (i in 1:length(eth.cen)) {
+      for (i in seq_along(eth.cen)) {
         if (i != 4 & i != 5) {
           census[paste("r_mal", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "002", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
           census[paste("r_fem", eth.cen[i], sep = "_")] <- census[paste("P012", eth.let[i], "026", sep = "")] / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -242,7 +242,7 @@ census_helper <- function(
       }
 
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x = T)
-      for (i in 1:length(eth.cen)) {
+      for (i in seq_along(eth.cen)) {
         voters.census[voters.census$sex == 0, paste("r", eth.cen[i], sep = "_")] <-
           voters.census[voters.census$sex == 0, paste("r_mal", eth.cen[i], sep = "_")]
         voters.census[voters.census$sex == 1, paste("r", eth.cen[i], sep = "_")] <-
@@ -258,7 +258,7 @@ census_helper <- function(
       age.cat <- c(seq(1, 23), seq(1, 23))
       age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
 
-      for (i in 1:length(eth.cen)) {
+      for (i in seq_along(eth.cen)) {
         for (j in 1:23) {
           if (i != 4 & i != 5) {
             census[paste("r", age.cat[j], eth.cen[i], sep = "_")] <- (census[paste("P012", eth.let[i], "0", age.cen[j], sep = "")] + census[paste("P012", eth.let[i], "0", age.cen[j + 23], sep = "")]) / sum(census[paste("P012", eth.let[i], "001", sep = "")])
@@ -275,7 +275,7 @@ census_helper <- function(
       }
 
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x = T)
-      for (i in 1:length(eth.cen)) {
+      for (i in seq_along(eth.cen)) {
         for (j in 1:23) {
           voters.census[voters.census$agecat == j, paste("r", eth.cen[i], sep = "_")] <-
             voters.census[voters.census$agecat == j, paste("r", j, eth.cen[i], sep = "_")]
@@ -292,8 +292,8 @@ census_helper <- function(
       age.cat <- c(seq(1, 23), seq(1, 23))
       age.cen <- as.character(c(c("03", "04", "05", "06", "07", "08", "09"), seq(10, 25), seq(27, 49)))
 
-      for (i in 1:length(eth.cen)) {
-        for (k in 1:length(sex.let)) {
+      for (i in seq_along(eth.cen)) {
+        for (k in seq_along(sex.let)) {
           for (j in 1:23) {
             if (k == 2) {
               j <- j + 23
@@ -314,7 +314,7 @@ census_helper <- function(
       }
 
       voters.census <- merge(voter.file[toupper(voter.file$state) == toupper(states[s]), ], census[names(census) != "state"], by = geo.merge, all.x = T)
-      for (i in 1:length(eth.cen)) {
+      for (i in seq_along(eth.cen)) {
         for (j in 1:23) {
           voters.census[
             voters.census$sex == 0 & voters.census$agecat == j,
