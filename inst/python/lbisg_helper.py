@@ -645,7 +645,7 @@ def select_shrink(F: npt.ArrayLike, geo: npt.ArrayLike,
             pbg = np.einsum("ir,ri->i", M[geo[test]],
                             shrink_pi(Pi, p_b, v)[:, bins[test]])
             total[i] += float((np.log(pbg) - np.log(p_b[bins[test]])).sum())
-    curve = [(v, t / n_held) for v, t in zip(cand, total)]
+    curve = [(v, float(t) / n_held) for v, t in zip(cand, total)]
     for v, q in curve:
         _log(verbose, f"  Q(shrink = {v:g}) = {q:.6f}")
     best = max(curve, key=lambda vq: vq[1])[0]
