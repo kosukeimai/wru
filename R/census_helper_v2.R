@@ -221,6 +221,10 @@ census_helper_new <- function(
       
     # }
     
+    if (age || sex) {
+      voters.census <- condition_on_age_sex(voters.census, year, age, sex)
+    }
+    
     keep.vars <- c(names(voter.file)[names(voter.file) != "agecat"], 
                    paste("r", c("whi", "bla", "his", "asi", "oth"), sep = "_"))
     df.out <- as.data.frame(rbind(df.out, voters.census[keep.vars]))
@@ -228,4 +232,46 @@ census_helper_new <- function(
   }
   
   return(df.out)
+}
+
+# Replace Pr(Race | Geo) with Pr(Race | Geo, Age, Sex): for each voter,
+# recompute r_whi, ..., r_oth from the Census counts of the voter's age
+# category and/or sex within their geography. Voters whose age or sex does not
+# match a Census cell, or whose cell has no population, keep Pr(Race | Geo).
+condition_on_age_sex <- function(voters.census, year, age, sex) {
+  races <- c("whi", "bla", "his", "asi", "oth")
+  vars_ <- census_geo_api_names(year = year, age = age, sex = sex)
+  
+  cell <- rep("", nrow(voters.census))
+  if (sex) {
+    cell <- paste0(cell, "_", c("mal", "fem")[match(voters.census$sex, c(0, 1))])
+  }
+  if (age) {
+    # Lower bounds of the 23 Census age categories (0-4, 5-9, ..., 85 and over)
+    lower <- c(0, 5, 10, 15, 18, 20, 21, 22, 25, 30, 35, 40, 45, 50, 55, 60,
+               62, 65, 67, 70, 75, 80, 85)
+    cell <- paste0(cell, "_", findInterval(voters.census$age, lower))
+  }
+  
+  unmatched <- 0
+  for (k in unique(cell)) {
+    rows <- which(cell == k)
+    vars_k <- vars_[paste0("r", k, "_", races)]
+    if (any(vapply(vars_k, is.null, logical(1)))) {
+      unmatched <- unmatched + length(rows)
+      next
+    }
+    pops <- matrix(
+      vapply(vars_k, function(v) rowSums(voters.census[rows, v, drop = FALSE]), numeric(length(rows))),
+      ncol = length(races)
+    )
+    cellPop <- rowSums(pops)
+    ok <- cellPop > 0
+    voters.census[rows[ok], paste0("r_", races)] <- pops[ok, , drop = FALSE] / cellPop[ok]
+  }
+  if (unmatched > 0) {
+    message(unmatched, " record(s) have a missing or invalid age/sex; using Pr(Race | Geo) for them.")
+  }
+  
+  voters.census
 }
