@@ -328,7 +328,7 @@ predict_race <- function(
     preds <- predict_race_new(voter.file = voter.file,
                               names.to.use = names.to.use,
                               year = year,
-                              age = age, sex = sex, # not implemented, default to F
+                              age = age, sex = sex,
                               census.geo = census.geo,
                               census.key = census.key,
                               name.dictionaries = name.dictionaries,
